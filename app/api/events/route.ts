@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "../../../db";
+import { ensureDb, getDb } from "../../../db";
 import { events, projects } from "../../../db/schema";
 import { decryptSecret } from "../../../lib/trackbase-security";
 
@@ -9,6 +9,7 @@ export function OPTIONS() { return new Response(null, { status: 204, headers: co
 
 export async function POST(request: Request) {
   try {
+    await ensureDb();
     const body = await request.json() as Record<string, unknown>;
     const key = String(body.projectKey || "");
     const eventName = String(body.eventName || "");
