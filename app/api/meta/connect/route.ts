@@ -1,9 +1,10 @@
 import { and, eq } from "drizzle-orm";
-import { getDb } from "../../../../db";
+import { ensureDb, getDb } from "../../../../db";
 import { projects } from "../../../../db/schema";
 import { encryptSecret, requestUserId, sha256 } from "../../../../lib/trackbase-security";
 
 export async function POST(request: Request) {
+  await ensureDb();
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const body = await request.json() as { projectId?: string; pixelId?: string; accessToken?: string; testCode?: string };
