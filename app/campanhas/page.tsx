@@ -1,0 +1,2 @@
+import { PrivateSection } from "../private-section";
+export const dynamic="force-dynamic";export default function Page(){return <PrivateSection title="Campanhas" description="Campanhas, conjuntos e anúncios da Meta."><div className="metric-card rounded-xl p-6"><a href="/contas-meta" className="rounded-lg bg-violet-600 px-4 py-2 font-medium">Conectar conta de anúncios Meta</a><p className="mt-5 text-slate-400">A importação de campanhas ainda não está ativa. Confira o estado da conexão na área de contas Meta.</p></div></PrivateSection>}

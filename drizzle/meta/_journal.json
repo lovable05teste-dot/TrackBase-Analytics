@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788667904857,
+      "tag": "0000_flashy_tana_nile",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788668485440,
+      "tag": "0001_panoramic_quasar",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788669314598,
+      "tag": "0002_salty_wolfpack",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788671968700,
+      "tag": "0003_amazing_patch",
+      "breakpoints": true
+    }
+  ]
+}
