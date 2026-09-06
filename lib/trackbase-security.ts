@@ -1,5 +1,3 @@
-import { env } from "cloudflare:workers";
-
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
@@ -19,7 +17,7 @@ function b64ToBytes(value: string) {
 }
 
 async function encryptionKey() {
-  const secret = (env as unknown as { TRACKBASE_ENCRYPTION_KEY?: string }).TRACKBASE_ENCRYPTION_KEY;
+  const secret = process.env.TRACKBASE_ENCRYPTION_KEY;
   if (!secret) throw new Error("Chave de proteção não configurada.");
   const digest = await crypto.subtle.digest("SHA-256", enc.encode(secret));
   return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
@@ -37,5 +35,9 @@ export async function decryptSecret(cipher: string, iv: string) {
 }
 
 export async function requestUserId(request: Request) {
-  return request.headers.get("oai-authenticated-user-id");
+  const forwarded=request.headers.get("oai-authenticated-user-id");
+  if(forwarded)return forwarded;
+  const cookie=request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
+  if(!cookie||!process.env.ADMIN_PASSWORD)return null;
+  return cookie===await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`)?"trackbase-owner":null;
 }
