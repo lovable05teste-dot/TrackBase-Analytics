@@ -1,9 +1,7 @@
-import { env } from "cloudflare:workers";
-
 type MetaEnv = { META_APP_ID?: string; META_APP_SECRET?: string; META_LOGIN_CONFIG_ID?: string; META_GRAPH_VERSION?: string };
 
 export function metaConfig() {
-  const values=env as unknown as MetaEnv;
+  const values=process.env as MetaEnv;
   return {appId:values.META_APP_ID?.trim()||"",appSecret:values.META_APP_SECRET?.trim()||"",configId:values.META_LOGIN_CONFIG_ID?.trim()||"",version:values.META_GRAPH_VERSION?.trim()||"v25.0"};
 }
 
