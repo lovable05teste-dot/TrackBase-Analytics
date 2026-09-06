@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 let client:ReturnType<typeof postgres>|undefined;let initialized:Promise<void>|undefined;
-function url(){const value=process.env.DATABASE_URL||process.env.POSTGRES_URL;if(!value)throw new Error("DATABASE_URL não configurada.");return value}
+function url(){const value=process.env.DATABASE_URL||process.env.POSTGRES_URL||process.env.STORAGE_DATABASE_URL||process.env.STORAGE_POSTGRES_URL;if(!value)throw new Error("Conexão do Neon não configurada.");return value.trim()}
 export function getSql(){if(!client)client=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return client}
 export function getDb(){return drizzle(getSql(),{schema})}
 export async function ensureDb(){if(!initialized)initialized=(async()=>{await getSql().unsafe(`
