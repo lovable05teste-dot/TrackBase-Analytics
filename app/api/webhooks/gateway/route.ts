@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "../../../../db";
+import { ensureDb, getDb } from "../../../../db";
 import { apiCredentials, events, orders } from "../../../../db/schema";
 import { sha256 } from "../../../../lib/trackbase-security";
 
@@ -21,6 +21,7 @@ function statusOf(value: unknown) {
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization,x-trackbase-key,content-type","Access-Control-Allow-Methods":"POST,OPTIONS"};
 export function OPTIONS(){return new Response(null,{status:204,headers:cors})}
 export async function POST(request: Request) {
+  await ensureDb();
   const url=new URL(request.url);
   const auth=request.headers.get("authorization")||"";
   const token=(auth.startsWith("Bearer ")?auth.slice(7):request.headers.get("x-trackbase-key")||url.searchParams.get("token")||"").trim();
