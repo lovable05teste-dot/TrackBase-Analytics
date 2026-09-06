@@ -1,4 +1,4 @@
-import { BarChart3, Bell, LayoutDashboard, Link2, Radio } from "lucide-react";
+import { BarChart3, Bell, LayoutDashboard, Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,7 @@ const metrics=[["Cliques no anúncio","0","Meta/UTM"],["Acessos à página","0",
 const campaigns:string[][]=[];
 const nav=[[LayoutDashboard,"Dashboard","/"],[Link2,"Integrações","/integracoes"],[BarChart3,"Campanhas","/campanhas"]];
 
-function Logo(){return <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-violet-600 shadow-[0_0_28px_#755cff55]"><Radio className="size-5"/></div><div><b>TrackBase Analytics</b><small className="block text-slate-500">Meta Ads Intelligence</small></div></div>}
+function Logo(){return <div className="flex items-center gap-3"><img src="/trackbase-logo.png" alt="Logo TrackBase Analytics" className="h-11 w-20 shrink-0 object-contain"/><div><b>TrackBase Analytics</b><small className="block text-slate-500">Meta Ads Intelligence</small></div></div>}
 export const dynamic = "force-dynamic";
 export default async function Home(){await requireChatGPTUser("/");return <main className="min-h-screen bg-[#080b12] text-slate-100">
 <aside className="fixed inset-y-0 hidden w-64 border-r border-white/7 bg-[#0b0e17] p-5 lg:block"><Logo/><nav className="mt-9 space-y-1">{nav.map(([Icon,label,href],i)=>{const I=Icon as typeof LayoutDashboard;return <a href={href as string} key={label as string} className={i?"nav-item":"nav-active"}><I/>{label as string}</a>})}</nav><div className="absolute bottom-5 left-5 right-5"><div className="rounded-xl border border-white/7 p-3"><b className="text-sm">Kit Bíblico</b><small className="block text-slate-500">Administrador</small></div></div></aside>
