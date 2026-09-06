@@ -3,7 +3,7 @@ import { getDb } from "../../../db";
 import { events, projects } from "../../../db/schema";
 import { decryptSecret } from "../../../lib/trackbase-security";
 
-const allowed = new Set(["PageView","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead"]);
+const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead"]);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST,OPTIONS" };
 export function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
 
