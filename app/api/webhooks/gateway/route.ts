@@ -13,11 +13,11 @@ function pick(source: Record<string, unknown>, paths: string[]) {
 }
 function statusOf(value: unknown) {
   const s=String(value||"pending").toLowerCase();
-  if (/approved|paid|completed|succeeded|success|aprovad|pago/.test(s)) return "approved";
+  if (/approved|authorized|authorised|paid|completed|complete|succeeded|success|settled|captured|aprovad|autorizad|pago|liquidado|capturado/.test(s)) return "approved";
   if (/refund|reembols/.test(s)) return "refunded";
   if (/chargeback|contestad/.test(s)) return "chargeback";
   if (/cancel|failed|recusad|expired/.test(s)) return "cancelled";
-  if (/pending|waiting|processing|aguard/.test(s)) return "pending";
+  if (/pending|waiting|processing|created|initiated|in_review|review|awaiting|aguard|criad|processando|analise/.test(s)) return "pending";
   return "unknown";
 }
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization,x-trackbase-key,content-type","Access-Control-Allow-Methods":"POST,OPTIONS"};
@@ -34,12 +34,12 @@ export async function POST(request: Request) {
   if(!credential||!credential.active)return Response.json({error:"Credencial inválida"},{status:401,headers:cors});
   let body:Record<string,unknown>;
   try{body=await request.json() as Record<string,unknown>}catch{return Response.json({error:"JSON inválido"},{status:400,headers:cors})}
-  const externalId=String(pick(body,["transaction_hash","id","transaction_id","transactionId","sale_id","saleId","data.id","data.transaction.id","order.id"])||crypto.randomUUID());
-  const rawStatus=pick(body,["status","event","type","data.status","data.transaction.status","order.status"]);
+  const externalId=String(pick(body,["transaction_hash","transactionHash","reference","reference_id","order_number","id","transaction_id","transactionId","sale_id","saleId","data.id","data.transaction.id","order.id"])||crypto.randomUUID());
+  const rawStatus=pick(body,["status","payment_status","transaction_status","event","type","data.status","data.payment_status","data.transaction.status","order.status"]);
   const status=statusOf(rawStatus);
   if (status === "unknown") return Response.json({error:"Status de pagamento não reconhecido"},{status:400,headers:cors});
   const fortpay=Boolean(pick(body,["transaction_hash"])) || credential.provider==="fortpay";
-  const centsValue=fortpay?pick(body,["amount","data.amount"]):pick(body,["amount_cents","amountCents","data.amount_cents","data.transaction.amount_cents","order.total_cents"]),rawValue=pick(body,["value","amount","total","price","data.value","data.amount","data.transaction.amount","order.total"]);
+  const centsValue=fortpay?pick(body,["amount","data.amount"]):pick(body,["amount_cents","amountCents","total_cents","data.amount_cents","data.transaction.amount_cents","order.total_cents"]),rawValue=pick(body,["value","amount","total","price","data.value","data.amount","data.transaction.amount","order.total"]);
   const value=centsValue!==undefined?Number(centsValue||0)/100:Number(rawValue||0);
   if(!Number.isFinite(value)||value<0)return Response.json({error:"Valor da venda inválido"},{status:400,headers:cors});
   const currency=String(pick(body,["currency","data.currency","data.transaction.currency"])||"BRL").toUpperCase();
