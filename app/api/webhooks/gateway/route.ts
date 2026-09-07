@@ -17,7 +17,8 @@ function statusOf(value: unknown) {
   if (/refund|reembols/.test(s)) return "refunded";
   if (/chargeback|contestad/.test(s)) return "chargeback";
   if (/cancel|failed|recusad|expired/.test(s)) return "cancelled";
-  return "pending";
+  if (/pending|waiting|processing|aguard/.test(s)) return "pending";
+  return "unknown";
 }
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization,x-trackbase-key,content-type","Access-Control-Allow-Methods":"POST,OPTIONS"};
 export function OPTIONS(){return new Response(null,{status:204,headers:cors})}
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
   const externalId=String(pick(body,["id","transaction_id","transactionId","sale_id","saleId","data.id","data.transaction.id","order.id"])||crypto.randomUUID());
   const rawStatus=pick(body,["status","event","type","data.status","data.transaction.status","order.status"]);
   const status=statusOf(rawStatus);
+  if (status === "unknown") return Response.json({error:"Status de pagamento não reconhecido"},{status:400,headers:cors});
   const centsValue=pick(body,["amount_cents","amountCents","data.amount_cents","data.transaction.amount_cents","order.total_cents"]),rawValue=pick(body,["value","amount","total","price","data.value","data.amount","data.transaction.amount","order.total"]);
   const value=centsValue!==undefined?Number(centsValue||0)/100:Number(rawValue||0);
   if(!Number.isFinite(value)||value<0)return Response.json({error:"Valor da venda inválido"},{status:400,headers:cors});
