@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     const body = await request.json() as Record<string, unknown>;
     const key = String(body.projectKey || "");
     const eventName = String(body.eventName || "");
+    if (eventName === "Purchase") return Response.json({ error: "Compra deve ser confirmada pelo webhook de pagamento" }, { status: 400, headers: cors });
     if (!key || !allowed.has(eventName)) return Response.json({ error: "Evento inválido" }, { status: 400, headers: cors });
     const [project] = await getDb().select().from(projects).where(eq(projects.publicKey, key)).limit(1);
     if (!project) return Response.json({ error: "Projeto inválido" }, { status: 404, headers: cors });
