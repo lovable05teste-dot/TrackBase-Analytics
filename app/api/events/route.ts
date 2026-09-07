@@ -6,7 +6,7 @@ import { decryptSecret } from "../../../lib/trackbase-security";
 const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead"]);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST,OPTIONS" };
 export function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
-async function hash(value:unknown){const normalized=String(value||"").trim().toLocaleLowerCase().replace(/\s+/g,"");if(!normalized)return undefined;const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));return Array.from(new Uint8Array(bytes)).map(byte=>byte.toString(16).padStart(2,"0")).join("")}
+async function hash(value:unknown,phone=false){const raw=String(value||"").trim().toLocaleLowerCase(),normalized=phone?raw.replace(/\D/g,""):raw.replace(/\s+/g,"");if(!normalized)return undefined;const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));return Array.from(new Uint8Array(bytes)).map(byte=>byte.toString(16).padStart(2,"0")).join("")}
 
 export async function POST(request: Request) {
   try {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     if (project.pixelId && project.metaTokenCipher && project.metaTokenIv) {
       const token = await decryptSecret(project.metaTokenCipher, project.metaTokenIv);
       const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "";
-      const payload: Record<string, unknown> = { data: [{ event_name: eventName, event_time: Number(body.eventTime || now), event_id: eventId, action_source: "website", event_source_url: url, user_data: { client_ip_address: ip, client_user_agent: request.headers.get("user-agent") || "", fbp: body.fbp || undefined, fbc: body.fbc || undefined, em:await hash(body.email),ph:await hash(body.phone) }, custom_data: { value, currency: String(body.currency || "BRL"), content_ids: body.contentIds || undefined, content_name: body.contentName || undefined, content_type: "product",order_id:body.externalId||undefined } }] };
+      const payload: Record<string, unknown> = { data: [{ event_name: eventName, event_time: Number(body.eventTime || now), event_id: eventId, action_source: "website", event_source_url: url, user_data: { client_ip_address: ip.split(",")[0].trim(), client_user_agent: request.headers.get("user-agent") || "", fbp: body.fbp || undefined, fbc: body.fbc || undefined, em:await hash(body.email),ph:await hash(body.phone,true) }, custom_data: { value, currency: String(body.currency || "BRL"), content_ids: body.contentIds || undefined, content_name: body.contentName || undefined, content_type: "product",order_id:body.externalId||undefined } }] };
       if (project.metaTestCode) payload.test_event_code = project.metaTestCode;
       const result = await fetch(`https://graph.facebook.com/v25.0/${project.pixelId}/events?access_token=${encodeURIComponent(token)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       capi = { ok: result.ok, status: result.status };
