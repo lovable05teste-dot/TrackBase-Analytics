@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="grid min-h-screen place-items-center bg-slate-50 text-slate-500"><div className="text-center"><div className="mx-auto size-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"/><p className="mt-3 text-sm">Carregando seu workspace…</p></div></main>}
