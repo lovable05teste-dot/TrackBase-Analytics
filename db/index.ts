@@ -1,4 +1,4 @@
-import {drizzle as drizzleD1} from "drizzle-orm/d1";
+import {drizzle as drizzleD1,type DrizzleD1Database} from "drizzle-orm/d1";
 import {drizzle as drizzlePg} from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
@@ -9,7 +9,7 @@ let initialized:Promise<void>|undefined;
 function d1(){const binding=(process.env as unknown as {DB?:D1Binding}).DB;if(binding&&typeof binding.prepare==="function")return binding;return null}
 function url(){const value=process.env.DATABASE_URL||process.env.POSTGRES_URL||process.env.STORAGE_DATABASE_URL||process.env.STORAGE_POSTGRES_URL;if(!value)throw new Error("Banco de dados não configurado.");return value.trim()}
 export function getSql(){if(d1())throw new Error("SQL direto indisponível no D1; use getDb().");if(!pgClient)pgClient=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return pgClient}
-export function getDb(){const binding=d1();if(binding)return drizzleD1(binding as never,{schema});if(!pgClient)pgClient=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return drizzlePg(pgClient,{schema})}
+export function getDb():DrizzleD1Database<typeof schema>{const binding=d1();if(binding)return drizzleD1(binding as never,{schema});if(!pgClient)pgClient=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return drizzlePg(pgClient,{schema}) as unknown as DrizzleD1Database<typeof schema>}
 const statements=[
 "CREATE TABLE IF NOT EXISTS workspaces(id text PRIMARY KEY,name text NOT NULL,created_at text NOT NULL)",
 "CREATE TABLE IF NOT EXISTS members(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,email text,role text NOT NULL DEFAULT 'member')",
