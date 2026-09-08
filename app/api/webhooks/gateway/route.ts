@@ -31,7 +31,8 @@ export async function POST(request: Request) {
   const token=(auth.startsWith("Bearer ")?auth.slice(7):request.headers.get("x-trackbase-key")||url.searchParams.get("token")||"").trim();
   if(!token)return Response.json({error:"Credencial ausente"},{status:401,headers:cors});
   const [credential]=await getDb().select().from(apiCredentials).where(eq(apiCredentials.tokenHash,await sha256(token))).limit(1);
-  if(!credential||!credential.active)return Response.json({error:"Credencial inválida"},{status:401,headers:cors});
+  const credActive=credential&&(credential.active===1||(credential.active as unknown)===true);
+  if(!credential||!credActive)return Response.json({error:"Credencial inválida"},{status:401,headers:cors});
   let body:Record<string,unknown>;
   try{body=await request.json() as Record<string,unknown>}catch{return Response.json({error:"JSON inválido"},{status:400,headers:cors})}
   const externalId=String(pick(body,["transaction_hash","transactionHash","reference","reference_id","order_number","id","transaction_id","transactionId","sale_id","saleId","data.id","data.transaction.id","order.id"])||crypto.randomUUID());

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
   const rows = await getDb().select({ id: apiCredentials.id, name: apiCredentials.name, provider: apiCredentials.provider, projectId: apiCredentials.projectId, active: apiCredentials.active, createdAt: apiCredentials.createdAt, lastUsedAt: apiCredentials.lastUsedAt }).from(apiCredentials).where(eq(apiCredentials.workspaceId, workspaceId));
-  return Response.json({ credentials: rows });
+  return Response.json({ credentials: rows.map(r=>({...r,active:r.active===1||(r.active as unknown)===true})) });
 }
 
 export async function POST(request: Request) {
