@@ -44,7 +44,9 @@ export async function POST(request: Request) {
   if(!Number.isFinite(value)||value<0)return Response.json({error:"Valor da venda inválido"},{status:400,headers:cors});
   const currency=String(pick(body,["currency","data.currency","data.transaction.currency"])||"BRL").toUpperCase();
   const eventId=String(pick(body,["event_id","eventId","tracking.event_id","metadata.event_id","data.event_id"])||(status==="approved"?`purchase_${externalId}`:`gw_${credential.provider}_${externalId}_${status}`));
-  const paidAt=pick(body,["paid_at","data.paid_at"]);\n  const paidTime=paidAt?Math.floor(Date.parse(String(paidAt))/1000):Math.floor(Date.now()/1000);\n  const now=Math.floor(Date.now()/1000);
+  const paidAt=pick(body,["paid_at","data.paid_at"]);
+  const paidTime=paidAt?Math.floor(Date.parse(String(paidAt))/1000):Math.floor(Date.now()/1000);
+  const now=Math.floor(Date.now()/1000);
   const db=getDb();
   await db.insert(orders).values({id:crypto.randomUUID(),projectId:credential.projectId,externalId,provider:credential.provider,status,value,currency,eventId,createdAt:now,updatedAt:now}).onConflictDoUpdate({target:[orders.provider,orders.externalId],set:{status,value,currency,eventId,updatedAt:now}});
   const eventName=status==="approved"?"Purchase":status==="pending"?"PaymentPending":status==="refunded"?"Refund":status==="chargeback"?"Chargeback":"PaymentCancelled";
