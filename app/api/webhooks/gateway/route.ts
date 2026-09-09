@@ -53,6 +53,8 @@ export async function POST(request: Request) {
   if(!Number.isFinite(value)||value<0)return Response.json({error:"Valor da venda inválido"},{status:400,headers:cors});
   const rawUtm=String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||"").trim();
   const utmCampaign=rawUtm?rawUtm.split("|")[0].trim()||null:null;
+  const utmOf=(k:string)=>{const v=String(pick(body,[k,`tracking.${k}`,`metadata.${k}`,`data.tracking.${k}`])||"").trim();return v||null;};
+  const utmSource=utmOf("utm_source"),utmMedium=utmOf("utm_medium"),utmContent=utmOf("utm_content"),utmTerm=utmOf("utm_term");
   const productTitle=itemsList.length?String(itemsList[0].title||itemsList[0].name||""):"";
   const currency=String(pick(body,["currency","data.currency","data.transaction.currency"])||"BRL").toUpperCase();
   const eventId=String(pick(body,["event_id","eventId","tracking.event_id","metadata.event_id","data.event_id"])||(status==="approved"?`purchase_${externalId}`:`gw_${credential.provider}_${externalId}_${status}`));
@@ -60,7 +62,7 @@ export async function POST(request: Request) {
   const paidTime=paidAt?Math.floor(Date.parse(String(paidAt))/1000):Math.floor(Date.now()/1000);
   const now=Math.floor(Date.now()/1000);
   const db=getDb();
-  await db.insert(orders).values({id:crypto.randomUUID(),projectId:credential.projectId,externalId,provider:credential.provider,status,value,currency,utmCampaign,eventId,createdAt:now,updatedAt:now}).onConflictDoUpdate({target:[orders.provider,orders.externalId],set:{status,value,currency,utmCampaign,eventId,updatedAt:now}});
+  await db.insert(orders).values({id:crypto.randomUUID(),projectId:credential.projectId,externalId,provider:credential.provider,status,value,currency,utmCampaign,utmSource,utmMedium,utmContent,utmTerm,eventId,createdAt:now,updatedAt:now}).onConflictDoUpdate({target:[orders.provider,orders.externalId],set:{status,value,currency,utmCampaign,utmSource,utmMedium,utmContent,utmTerm,eventId,updatedAt:now}});
   const eventName=status==="approved"?"Purchase":status==="pending"?"PaymentPending":status==="refunded"?"Refund":status==="chargeback"?"Chargeback":"PaymentCancelled";
   const fbc=String(pick(body,["fbc","tracking.fbc","metadata.fbc","data.tracking.fbc"])||""),fbp=String(pick(body,["fbp","tracking.fbp","metadata.fbp","data.tracking.fbp"])||""),fbclid=String(pick(body,["fbclid","tracking.fbclid","metadata.fbclid","data.tracking.fbclid"])||"");
   await db.insert(events).values({id:crypto.randomUUID(),projectId:credential.projectId,eventId,eventName,source:"gateway",occurredAt:Number.isFinite(paidTime)?paidTime:now,value,currency,payload:JSON.stringify(body),visitorId:String(pick(body,["tb_vid","tracking.tb_vid","metadata.tb_vid","data.tracking.tb_vid"])||""),fbclid,fbc,fbp,utmSource:String(pick(body,["utm_source","tracking.utm_source","metadata.utm_source","data.tracking.utm_source"])||""),utmCampaign:String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||""),utmMedium:String(pick(body,["utm_medium","tracking.utm_medium","metadata.utm_medium","data.tracking.utm_medium"])||""),utmContent:String(pick(body,["utm_content","tracking.utm_content","metadata.utm_content","data.tracking.utm_content"])||""),utmTerm:String(pick(body,["utm_term","tracking.utm_term","metadata.utm_term","data.tracking.utm_term"])||"")}).onConflictDoNothing();

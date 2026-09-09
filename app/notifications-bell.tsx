@@ -4,6 +4,7 @@ import {Bell,BellRing,Smartphone} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
+import {playSound,sounds} from "@/lib/sounds";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
