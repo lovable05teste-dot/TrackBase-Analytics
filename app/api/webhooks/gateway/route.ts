@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../../db";
-import { apiCredentials,events,orders,projects } from "../../../../db/schema";
+import { apiCredentials,events,notificationPrefs,orders,projects } from "../../../../db/schema";
 import { decryptSecret,sha256 } from "../../../../lib/trackbase-security";
 import {parseTrackingConfig} from "../../../../lib/tracking-config";
+import {parsePrefs} from "../../../../lib/notify";
 import {pushToWorkspace} from "../../../../lib/push";
 
 function pick(source: Record<string, unknown>, paths: string[]) {
@@ -60,9 +61,19 @@ export async function POST(request: Request) {
   }
   await db.update(apiCredentials).set({lastUsedAt:new Date().toISOString()}).where(eq(apiCredentials.id,credential.id));
   if(status==="approved"||status==="pending"){
-   const money=`R$ ${value.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}`;
-   const note=status==="approved"?{title:`Venda aprovada · ${money}`,tag:`tb-approved-${externalId}`}:{title:`Venda pendente · ${money}`,tag:`tb-pending-${externalId}`};
-   await Promise.race([pushToWorkspace(credential.workspaceId,{...note,body:`${credential.provider} · pedido ${externalId}`,url:"/vendas"}),new Promise(r=>setTimeout(r,3000))]).catch(()=>{});
+   const[prefRow]=await db.select().from(notificationPrefs).where(eq(notificationPrefs.workspaceId,credential.workspaceId)).limit(1);
+   const prefs=parsePrefs(prefRow?.prefs);
+   const allowed=status==="approved"?prefs.approved:prefs.pending;
+   if(allowed){
+    const money=`R$ ${value.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}`;
+    const title=(status==="approved"?"Venda aprovada":"Venda pendente")+(prefs.showValue?` · ${money}`:"");
+    const parts:string[]=[];
+    if(prefs.showProject){const[proj]=await db.select({name:projects.name}).from(projects).where(eq(projects.id,credential.projectId)).limit(1);if(proj?.name)parts.push(proj.name);}
+    if(prefs.showProduct){const prod=String(pick(body,["product","product_name","productName","item_name","itemName","offer","offer_name","data.product","data.product_name"])||"");if(prod)parts.push(prod);}
+    if(prefs.showUtm){const u=String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||"");if(u)parts.push(u);}
+    parts.push(`${credential.provider} · pedido ${externalId}`);
+    await Promise.race([pushToWorkspace(credential.workspaceId,{title,body:parts.join(" · "),url:"/vendas",tag:`tb-${status}-${externalId}`}),new Promise(r=>setTimeout(r,3000))]).catch(()=>{});
+   }
   }
   return Response.json({received:true,orderId:externalId,status,event:eventName},{headers:cors});
 }

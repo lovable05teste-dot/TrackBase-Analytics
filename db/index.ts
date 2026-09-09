@@ -31,6 +31,7 @@ const statements=[
 "CREATE TABLE IF NOT EXISTS meta_linked(user_id text NOT NULL,ad_account_id text NOT NULL,created_at integer NOT NULL)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_linked_user_ad ON meta_linked(user_id,ad_account_id)",
 "CREATE TABLE IF NOT EXISTS push_subscriptions(workspace_id text NOT NULL,endpoint text NOT NULL,p256dh text NOT NULL,auth text NOT NULL,created_at integer NOT NULL)",
-"CREATE UNIQUE INDEX IF NOT EXISTS idx_push_sub_endpoint ON push_subscriptions(workspace_id,endpoint)"
+"CREATE UNIQUE INDEX IF NOT EXISTS idx_push_sub_endpoint ON push_subscriptions(workspace_id,endpoint)",
+"CREATE TABLE IF NOT EXISTS notification_prefs(workspace_id text PRIMARY KEY,prefs text NOT NULL,updated_at integer NOT NULL)"
 ];
 export async function ensureDb(){if(!initialized)initialized=(async()=>{const binding=d1();if(binding){for(const statement of statements)await binding.prepare(statement).run();}else{await getSql().unsafe(statements.map(s=>s+';').join('\n'));}})().catch(error=>{initialized=undefined;throw error});return initialized}

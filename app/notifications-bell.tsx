@@ -1,7 +1,9 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
-import {Bell,BellRing,CheckCheck,Smartphone} from "lucide-react";
+import {Bell,BellRing,Smartphone} from "lucide-react";
 import {Button} from "@/components/ui/button";
+import {Switch} from "@/components/ui/switch";
+import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -27,9 +29,10 @@ function chime(high:boolean){
 
 export function NotificationsBell(){
  const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
+ const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
  const known=useRef<Set<string>>(new Set());const first=useRef(true);
- const interesting=(o:Order)=>o.status==="approved"||o.status==="pending";
+ const interesting=(o:Order)=>o.status==="approved"?prefs.approved:o.status==="pending"?prefs.pending:false;
  const unread=orders.filter(o=>interesting(o)&&(o.updatedAt*1000>(seen||0))).length;
 
  const load=useCallback(async(silentInit:boolean)=>{
@@ -41,7 +44,12 @@ export function NotificationsBell(){
    if(fresh.length){chime(fresh.some(o=>o.status==="approved"));known.current=new Set(list.map(o=>o.id));}
    setOrders(list);
   }catch{}
- },[]);
+ },[prefs]);
+
+ const savePrefs=async(next:NotifyPrefs)=>{
+  setPrefs(next);
+  try{await fetch("/api/notifications/prefs",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(next)});}catch{}
+ };
 
  useEffect(()=>{
   try{setSeen(Number(localStorage.getItem(SEEN_KEY)||0));}catch{}
@@ -49,6 +57,7 @@ export function NotificationsBell(){
   const unlock=()=>unlockAudio();
   window.addEventListener("pointerdown",unlock,{once:true});
   void load(true);
+  fetch("/api/notifications/prefs",{cache:"no-store"}).then(r=>r.json()).then(b=>{if(b.prefs)setPrefs(b.prefs);}).catch(()=>{});
   const timer=setInterval(()=>{if(!document.hidden)void load(false);},30000);
   (async()=>{
    try{
@@ -92,6 +101,14 @@ export function NotificationsBell(){
      {push==="loading"&&<p className="text-center text-xs text-slate-500">Ativando… confirme no navegador.</p>}
      {push==="denied"&&<p className="text-center text-xs text-slate-500">Notificação bloqueada no navegador — libere nas configurações do site.</p>}
      {push==="on"&&<p className="text-center text-xs text-emerald-600">Notificações no celular ativas ✓</p>}
+    </div>
+    <div className="space-y-2.5 border-t border-slate-200 p-3">
+     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avisar sobre</p>
+     {[["pending","Vendas pendentes"],["approved","Vendas aprovadas"]].map(([k,label])=>{const key=k as keyof NotifyPrefs;return <label key={k} className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>{label}</span><Switch checked={prefs[key]} onCheckedChange={v=>savePrefs({...prefs,[key]:v})}/></label>})}
+    </div>
+    <div className="space-y-2.5 border-t border-slate-200 p-3">
+     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Mostrar na notificação</p>
+     {[["showValue","Valor da venda"],["showProduct","Nome do produto"],["showUtm","UTM de campanha"],["showProject","Nome do projeto"]].map(([k,label])=>{const key=k as keyof NotifyPrefs;return <label key={k} className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>{label}</span><Switch checked={prefs[key]} onCheckedChange={v=>savePrefs({...prefs,[key]:v})}/></label>})}
     </div>
    </div>
   </>}</div>;
