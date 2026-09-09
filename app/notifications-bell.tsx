@@ -31,23 +31,26 @@ export function NotificationsBell(){
  const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
  const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
- const known=useRef<Set<string>>(new Set());const first=useRef(true);
+ const known=useRef<Set<string>>(new Set());
+ const prefsRef=useRef(prefs);prefsRef.current=prefs;
  const interesting=(o:Order)=>o.status==="approved"?prefs.approved:o.status==="pending"?prefs.pending:false;
  const unread=orders.filter(o=>interesting(o)&&(o.updatedAt*1000>(seen||0))).length;
 
  const load=useCallback(async(silentInit:boolean)=>{
   try{
    const r=await fetch("/api/orders?period=last_30d",{cache:"no-store"});if(!r.ok)return;
-   const b=await r.json();const list:Array<Order>=(b.orders||[]).filter(interesting);
+   const b=await r.json();const p=prefsRef.current;
+   const list:Array<Order>=(b.orders||[]).filter((o:Order)=>o.status==="approved"?p.approved:o.status==="pending"?p.pending:false);
    if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return;}
    const fresh=list.filter(o=>!known.current.has(o.id));
    if(fresh.length){chime(fresh.some(o=>o.status==="approved"));known.current=new Set(list.map(o=>o.id));}
    setOrders(list);
   }catch{}
- },[prefs]);
+ },[]);
 
  const savePrefs=async(next:NotifyPrefs)=>{
   setPrefs(next);
+  setOrders(cur=>cur.filter(o=>o.status==="approved"?next.approved:o.status==="pending"?next.pending:false));
   try{await fetch("/api/notifications/prefs",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(next)});}catch{}
  };
 
