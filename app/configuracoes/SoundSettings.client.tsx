@@ -24,9 +24,11 @@ export function SoundSettings() {
   }, []);
 
   useEffect(() => {
+    const next = { selected, enabled };
     try {
-      localStorage.setItem(STORAGE, JSON.stringify({ selected, enabled }));
+      localStorage.setItem(STORAGE, JSON.stringify(next));
     } catch {}
+    window.dispatchEvent(new CustomEvent("tb-sound-change", { detail: { sound: next } }));
   }, [selected, enabled]);
 
   const demo = (id: string) => {

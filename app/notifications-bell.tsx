@@ -31,7 +31,7 @@ const SOUND_KEY="trackbase:notification";
 type SoundPref={selected:string;enabled:boolean};
 const DEFAULT_SOUND:SoundPref={selected:"ka-ching",enabled:true};
 function readSoundPref():SoundPref{try{const raw=localStorage.getItem(SOUND_KEY);if(raw){const p=JSON.parse(raw);return {selected:sounds.some(s=>s.id===p.selected)?p.selected:DEFAULT_SOUND.selected,enabled:typeof p.enabled==="boolean"?p.enabled:DEFAULT_SOUND.enabled}}}catch{}return DEFAULT_SOUND}
-function saveSoundPref(p:SoundPref){try{localStorage.setItem(SOUND_KEY,JSON.stringify(p))}catch{}}
+function saveSoundPref(p:SoundPref){try{localStorage.setItem(SOUND_KEY,JSON.stringify(p))}catch{};window.dispatchEvent(new CustomEvent("tb-sound-change",{detail:{sound:p}}));}
 
 export function NotificationsBell(){
  const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
@@ -83,6 +83,12 @@ return ()=>{window.removeEventListener("pointerdown",unlock);clearInterval(timer
   },[load]);
 
   useEffect(()=>{(async()=>{try{if(!("serviceWorker" in navigator))return;const reg=await navigator.serviceWorker.ready;if(reg.active)reg.active.postMessage({type:"set-sound",soundId:sound.selected,enabled:sound.enabled});}catch{}})();},[sound]);
+
+  useEffect(()=>{
+   const onSound=(e:Event)=>{const d=(e as CustomEvent).detail;if(d&&d.sound)setSound(s=>({selected:d.sound.selected||s.selected,enabled:typeof d.sound.enabled==="boolean"?d.sound.enabled:s.enabled}));};
+   window.addEventListener("tb-sound-change",onSound);
+   return()=>window.removeEventListener("tb-sound-change",onSound);
+  },[]);
 
  const markSeen=()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}};
  const toggle=()=>{if(!open)markSeen();setOpen(v=>!v);};
