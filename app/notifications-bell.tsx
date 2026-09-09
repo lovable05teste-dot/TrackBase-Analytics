@@ -27,13 +27,20 @@ function chime(high:boolean){
   });
  }catch{}
 }
+const SOUND_KEY="trackbase:notification";
+type SoundPref={selected:string;enabled:boolean};
+const DEFAULT_SOUND:SoundPref={selected:"ka-ching",enabled:true};
+function readSoundPref():SoundPref{try{const raw=localStorage.getItem(SOUND_KEY);if(raw){const p=JSON.parse(raw);return {selected:sounds.some(s=>s.id===p.selected)?p.selected:DEFAULT_SOUND.selected,enabled:typeof p.enabled==="boolean"?p.enabled:DEFAULT_SOUND.enabled}}}catch{}return DEFAULT_SOUND}
+function saveSoundPref(p:SoundPref){try{localStorage.setItem(SOUND_KEY,JSON.stringify(p))}catch{}}
 
 export function NotificationsBell(){
  const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
  const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
+ const[sound,setSound]=useState<SoundPref>(readSoundPref);
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
  const known=useRef<Set<string>>(new Set());
  const prefsRef=useRef(prefs);prefsRef.current=prefs;
+ const soundRef=useRef(sound);soundRef.current=sound;
  const interesting=(o:Order)=>o.status==="approved"?prefs.approved:o.status==="pending"?prefs.pending:false;
  const unread=orders.filter(o=>interesting(o)&&(o.updatedAt*1000>(seen||0))).length;
 
@@ -44,7 +51,7 @@ export function NotificationsBell(){
    const list:Array<Order>=(b.orders||[]).filter((o:Order)=>o.status==="approved"?p.approved:o.status==="pending"?p.pending:false);
    if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return;}
    const fresh=list.filter(o=>!known.current.has(o.id));
-   if(fresh.length){chime(fresh.some(o=>o.status==="approved"));known.current=new Set(list.map(o=>o.id));}
+   if(fresh.length){if(soundRef.current.enabled)playSound(soundRef.current.selected);known.current=new Set(list.map(o=>o.id));}
    setOrders(list);
   }catch{}
  },[]);
@@ -113,6 +120,12 @@ export function NotificationsBell(){
     <div className="space-y-2.5 border-t border-slate-200 p-3">
      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Mostrar na notificação</p>
      {[["showValue","Valor da venda"],["showProduct","Nome do produto"],["showUtm","UTM de campanha"],["showProject","Nome do projeto"]].map(([k,label])=>{const key=k as keyof NotifyPrefs;return <label key={k} className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>{label}</span><Switch checked={prefs[key]} onCheckedChange={v=>savePrefs({...prefs,[key]:v})}/></label>})}
+    </div>
+    <div className="space-y-2.5 border-t border-slate-200 p-3">
+     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Som da notificação</p>
+     <label className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>Som ligado</span><Switch checked={sound.enabled} onCheckedChange={v=>setSound(s=>{const n={...s,enabled:v};saveSoundPref(n);return n})}/></label>
+     {sound.enabled&&<div className="flex items-center gap-2"><select value={sound.selected} onChange={e=>setSound(s=>{const n={...s,selected:e.target.value};saveSoundPref(n);return n})} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-card px-2 py-1.5 text-sm">{sounds.map(s=><option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select><Button variant="outline" size="sm" onClick={()=>playSound(sound.selected)}>Testar</Button></div>}
+     <a href="/configuracoes#som" className="block text-xs font-medium text-blue-600 hover:underline">Ver os 12 sons com demo →</a>
     </div>
    </div>
   </>}</div>;
