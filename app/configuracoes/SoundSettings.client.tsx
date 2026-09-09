@@ -1,14 +1,14 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Loader2, Volume2 } from "lucide-react";
-import { playSound, sounds } from "@/lib/sounds";
+import { playSound, sounds, DEFAULT_SOUND_ID } from "@/lib/sounds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 const STORAGE = "trackbase:notification";
 
 export function SoundSettings() {
-  const [selected, setSelected] = useState("cha-ching");
+  const [selected, setSelected] = useState(DEFAULT_SOUND_ID);
   const [enabled, setEnabled] = useState(true);
   const [playing, setPlaying] = useState("");
 

@@ -1,13 +1,13 @@
 ﻿"use client";
 import {useEffect,useState} from "react";
 import {ChevronDown,ChevronRight,Loader2,Volume2} from "lucide-react";
-import {playSound,sounds} from "@/lib/sounds";
+import {playSound,sounds,DEFAULT_SOUND_ID} from "@/lib/sounds";
 import {Switch} from "@/components/ui/switch";
 
 const STORAGE="trackbase:notification";
 type Pref={selected:string;enabled:boolean};
 
-function readPref():Pref{try{const raw=localStorage.getItem(STORAGE);if(raw){const p=JSON.parse(raw);return{selected:p.selected&&sounds.some(s=>s.id===p.selected)?p.selected:"cha-ching",enabled:typeof p.enabled==="boolean"?p.enabled:true}}}catch{}return{selected:"cha-ching",enabled:true}}
+function readPref():Pref{try{const raw=localStorage.getItem(STORAGE);if(raw){const p=JSON.parse(raw);return{selected:p.selected&&sounds.some(s=>s.id===p.selected)?p.selected:DEFAULT_SOUND_ID,enabled:typeof p.enabled==="boolean"?p.enabled:true}}}catch{}return{selected:DEFAULT_SOUND_ID,enabled:true}}
 
 function useSoundPref(){
  const[pref,setPref]=useState<Pref>(readPref);

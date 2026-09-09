@@ -4,7 +4,7 @@ import {Bell,BellRing,Smartphone} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
-import {playSound,sounds} from "@/lib/sounds";
+import {playSound,sounds,DEFAULT_SOUND_ID} from "@/lib/sounds";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -29,7 +29,7 @@ function chime(high:boolean){
 }
 const SOUND_KEY="trackbase:notification";
 type SoundPref={selected:string;enabled:boolean};
-const DEFAULT_SOUND:SoundPref={selected:"cha-ching",enabled:true};
+const DEFAULT_SOUND:SoundPref={selected:DEFAULT_SOUND_ID,enabled:true};
 function readSoundPref():SoundPref{try{const raw=localStorage.getItem(SOUND_KEY);if(raw){const p=JSON.parse(raw);return {selected:sounds.some(s=>s.id===p.selected)?p.selected:DEFAULT_SOUND.selected,enabled:typeof p.enabled==="boolean"?p.enabled:DEFAULT_SOUND.enabled}}}catch{}return DEFAULT_SOUND}
 function saveSoundPref(p:SoundPref){try{localStorage.setItem(SOUND_KEY,JSON.stringify(p))}catch{};window.dispatchEvent(new CustomEvent("tb-sound-change",{detail:{sound:p}}));}
 
@@ -67,7 +67,7 @@ export function NotificationsBell(){
   unlockAudio();
 const unlock=()=>unlockAudio();
    window.addEventListener("pointerdown",unlock,{once:true});
-   const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){if(m.enabled!==false)playSound(sounds.some(s=>s.id===m.soundId)?m.soundId:"cha-ching");}};
+   const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){if(m.enabled!==false)playSound(sounds.some(s=>s.id===m.soundId)?m.soundId:DEFAULT_SOUND_ID);}};
    try{if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",onSwMessage);}catch{}
    void load(true);
   fetch("/api/notifications/prefs",{cache:"no-store"}).then(r=>r.json()).then(b=>{if(b.prefs)setPrefs(b.prefs);}).catch(()=>{});

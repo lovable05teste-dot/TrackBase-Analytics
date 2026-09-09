@@ -30,7 +30,7 @@ function scheduleNote(ctx: AudioContext, freq: number, start: number, dur: numbe
   osc.stop(ctx.currentTime + start + dur);
 }
 
-function scheduleNoise(ctx: AudioContext, start: number, dur: number, gain = 0.15) {
+function scheduleNoise(ctx: AudioContext, start: number, dur: number, gain = 0.15, filterFreq = 0) {
   const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -40,102 +40,90 @@ function scheduleNoise(ctx: AudioContext, start: number, dur: number, gain = 0.1
   const g = ctx.createGain();
   g.gain.setValueAtTime(gain, ctx.currentTime + start);
   g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-  src.connect(g).connect(ctx.destination);
+  if (filterFreq > 0) {
+    const f = ctx.createBiquadFilter();
+    f.type = "bandpass"; f.frequency.value = filterFreq; f.Q.value = 0.8;
+    src.connect(f); f.connect(g); g.connect(ctx.destination);
+  } else {
+    src.connect(g); g.connect(ctx.destination);
+  }
   src.start(ctx.currentTime + start);
   src.stop(ctx.currentTime + start + dur);
 }
 
-// Sino metálico com parciais inarmônicos (sons de moeda/caixa registradora)
-function bell(ctx: AudioContext, freq: number, start: number, dur: number, gain = 0.3) {
-  const partials = [1, 2.7, 5.4];
-  const amps = [1, 0.5, 0.22];
-  const decays = [1, 0.6, 0.35];
-  partials.forEach((mult, i) => {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq * mult;
-    const t = ctx.currentTime + start;
-    g.gain.setValueAtTime(gain * amps[i], t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur * decays[i]);
-    osc.connect(g).connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + dur);
-  });
+// "KA" mecânico da registradora: pancada grave + clique metálico.
+function clunk(ctx: AudioContext, at: number) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = "sine"; o.frequency.setValueAtTime(220, ctx.currentTime + at);
+  o.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + at + 0.08);
+  g.gain.setValueAtTime(0.8, ctx.currentTime + at);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + at + 0.1);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 0.12);
+  scheduleNoise(ctx, at, 0.05, 0.5, 2600);
 }
 
-function tink(ctx: AudioContext, freq: number, start: number, gain = 0.25) {
-  const osc = ctx.createOscillator();
-  const g = ctx.createGain();
-  osc.type = "triangle";
-  osc.frequency.value = freq;
-  const t = ctx.currentTime + start;
-  g.gain.setValueAtTime(gain, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  osc.connect(g).connect(ctx.destination);
-  osc.start(t);
-  osc.stop(t + 0.14);
+// "CHING": sino metálico com parciais inarmônicos e decaimento longo.
+function ching(ctx: AudioContext, at: number, vol = 1) {
+  const partials:[number,number][]=[[2093,0.55],[2794,0.4],[3520,0.34],[4699,0.24],[5593,0.16],[7040,0.1]];
+  for (const [f, g0] of partials) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = f * (1 + (Math.random() - 0.5) * 0.002);
+    g.gain.setValueAtTime(g0 * vol, ctx.currentTime + at);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + at + 0.9);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 1);
+  }
+  scheduleNoise(ctx, at, 0.12, 0.22 * vol, 6800);
 }
 
 export const sounds: { id: string; name: string; icon: string; fn: SoundFn }[] = [
-  // Caixa registradora — Cash Register Sound (clássico da Hotmart): desliza a gaveta e dá dois "dings".
   {
-    id: "cash-register",
+    id: "caixa-registradora",
     name: "Caixa registradora",
     icon: "💰",
     fn(ctx) {
-      scheduleNoise(ctx, 0, 0.08, 0.12);
-      tink(ctx, 1046, 0.00, 0.18);
-      tink(ctx, 1318, 0.04, 0.18);
-      tink(ctx, 1568, 0.08, 0.18);
-      bell(ctx, 2093, 0.2, 0.45, 0.32);
-      bell(ctx, 2637, 0.36, 0.6, 0.28);
+      clunk(ctx, 0); ching(ctx, 0.08, 1);
     },
   },
-  // Cha-Ching — onomatopeia da caixa registradora: "cha" abafado + "CHING" brilhante.
   {
     id: "cha-ching",
-    name: "Cha-Ching",
-    icon: "🛎️",
+    name: "Cha-ching alto",
+    icon: "🔔",
     fn(ctx) {
-      scheduleNoise(ctx, 0, 0.06, 0.1);
-      scheduleNote(ctx, 660, 0, 0.08, "triangle", 0.22);
-      scheduleNote(ctx, 740, 0.05, 0.08, "triangle", 0.18);
-      bell(ctx, 1760, 0.12, 0.8, 0.34);
-      bell(ctx, 2637, 0.12, 0.4, 0.12);
+      ching(ctx, 0, 1); ching(ctx, 0.16, 0.7);
     },
   },
-  // Moedas caindo — Coins Dropping / Coins Clinking (Kiwify e Cakto): várias moedas de metal batendo.
   {
-    id: "coins",
+    id: "moedas",
     name: "Moedas caindo",
     icon: "🪙",
     fn(ctx) {
-      const seq = [2637, 2093, 3135, 2349, 2793, 2093, 3135, 2349, 1760];
-      seq.forEach((f, i) => bell(ctx, f, i * 0.045, 0.18, 0.2 + (i < 4 ? i * 0.02 : (8 - i) * 0.02)));
-      bell(ctx, 3135, 0.42, 0.4, 0.22);
+      const pings = [4186, 3520, 4699, 3136, 3951, 5274];
+      pings.forEach((f, i) => scheduleNote(ctx, f, i * 0.07, 0.16, "triangle", 0.5));
+      scheduleNoise(ctx, 0, 0.3, 0.2, 8000);
     },
   },
-  // Sino de sucesso — Success Chime / Success Ping (Kirvano): "bip" digital curto e limpo em duas notas.
   {
-    id: "success-chime",
-    name: "Sino de sucesso",
+    id: "sino-venda",
+    name: "Sino de venda",
     icon: "✅",
     fn(ctx) {
-      scheduleNote(ctx, 1046, 0, 0.22, "sine", 0.3);
-      scheduleNote(ctx, 1568, 0.14, 0.32, "sine", 0.32);
-      scheduleNote(ctx, 2093, 0.14, 0.18, "sine", 0.14);
+      scheduleNote(ctx, 1046, 0, 0.25, "sine", 0.55);
+      scheduleNote(ctx, 1568, 0.13, 0.4, "sine", 0.55);
+      scheduleNote(ctx, 2093, 0.13, 0.2, "sine", 0.25);
     },
   },
 ];
 
+export const DEFAULT_SOUND_ID = "caixa-registradora";
+
 export function playSound(id: string) {
-  const sound = sounds.find((s) => s.id === id);
-  if (!sound) return;
+  const sound = sounds.find((s) => s.id === id) || sounds[0];
   const ctx = createCtx();
   if (!ctx) return;
   try {
-    if(ctx.state==="suspended"){void ctx.resume().then(()=>{try{sound.fn(ctx);}catch{}});return;}
+    if (ctx.state === "suspended") { void ctx.resume().then(() => { try { sound.fn(ctx); } catch {} }); return; }
     sound.fn(ctx);
   } catch {}
 }
