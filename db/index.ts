@@ -29,6 +29,8 @@ const statements=[
 "CREATE TABLE IF NOT EXISTS meta_accounts(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,meta_user_id text,meta_user_name text,ad_account_id text NOT NULL,account_name text NOT NULL,currency text,timezone_name text,account_status integer,access_token_cipher text NOT NULL,access_token_iv text NOT NULL,token_expires_at integer,selected integer NOT NULL DEFAULT 0,connected_at integer NOT NULL,updated_at integer NOT NULL)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_accounts_user_ad ON meta_accounts(user_id,ad_account_id)",
 "CREATE TABLE IF NOT EXISTS meta_linked(user_id text NOT NULL,ad_account_id text NOT NULL,created_at integer NOT NULL)",
-"CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_linked_user_ad ON meta_linked(user_id,ad_account_id)"
+"CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_linked_user_ad ON meta_linked(user_id,ad_account_id)",
+"CREATE TABLE IF NOT EXISTS push_subscriptions(workspace_id text NOT NULL,endpoint text NOT NULL,p256dh text NOT NULL,auth text NOT NULL,created_at integer NOT NULL)",
+"CREATE UNIQUE INDEX IF NOT EXISTS idx_push_sub_endpoint ON push_subscriptions(workspace_id,endpoint)"
 ];
 export async function ensureDb(){if(!initialized)initialized=(async()=>{const binding=d1();if(binding){for(const statement of statements)await binding.prepare(statement).run();}else{await getSql().unsafe(statements.map(s=>s+';').join('\n'));}})().catch(error=>{initialized=undefined;throw error});return initialized}

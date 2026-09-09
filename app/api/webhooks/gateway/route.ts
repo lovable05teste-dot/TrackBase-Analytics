@@ -3,6 +3,7 @@ import { ensureDb, getDb } from "../../../../db";
 import { apiCredentials,events,orders,projects } from "../../../../db/schema";
 import { decryptSecret,sha256 } from "../../../../lib/trackbase-security";
 import {parseTrackingConfig} from "../../../../lib/tracking-config";
+import {pushToWorkspace} from "../../../../lib/push";
 
 function pick(source: Record<string, unknown>, paths: string[]) {
   for (const path of paths) {
@@ -58,5 +59,10 @@ export async function POST(request: Request) {
     if(project?.pixelId&&project.metaTokenCipher&&project.metaTokenIv){try{const accessToken=await decryptSecret(project.metaTokenCipher,project.metaTokenIv),config=parseTrackingConfig(project.trackingConfig),email=pick(body,["email","customer.email","data.customer.email","buyer.email"]),phone=pick(body,["phone","customer.phone","data.customer.phone","buyer.phone"]),sourceUrl=String(pick(body,["url","checkout_url","tracking.url","metadata.url"])||"");const capi={data:[{event_name:"Purchase",event_time:now,event_id:eventId,action_source:"website",event_source_url:sourceUrl||undefined,user_data:{client_ip_address:clientIp(request,config.ipMode),client_user_agent:request.headers.get("user-agent")||undefined,em:await hash(email),ph:await hash(phone,true),fbc:fbc||undefined,fbp:fbp||undefined},custom_data:{value:config.purchase.valueSource==="fixed"?config.purchase.fixedValue:value,currency,order_id:externalId}}]};await fetch(`https://graph.facebook.com/v25.0/${project.pixelId}/events?access_token=${encodeURIComponent(accessToken)}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(capi)})}catch(error){console.error("Gateway CAPI",error)}}
   }
   await db.update(apiCredentials).set({lastUsedAt:new Date().toISOString()}).where(eq(apiCredentials.id,credential.id));
+  if(status==="approved"||status==="pending"){
+   const money=`R$ ${value.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}`;
+   const note=status==="approved"?{title:`Venda aprovada · ${money}`,tag:`tb-approved-${externalId}`}:{title:`Venda pendente · ${money}`,tag:`tb-pending-${externalId}`};
+   await Promise.race([pushToWorkspace(credential.workspaceId,{...note,body:`${credential.provider} · pedido ${externalId}`,url:"/vendas"}),new Promise(r=>setTimeout(r,3000))]).catch(()=>{});
+  }
   return Response.json({received:true,orderId:externalId,status,event:eventName},{headers:cors});
 }
