@@ -5,7 +5,7 @@ import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
 
-type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;updatedAt:number;createdAt:number};
+type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
 const money=(v:number,c="BRL")=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:c}).format(v||0);
 function ago(ts:number){const s=Math.max(1,Math.floor(Date.now()/1000)-ts);if(s<60)return `há ${s}s`;const m=Math.floor(s/60);if(m<60)return `há ${m}min`;const h=Math.floor(m/60);if(h<24)return `há ${h}h`;return `há ${Math.floor(h/24)}d`}
@@ -97,7 +97,7 @@ export function NotificationsBell(){
     <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3"><b className="text-sm">Vendas recentes</b><a href="/vendas" className="text-xs font-medium text-blue-600 hover:underline">Ver vendas</a></div>
     <div className="max-h-80 overflow-y-auto">
      {recent.length===0&&<p className="px-4 py-6 text-center text-sm text-slate-500">Nenhuma venda pendente ou aprovada nos últimos 30 dias.</p>}
-     {recent.map(o=><div key={o.id} className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 last:border-0"><span className={`size-2.5 shrink-0 rounded-full ${o.status==="approved"?"bg-emerald-500":"bg-amber-400"}`}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{o.status==="approved"?"Venda aprovada":"Venda pendente"} · {money(o.value,o.currency)}</p><p className="truncate text-xs text-slate-500">{o.projectName||o.provider} · {o.externalId} · {ago(o.updatedAt)}</p></div></div>)}
+     {recent.map(o=><div key={o.id} className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 last:border-0"><span className={`size-2.5 shrink-0 rounded-full ${o.status==="approved"?"bg-emerald-500":"bg-amber-400"}`}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{o.status==="approved"?"Venda aprovada":"Venda pendente"} · {money(o.value,o.currency)}</p><p className="truncate text-xs text-slate-500">{o.utmCampaign||o.projectName} · {ago(o.updatedAt)}</p></div></div>)}
     </div>
     <div className="space-y-2 border-t border-slate-200 p-3">
      {push==="off"&&<Button variant="outline" size="sm" className="w-full" onClick={enablePush}><Smartphone/>Ativar notificação no celular</Button>}

@@ -22,6 +22,7 @@ function statusOf(value: unknown) {
   if (/pending|waiting|processing|created|initiated|in_review|review|awaiting|aguard|criad|processando|analise/.test(s)) return "pending";
   return "unknown";
 }
+const str=(v:unknown)=>typeof v==="string"?v.trim():typeof v==="number"&&Number.isFinite(v)?String(v):"";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization,x-trackbase-key,content-type","Access-Control-Allow-Methods":"POST,OPTIONS"};
 export function OPTIONS(){return new Response(null,{status:204,headers:cors})}
 async function hash(value:unknown,phone=false){const raw=String(value||"").trim().toLocaleLowerCase(),normalized=phone?raw.replace(/\D/g,""):raw.replace(/\s+/g,"");if(!normalized)return undefined;return sha256(normalized)}
@@ -76,11 +77,10 @@ export async function POST(request: Request) {
     const money=`R$ ${value.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}`;
     const title=(status==="approved"?"Venda aprovada":"Venda pendente")+(prefs.showValue?` · ${money}`:"");
     const parts:string[]=[];
-    if(prefs.showProject){const[proj]=await db.select({name:projects.name}).from(projects).where(eq(projects.id,credential.projectId)).limit(1);if(proj?.name)parts.push(proj.name);}
-    if(prefs.showProduct){const prod=String(pick(body,["product","product_name","productName","item_name","itemName","offer","offer_name","data.product","data.product_name"])||"")||productTitle;if(prod)parts.push(prod);}
-    if(prefs.showUtm){const u=String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||"");if(u)parts.push(u);}
-    parts.push(`${credential.provider} · pedido ${externalId}`);
-    await Promise.race([pushToWorkspace(credential.workspaceId,{title,body:parts.join(" · "),url:"/vendas",tag:`tb-${status}-${externalId}`}),new Promise(r=>setTimeout(r,3000))]).catch(()=>{});
+    if(prefs.showProject){const[proj]=await db.select({name:projects.name}).from(projects).where(eq(projects.id,credential.projectId)).limit(1);const pn=proj?str(proj.name):"";if(pn)parts.push(pn);}
+    if(prefs.showProduct){const prod=str(pick(body,["product","product_name","productName","item_name","itemName","offer_name","data.product","data.product_name"]))||str(productTitle);if(prod)parts.push(prod);}
+    if(prefs.showUtm){const u=str(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"]));const nm=u?u.split("|")[0].trim():"";if(nm)parts.push(nm);}
+    await Promise.race([pushToWorkspace(credential.workspaceId,{title,body:parts.join(" · ")||(status==="approved"?"Toque para ver a venda aprovada":"Toque para ver a venda pendente"),url:"/vendas",tag:`tb-${status}-${externalId}`}),new Promise(r=>setTimeout(r,3000))]).catch(()=>{});
    }
   }
   return Response.json({received:true,orderId:externalId,status,event:eventName},{headers:cors});
