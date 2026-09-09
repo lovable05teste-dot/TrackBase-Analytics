@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 import { Loader2, Volume2 } from "lucide-react";
 import { playSound, sounds } from "@/lib/sounds";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 const STORAGE = "trackbase:notification";
 
 export function SoundSettings() {
-  const [selected, setSelected] = useState("ka-ching");
+  const [selected, setSelected] = useState("cha-ching");
   const [enabled, setEnabled] = useState(true);
   const [playing, setPlaying] = useState("");
 
@@ -42,13 +42,14 @@ export function SoundSettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Volume2 className="size-5" />
-          Som de venda <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-normal text-blue-700">12 sons</span>
+          Som de venda <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-normal text-blue-700">4 sons</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm leading-6 text-slate-600">
           Toque para ouvir. O som escolhido toca sempre que uma venda pendente ou aprovada chegar enquanto o painel estiver aberto (via sino de notificações).
         </p>
+        <p className="text-xs leading-5 text-slate-500">Caixa registradora (Hotmart) · Cha-Ching · Moedas caindo (Kiwify e Cakto) · Sino de sucesso (Kirvano).</p>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-4 w-4 accent-blue-600" />
           Habilitar som de vendas

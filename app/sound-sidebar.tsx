@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import {useEffect,useState} from "react";
 import {ChevronDown,ChevronRight,Loader2,Volume2} from "lucide-react";
 import {playSound,sounds} from "@/lib/sounds";
@@ -7,7 +7,7 @@ import {Switch} from "@/components/ui/switch";
 const STORAGE="trackbase:notification";
 type Pref={selected:string;enabled:boolean};
 
-function readPref():Pref{try{const raw=localStorage.getItem(STORAGE);if(raw){const p=JSON.parse(raw);return{selected:p.selected&&sounds.some(s=>s.id===p.selected)?p.selected:"ka-ching",enabled:typeof p.enabled==="boolean"?p.enabled:true}}}catch{}return{selected:"ka-ching",enabled:true}}
+function readPref():Pref{try{const raw=localStorage.getItem(STORAGE);if(raw){const p=JSON.parse(raw);return{selected:p.selected&&sounds.some(s=>s.id===p.selected)?p.selected:"cha-ching",enabled:typeof p.enabled==="boolean"?p.enabled:true}}}catch{}return{selected:"cha-ching",enabled:true}}
 
 function useSoundPref(){
  const[pref,setPref]=useState<Pref>(readPref);
@@ -33,7 +33,7 @@ export function SoundSidebar(){
     <span className="min-w-0 flex-1"><b className="block text-sm">Notificação</b><small className={`block truncate text-xs ${pref.enabled?"text-emerald-600":"text-slate-400"}`}>{pref.enabled?"Som de venda ativo":"Som desligado"}</small></span>
     <span className={`h-2 w-2 shrink-0 rounded-full ${pref.enabled?"bg-emerald-500":"bg-slate-300"}`}/>
    </button>
-   <button type="button" onClick={()=>setOpen(v=>!v)} title={open?"Ocultar sons":"Ver os 12 sons"} className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition hover:text-blue-600">{open?<ChevronDown className="size-4"/>:<ChevronRight className="size-4"/>}</button>
+   <button type="button" onClick={()=>setOpen(v=>!v)} title={open?"Ocultar sons":"Ver os 4 sons"} className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition hover:text-blue-600">{open?<ChevronDown className="size-4"/>:<ChevronRight className="size-4"/>}</button>
   </div>
   {open&&<div className="mt-1 space-y-2 border-t border-slate-200 p-2">
    <div className="flex items-center justify-between px-0.5 text-xs"><span className="text-slate-500">Som de venda</span><Switch checked={pref.enabled} onCheckedChange={toggle}/></div>
@@ -53,7 +53,7 @@ export function SoundMobile(){
     <span className="min-w-0 flex-1"><b className="block text-sm">Notificação</b><small className={`block truncate text-xs ${pref.enabled?"text-emerald-600":"text-slate-400"}`}>{pref.enabled?"Som de venda ativo":"Som desligado"}</small></span>
     <span className={`h-2 w-2 shrink-0 rounded-full ${pref.enabled?"bg-emerald-500":"bg-slate-300"}`}/>
    </button>
-   <button type="button" onClick={()=>setOpen(v=>!v)} title={open?"Ocultar sons":"Ver os 12 sons"} className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition hover:text-blue-600">{open?<ChevronDown className="size-4"/>:<ChevronRight className="size-4"/>}</button>
+   <button type="button" onClick={()=>setOpen(v=>!v)} title={open?"Ocultar sons":"Ver os 4 sons"} className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition hover:text-blue-600">{open?<ChevronDown className="size-4"/>:<ChevronRight className="size-4"/>}</button>
   </div>
   {open&&<div className="mt-1 space-y-2 border-t border-slate-200 p-2">
    <div className="flex items-center justify-between px-0.5 text-xs"><span className="text-slate-500">Som de venda</span><Switch checked={pref.enabled} onCheckedChange={toggle}/></div>

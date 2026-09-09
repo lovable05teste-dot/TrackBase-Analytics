@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {Bell,BellRing,Smartphone} from "lucide-react";
 import {Button} from "@/components/ui/button";
@@ -29,7 +29,7 @@ function chime(high:boolean){
 }
 const SOUND_KEY="trackbase:notification";
 type SoundPref={selected:string;enabled:boolean};
-const DEFAULT_SOUND:SoundPref={selected:"ka-ching",enabled:true};
+const DEFAULT_SOUND:SoundPref={selected:"cha-ching",enabled:true};
 function readSoundPref():SoundPref{try{const raw=localStorage.getItem(SOUND_KEY);if(raw){const p=JSON.parse(raw);return {selected:sounds.some(s=>s.id===p.selected)?p.selected:DEFAULT_SOUND.selected,enabled:typeof p.enabled==="boolean"?p.enabled:DEFAULT_SOUND.enabled}}}catch{}return DEFAULT_SOUND}
 function saveSoundPref(p:SoundPref){try{localStorage.setItem(SOUND_KEY,JSON.stringify(p))}catch{};window.dispatchEvent(new CustomEvent("tb-sound-change",{detail:{sound:p}}));}
 
@@ -67,7 +67,7 @@ export function NotificationsBell(){
   unlockAudio();
 const unlock=()=>unlockAudio();
    window.addEventListener("pointerdown",unlock,{once:true});
-   const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){if(m.enabled!==false)playSound(sounds.some(s=>s.id===m.soundId)?m.soundId:"ka-ching");}};
+   const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){if(m.enabled!==false)playSound(sounds.some(s=>s.id===m.soundId)?m.soundId:"cha-ching");}};
    try{if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",onSwMessage);}catch{}
    void load(true);
   fetch("/api/notifications/prefs",{cache:"no-store"}).then(r=>r.json()).then(b=>{if(b.prefs)setPrefs(b.prefs);}).catch(()=>{});
@@ -135,7 +135,7 @@ return ()=>{window.removeEventListener("pointerdown",unlock);clearInterval(timer
      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Som da notificação</p>
      <label className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>Som ligado</span><Switch checked={sound.enabled} onCheckedChange={v=>setSound(s=>{const n={...s,enabled:v};saveSoundPref(n);return n})}/></label>
      {sound.enabled&&<div className="flex items-center gap-2"><select value={sound.selected} onChange={e=>setSound(s=>{const n={...s,selected:e.target.value};saveSoundPref(n);return n})} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-card px-2 py-1.5 text-sm">{sounds.map(s=><option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select><Button variant="outline" size="sm" onClick={()=>playSound(sound.selected)}>Testar</Button></div>}
-     <a href="/configuracoes#som" className="block text-xs font-medium text-blue-600 hover:underline">Ver os 12 sons com demo →</a>
+     <a href="/configuracoes#som" className="block text-xs font-medium text-blue-600 hover:underline">Ver os 4 sons com demo →</a>
     </div>
    </div>
   </>}</div>;

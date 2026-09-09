@@ -1,7 +1,7 @@
-let soundPref={soundId:"ka-ching",enabled:true};
+﻿let soundPref={soundId:"cha-ching",enabled:true};
 self.addEventListener("message",event=>{
  const d=(event.data||{});
- if(d.type==="set-sound")soundPref={soundId:(typeof d.soundId==="string"&&d.soundId)?d.soundId:"ka-ching",enabled:d.enabled!==false};
+ if(d.type==="set-sound")soundPref={soundId:(typeof d.soundId==="string"&&d.soundId)?d.soundId:"cha-ching",enabled:d.enabled!==false};
 });
 self.addEventListener("push",event=>{
  let data={};
