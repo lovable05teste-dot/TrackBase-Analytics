@@ -1,7 +1,21 @@
 type SoundFn = (ctx: AudioContext) => void;
 
-function createCtx(): AudioContext {
-  return new AudioContext();
+let sharedCtx:AudioContext|null=null;
+function createCtx(): AudioContext|null {
+  try{
+    if(typeof window==="undefined")return null;
+    if(!sharedCtx){
+      const AC=window.AudioContext||(window as unknown as {webkitAudioContext:typeof AudioContext}).webkitAudioContext;
+      sharedCtx=new AC();
+    }
+    if(sharedCtx.state==="suspended")void sharedCtx.resume();
+    return sharedCtx;
+  }catch{return null;}
+}
+if(typeof window!=="undefined"){
+  const unlock=()=>{try{createCtx();}catch{}};
+  window.addEventListener("pointerdown",unlock,{once:true});
+  window.addEventListener("touchend",unlock,{once:true});
 }
 
 function scheduleNote(ctx: AudioContext, freq: number, start: number, dur: number, type: OscillatorType = "sine", gain = 0.3) {
@@ -119,6 +133,9 @@ export function playSound(id: string) {
   const sound = sounds.find((s) => s.id === id);
   if (!sound) return;
   const ctx = createCtx();
-  sound.fn(ctx);
-  setTimeout(() => ctx.close(), 3000);
+  if (!ctx) return;
+  try {
+    if(ctx.state==="suspended"){void ctx.resume().then(()=>{try{sound.fn(ctx);}catch{}});return;}
+    sound.fn(ctx);
+  } catch {}
 }
