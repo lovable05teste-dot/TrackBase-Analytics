@@ -20,7 +20,7 @@ const statements=[
 "CREATE TABLE IF NOT EXISTS events(id text PRIMARY KEY,project_id text NOT NULL,event_id text NOT NULL,event_name text NOT NULL,source text NOT NULL,occurred_at integer NOT NULL,visitor_id text,fbclid text,fbp text,fbc text,utm_source text,utm_campaign text,utm_medium text,utm_content text,utm_term text,value real,currency text,payload text)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_events_project_event ON events(project_id,event_id)",
 "CREATE INDEX IF NOT EXISTS idx_events_project_time ON events(project_id,occurred_at)",
-"CREATE TABLE IF NOT EXISTS orders(id text PRIMARY KEY,project_id text NOT NULL,external_id text NOT NULL,provider text NOT NULL,status text NOT NULL,value real NOT NULL,currency text NOT NULL,event_id text,created_at integer NOT NULL,updated_at integer NOT NULL)",
+"CREATE TABLE IF NOT EXISTS orders(id text PRIMARY KEY,project_id text NOT NULL,external_id text NOT NULL,provider text NOT NULL,status text NOT NULL,value real NOT NULL,currency text NOT NULL,utm_campaign text,event_id text,created_at integer NOT NULL,updated_at integer NOT NULL)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_provider_external ON orders(provider,external_id)",
 "CREATE TABLE IF NOT EXISTS api_credentials(id text PRIMARY KEY,workspace_id text NOT NULL,project_id text NOT NULL,name text NOT NULL,provider text NOT NULL DEFAULT 'generic',token_hash text NOT NULL,active integer NOT NULL DEFAULT 1,created_at text NOT NULL,last_used_at text)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_api_credentials_token ON api_credentials(token_hash)",
@@ -34,4 +34,4 @@ const statements=[
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_push_sub_endpoint ON push_subscriptions(workspace_id,endpoint)",
 "CREATE TABLE IF NOT EXISTS notification_prefs(workspace_id text PRIMARY KEY,prefs text NOT NULL,updated_at integer NOT NULL)"
 ];
-export async function ensureDb(){if(!initialized)initialized=(async()=>{const binding=d1();if(binding){for(const statement of statements)await binding.prepare(statement).run();}else{await getSql().unsafe(statements.map(s=>s+';').join('\n'));}})().catch(error=>{initialized=undefined;throw error});return initialized}
+export async function ensureDb(){if(!initialized)initialized=(async()=>{const binding=d1();const addCols=["ALTER TABLE orders ADD COLUMN utm_campaign text"];if(binding){for(const statement of statements)await binding.prepare(statement).run();for(const add of addCols){try{await binding.prepare(add).run()}catch{}}}else{await getSql().unsafe(statements.map(s=>s+';').join('\n'));for(const add of addCols){try{await getSql().unsafe(add)}catch{}}}})().catch(error=>{initialized=undefined;throw error});return initialized}

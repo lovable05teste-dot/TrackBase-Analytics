@@ -37,21 +37,29 @@ export async function POST(request: Request) {
   if(!credential||!credActive)return Response.json({error:"Credencial inválida"},{status:401,headers:cors});
   let body:Record<string,unknown>;
   try{body=await request.json() as Record<string,unknown>}catch{return Response.json({error:"JSON inválido"},{status:400,headers:cors})}
-  const externalId=String(pick(body,["transaction_hash","transactionHash","reference","reference_id","order_number","id","transaction_id","transactionId","sale_id","saleId","data.id","data.transaction.id","order.id"])||crypto.randomUUID());
+  const externalId=String(pick(body,["transaction_hash","transactionHash","transaction.id","reference","reference_id","order_number","id","transaction_id","transactionId","sale_id","saleId","data.id","data.transaction.id","order.id"])||crypto.randomUUID());
   const rawStatus=pick(body,["status","payment_status","transaction_status","event","type","data.status","data.payment_status","data.transaction.status","order.status"]);
   const status=statusOf(rawStatus);
   if (status === "unknown") return Response.json({error:"Status de pagamento não reconhecido"},{status:400,headers:cors});
-  const fortpay=Boolean(pick(body,["transaction_hash"])) || credential.provider==="fortpay";
-  const centsValue=fortpay?pick(body,["amount","data.amount"]):pick(body,["amount_cents","amountCents","total_cents","data.amount_cents","data.transaction.amount_cents","order.total_cents"]),rawValue=pick(body,["value","amount","total","price","data.value","data.amount","data.transaction.amount","order.total"]);
-  const value=centsValue!==undefined?Number(centsValue||0)/100:Number(rawValue||0);
+  const fortpay=Boolean(pick(body,["transaction_hash"]))||credential.provider==="fortpay"||String(pick(body,["platform"])||"").toLowerCase()==="fortpay"||pick(body,["transaction.amount"])!==undefined;
+  const itemsList=Array.isArray((body as {items?:unknown}).items)?(body as {items:Array<Record<string,unknown>>}).items:[];
+  const centsValue=fortpay?pick(body,["amount","data.amount","transaction.amount","offer.price"]):pick(body,["amount_cents","amountCents","total_cents","data.amount_cents","data.transaction.amount_cents","order.total_cents"]),rawValue=pick(body,["value","amount","total","price","data.value","data.amount","data.transaction.amount","order.total"]);
+  let value:number;
+  if(centsValue!==undefined)value=Number(centsValue||0)/100;
+  else if(rawValue!==undefined)value=Number(rawValue||0);
+  else if(itemsList.length&&Number.isFinite(Number(itemsList[0].price)))value=fortpay?Number(itemsList[0].price)/100:Number(itemsList[0].price);
+  else value=0;
   if(!Number.isFinite(value)||value<0)return Response.json({error:"Valor da venda inválido"},{status:400,headers:cors});
+  const rawUtm=String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||"").trim();
+  const utmCampaign=rawUtm?rawUtm.split("|")[0].trim()||null:null;
+  const productTitle=itemsList.length?String(itemsList[0].title||itemsList[0].name||""):"";
   const currency=String(pick(body,["currency","data.currency","data.transaction.currency"])||"BRL").toUpperCase();
   const eventId=String(pick(body,["event_id","eventId","tracking.event_id","metadata.event_id","data.event_id"])||(status==="approved"?`purchase_${externalId}`:`gw_${credential.provider}_${externalId}_${status}`));
   const paidAt=pick(body,["paid_at","data.paid_at"]);
   const paidTime=paidAt?Math.floor(Date.parse(String(paidAt))/1000):Math.floor(Date.now()/1000);
   const now=Math.floor(Date.now()/1000);
   const db=getDb();
-  await db.insert(orders).values({id:crypto.randomUUID(),projectId:credential.projectId,externalId,provider:credential.provider,status,value,currency,eventId,createdAt:now,updatedAt:now}).onConflictDoUpdate({target:[orders.provider,orders.externalId],set:{status,value,currency,eventId,updatedAt:now}});
+  await db.insert(orders).values({id:crypto.randomUUID(),projectId:credential.projectId,externalId,provider:credential.provider,status,value,currency,utmCampaign,eventId,createdAt:now,updatedAt:now}).onConflictDoUpdate({target:[orders.provider,orders.externalId],set:{status,value,currency,utmCampaign,eventId,updatedAt:now}});
   const eventName=status==="approved"?"Purchase":status==="pending"?"PaymentPending":status==="refunded"?"Refund":status==="chargeback"?"Chargeback":"PaymentCancelled";
   const fbc=String(pick(body,["fbc","tracking.fbc","metadata.fbc","data.tracking.fbc"])||""),fbp=String(pick(body,["fbp","tracking.fbp","metadata.fbp","data.tracking.fbp"])||""),fbclid=String(pick(body,["fbclid","tracking.fbclid","metadata.fbclid","data.tracking.fbclid"])||"");
   await db.insert(events).values({id:crypto.randomUUID(),projectId:credential.projectId,eventId,eventName,source:"gateway",occurredAt:Number.isFinite(paidTime)?paidTime:now,value,currency,payload:JSON.stringify(body),visitorId:String(pick(body,["tb_vid","tracking.tb_vid","metadata.tb_vid","data.tracking.tb_vid"])||""),fbclid,fbc,fbp,utmSource:String(pick(body,["utm_source","tracking.utm_source","metadata.utm_source","data.tracking.utm_source"])||""),utmCampaign:String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||""),utmMedium:String(pick(body,["utm_medium","tracking.utm_medium","metadata.utm_medium","data.tracking.utm_medium"])||""),utmContent:String(pick(body,["utm_content","tracking.utm_content","metadata.utm_content","data.tracking.utm_content"])||""),utmTerm:String(pick(body,["utm_term","tracking.utm_term","metadata.utm_term","data.tracking.utm_term"])||"")}).onConflictDoNothing();
@@ -69,7 +77,7 @@ export async function POST(request: Request) {
     const title=(status==="approved"?"Venda aprovada":"Venda pendente")+(prefs.showValue?` · ${money}`:"");
     const parts:string[]=[];
     if(prefs.showProject){const[proj]=await db.select({name:projects.name}).from(projects).where(eq(projects.id,credential.projectId)).limit(1);if(proj?.name)parts.push(proj.name);}
-    if(prefs.showProduct){const prod=String(pick(body,["product","product_name","productName","item_name","itemName","offer","offer_name","data.product","data.product_name"])||"");if(prod)parts.push(prod);}
+    if(prefs.showProduct){const prod=String(pick(body,["product","product_name","productName","item_name","itemName","offer","offer_name","data.product","data.product_name"])||"")||productTitle;if(prod)parts.push(prod);}
     if(prefs.showUtm){const u=String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||"");if(u)parts.push(u);}
     parts.push(`${credential.provider} · pedido ${externalId}`);
     await Promise.race([pushToWorkspace(credential.workspaceId,{title,body:parts.join(" · "),url:"/vendas",tag:`tb-${status}-${externalId}`}),new Promise(r=>setTimeout(r,3000))]).catch(()=>{});

@@ -50,8 +50,9 @@ export default function Docs(){
      <p>Valores fora dessa lista retornam <code>HTTP 400</code> com <code>{"{"}"error": "Status de pagamento não reconhecido"{"}"}</code> e nada é salvo. Reenviar o mesmo ID atualiza a venda (mudança de pendente → aprovada funciona sozinha).</p>
     </Sec>
     <Sec id="fortpay" n="Parte 6" title="Caso especial: FortPay">
-     <p>Pedidos FortPay usam <code>transaction_hash</code> como ID e <code>amount</code> em valor decimal:</p>
-     <Code>{`{\n  "transaction_hash": "abc123...",\n  "status": "paid",\n  "amount": 69.90\n}`}</Code>
+     <p>A FortPay envia o pedido aninhado: ID em <code>transaction.id</code>, valor em <code>transaction.amount</code> <b>em centavos</b> (777 = R$ 7,77), produto em <code>items[0].title</code> e UTMs em <code>tracking.*</code>:</p>
+     <Code>{`{\n  "event": "transaction",\n  "status": "waiting_payment",\n  "platform": "FortPay",\n  "method": "pix",\n  "customer": {"name": "...", "email": "...", "phone": "..."},\n  "transaction": {"id": "abc123", "amount": 777},\n  "items": [{"title": "NOME DO PRODUTO", "price": "777"}],\n  "tracking": {"utm_source": "...", "utm_campaign": "NOME|ID"}\n}`}</Code>
+     <p>O TrackBase usa <code>transaction.id</code> para atualizar a venda (pendente → aprovada) sem duplicar, converte centavos sozinho e mostra só o <b>nome</b> da campanha (antes do <code>|</code>). Sem UTMs, a campanha fica vazia.</p>
     </Sec>
     <Sec id="valores" n="Parte 7" title="Valores e moeda">
      <p>Se enviar valor em centavos (<code>amount_cents: 6990</code>), o TrackBase divide por 100. Se enviar decimal (<code>amount: 69.90</code>), usa direto. Valores negativos ou inválidos retornam <code>HTTP 400</code>. Moeda padrão: <code>BRL</code>.</p>
