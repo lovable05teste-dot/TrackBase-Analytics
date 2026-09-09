@@ -1,0 +1,93 @@
+"use client";
+import {useEffect,useState} from "react";
+import {AlertTriangle,CheckCircle2,Copy,FlaskConical,History,Loader2,Megaphone,Play,Plus,Trash2,Users} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {Card,CardContent,CardHeader,CardTitle} from "@/components/ui/card";
+import {Switch} from "@/components/ui/switch";
+
+type Account={id:string;adAccountId:string;name:string};
+type Project={id:string;name:string;pixelId?:string};
+type Rule={id:string;name:string;level:string;metric:string;operator:string;value:number;windowDays:number;minSpend:number;action:string;active:boolean;cooldownHours:number;lastTriggeredAt?:number|null};
+const LEVELS:[string,string][]=[["campaign","Campanha"],["adset","Conjunto"],["ad","Anúncio"]];
+const METRICS:[string,string][]=[["roas","ROAS"],["spend","Gasto"],["cpa","CPA"],["ctr","CTR %"],["frequency","Frequência"],["sales","Vendas"]];
+const OPS:[string,string][]=[["<","menor que"],[">","maior que"],["<=","menor/igual"],[">=","maior/igual"]];
+const ACTS:[string,string][]=[["pause","Pausar"],["activate","Ativar"],["notify","Só avisar"]];
+const ruleText=(r:Rule)=>`${(LEVELS.find(l=>l[0]===r.level)||[])[1]||r.level} com ${(METRICS.find(m=>m[0]===r.metric)||[])[1]||r.metric} ${(OPS.find(o=>o[0]===r.operator)||[])[1]||r.operator} ${r.value} em ${r.windowDays}d${r.minSpend?` (gasto mín R$ ${r.minSpend})`:""} → ${(ACTS.find(a=>a[0]===r.action)||[])[1]||r.action}`;
+const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
+const when=(ts:number)=>new Date(ts*1000).toLocaleString("pt-BR");
+const input="dashboard-input mt-1";
+
+function useApi<T>(url:string|null){
+ const[data,setData]=useState<T|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState("");
+ const load=async()=>{if(!url)return;setLoading(true);setError("");try{const r=await fetch(url,{cache:"no-store"});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setData(b);}catch(e){setError(e instanceof Error?e.message:"Falha.")}finally{setLoading(false)}};
+ return {data,loading,error,load,setData};
+}
+
+function Diagnostics({accounts}:{accounts:Account[]}){
+ const[res,setRes]=useState<any|null>(null);const[loading,setLoading]=useState(false);const[error,setError]=useState("");const[msg,setMsg]=useState("");
+ const run=async()=>{setLoading(true);setError("");setMsg("");try{const r=await fetch("/api/meta/diagnostics",{cache:"no-store"});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setRes(b);}catch(e){setError(e instanceof Error?e.message:"Falha.")}finally{setLoading(false)}};
+ const duplicate=async(w:any)=>{if(!confirm(`Duplicar o anúncio "${w.adName}"?`))return;setMsg("");try{const r=await fetch("/api/meta/actions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({accountId:w.accountRowId,objectId:w.adId,level:"ad",action:"duplicate"})});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setMsg(`Anúncio duplicado na Meta.`);}catch(e){setMsg(e instanceof Error?e.message:"Falha ao duplicar.")}};
+ useEffect(()=>{void run();},[]);
+ return <div className="space-y-5">
+  <div className="flex flex-wrap items-center gap-3"><Button onClick={run} disabled={loading}>{loading?<Loader2 className="animate-spin"/>:<FlaskConical/>}Analisar últimos 7 dias</Button>{msg&&<span className="text-sm text-emerald-600">{msg}</span>}{error&&<span className="text-sm text-red-600">{error}</span>}</div>
+  {!res&&!loading&&!error&&<p className="text-sm text-slate-500">Clique em analisar para ler fadiga, qualidade, UTMs e comparar com o Gerenciador.</p>}
+  {res&&<>
+   <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="size-5 text-amber-600"/>Fadiga de criativo ({res.fatigue?.length||0})</CardTitle></CardHeader><CardContent>{(res.fatigue||[]).length===0?<p className="text-sm text-slate-500">Nenhum anúncio com sinais de fadiga.</p>:<div className="space-y-2">{res.fatigue.map((f:any,i:number)=><div key={i} className="rounded-lg border border-amber-500/30 bg-amber-50 p-3 text-sm"><b>{f.adName}</b><p className="mt-1 text-slate-600">{f.campaignName} · {f.accountName}</p><p className="mt-1 text-slate-600">Gasto 7d {money(f.spend7)} · freq {f.freqPrev}→{f.freqRecent} · CTR {f.ctrPrev}%→{f.ctrRecent}%</p><p className="mt-1 font-medium text-amber-700">{f.verdict}</p></div>)}</div>}</CardContent></Card>
+   <Card className="metric-card"><CardHeader><CardTitle>Qualidade Meta abaixo da média ({res.quality?.length||0})</CardTitle></CardHeader><CardContent>{(res.quality||[]).length===0?<p className="text-sm text-slate-500">Nada crítico.</p>:<div className="space-y-2">{res.quality.map((q:any,i:number)=><div key={i} className="rounded-lg border border-slate-200 p-3 text-sm"><b>{q.adName}</b><p className="mt-1 text-slate-600">{(q.flags||[]).join(" · ")} abaixo da média · {Number(q.impressions||0).toLocaleString("pt-BR")} impressões</p></div>)}</div>}</CardContent></Card>
+   <Card className="metric-card"><CardHeader><CardTitle>UTMs nos anúncios ({res.utmIssues?.length||0} problemas)</CardTitle></CardHeader><CardContent>{(res.utmIssues||[]).length===0?<p className="text-sm text-slate-500">Todos os links com UTM. ✓</p>:<div className="space-y-2">{res.utmIssues.map((u:any,i:number)=><div key={i} className="rounded-lg border border-slate-200 p-3 text-sm"><b>{u.adName}</b><p className="mt-1 text-red-600">{u.problem}</p></div>)}</div>}</CardContent></Card>
+   <Card className="metric-card"><CardHeader><CardTitle>TrackBase × Gerenciador (7 dias)</CardTitle></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr><th className="p-2">Campanha</th><th className="p-2">Meta compr.</th><th className="p-2">Meta fat.</th><th className="p-2">TB vendas</th><th className="p-2">TB fat.</th><th className="p-2">Dif.</th></tr></thead><tbody>{(res.compare||[]).map((c:any,i:number)=><tr key={i} className="border-t border-slate-200"><td className="p-2">{c.campaignName}</td><td className="p-2">{c.metaPurchases}</td><td className="p-2">{money(c.metaRevenue)}</td><td className="p-2">{c.tbSales}</td><td className="p-2">{money(c.tbRevenue)}</td><td className={`p-2 font-medium ${c.diff!=null&&Math.abs(c.diff)>20?"text-red-600":"text-emerald-600"}`}>{c.diff==null?"—":`${c.diff}%`}</td></tr>)}</tbody></table></div></CardContent></Card>
+   <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2"><Megaphone className="size-5 text-blue-600"/>Top anúncios por ROAS</CardTitle></CardHeader><CardContent>{(res.winners||[]).length===0?<p className="text-sm text-slate-500">Sem vencedores com gasto e receita.</p>:<div className="space-y-2">{res.winners.map((w:any,i:number)=><div key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm"><div><b>{w.adName}</b><p className="mt-1 text-slate-600">{w.campaignName} · gasto {money(w.spend)} · fat. {money(w.revenue)} · <b className="text-emerald-600">ROAS {w.roas}x</b></p></div><Button variant="outline" size="sm" onClick={()=>duplicate(w)}><Copy/>Duplicar</Button></div>)}</div>}</CardContent></Card>
+  </>}
+ </div>;
+}
+
+function Rules(){
+ const[rules,setRules]=useState<Rule[]>([]);const[loading,setLoading]=useState(false);const[msg,setMsg]=useState("");
+ const[f,setF]=useState({name:"",level:"campaign",metric:"roas",operator:"<",value:"1.5",windowDays:"3",minSpend:"50",action:"pause",cooldownHours:"72",active:true});
+ const[running,setRunning]=useState("");
+ const load=async()=>{setLoading(true);try{const r=await fetch("/api/meta/rules",{cache:"no-store"});const b=await r.json();if(r.ok)setRules(b.rules||[]);}finally{setLoading(false)}};
+ useEffect(()=>{void load();},[]);
+ const save=async()=>{setMsg("");try{const r=await fetch("/api/meta/rules",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...f,value:Number(f.value),windowDays:Number(f.windowDays),minSpend:Number(f.minSpend),cooldownHours:Number(f.cooldownHours)})});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setF({...f,name:"",value:"1.5"});setMsg("Regra criada.");await load();}catch(e){setMsg(e instanceof Error?e.message:"Falha.")}};
+ const toggle=async(rule:Rule)=>{await fetch("/api/meta/rules",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({...rule,active:!rule.active})});await load();};
+ const remove=async(id:string)=>{if(!confirm("Apagar esta regra?"))return;await fetch(`/api/meta/rules?id=${encodeURIComponent(id)}`,{method:"DELETE"});await load();};
+ const run=async(dry:boolean,ids?:string[])=>{setRunning(dry?"dry":"live");setMsg("");try{const r=await fetch("/api/meta/rules/evaluate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({dryRun:dry,ruleIds:ids})});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");const t=(b.triggered||[]).length;setMsg(dry?`Simulação: ${t} ação(ões) seriam executadas em ${b.evaluated} itens.`:`Executado: ${t} ação(ões) em ${b.evaluated} itens.${b.errors?.length?` Erros: ${b.errors.length}.`:""}`);}catch(e){setMsg(e instanceof Error?e.message:"Falha.")}finally{setRunning("");}};
+ return <div className="space-y-5">
+  <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2"><Plus className="size-5 text-blue-600"/>Nova regra</CardTitle></CardHeader><CardContent><div className="grid gap-3 md:grid-cols-3"><label className="text-sm md:col-span-1">Nome<input className={input} value={f.name} onChange={e=>setF({...f,name:e.target.value})} placeholder="Ex.: Mata CBO fraco"/></label><label className="text-sm">Nível<select className={input} value={f.level} onChange={e=>setF({...f,level:e.target.value})}>{LEVELS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label><label className="text-sm">Métrica<select className={input} value={f.metric} onChange={e=>setF({...f,metric:e.target.value})}>{METRICS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label><label className="text-sm">Condição<select className={input} value={f.operator} onChange={e=>setF({...f,operator:e.target.value})}>{OPS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label><label className="text-sm">Valor<input type="number" step="any" className={input} value={f.value} onChange={e=>setF({...f,value:e.target.value})}/></label><label className="text-sm">Janela<select className={input} value={f.windowDays} onChange={e=>setF({...f,windowDays:e.target.value})}>{[["1","1 dia"],["3","3 dias"],["7","7 dias"],["14","14 dias"],["30","30 dias"]].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label><label className="text-sm">Gasto mín. (R$)<input type="number" step="any" className={input} value={f.minSpend} onChange={e=>setF({...f,minSpend:e.target.value})}/></label><label className="text-sm">Ação<select className={input} value={f.action} onChange={e=>setF({...f,action:e.target.value})}>{ACTS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label><label className="text-sm">Intervalo mín. (h)<input type="number" className={input} value={f.cooldownHours} onChange={e=>setF({...f,cooldownHours:e.target.value})}/></label></div><div className="mt-4"><Button onClick={save} disabled={!f.name.trim()}><Plus/>Criar regra</Button></div></CardContent></Card>
+  <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>run(true)} disabled={running!==""}>{running==="dry"?<Loader2 className="animate-spin"/>:<FlaskConical/>}Simular todas</Button><Button variant="outline" onClick={()=>run(false)} disabled={running!==""}>{running==="live"?<Loader2 className="animate-spin"/>:<Play/>}Executar agora</Button>{msg&&<span className="self-center text-sm text-slate-600">{msg}</span>}</div>
+  <Card className="metric-card"><CardHeader><CardTitle>Minhas regras ({rules.length})</CardTitle></CardHeader><CardContent>{loading?<Loader2 className="animate-spin"/>:rules.length===0?<p className="text-sm text-slate-500">Nenhuma regra. Crie a primeira acima.</p>:<div className="space-y-2">{rules.map(r=><div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm"><div><b>{r.name}</b><p className="mt-1 text-slate-600">{ruleText(r)}</p>{r.lastTriggeredAt?<p className="mt-1 text-xs text-slate-500">Último disparo: {when(r.lastTriggeredAt)}</p>:null}</div><div className="flex items-center gap-2"><Switch checked={!!r.active} onCheckedChange={()=>toggle(r)} aria-label="Ativar regra"/><Button variant="outline" size="sm" onClick={()=>run(true,[r.id])}>Testar</Button><Button variant="outline" size="sm" className="text-red-600" onClick={()=>remove(r.id)}><Trash2/></Button></div></div>)}</div>}</CardContent></Card>
+ </div>;
+}
+
+function Audiences({accounts}:{accounts:Account[]}){
+ const[projects,setProjects]=useState<Project[]>([]);const[list,setList]=useState<any[]>([]);const[msg,setMsg]=useState("");
+ const[accountId,setAccountId]=useState("");const[projectId,setProjectId]=useState("");const[name,setName]=useState("Compradores 180d");const[days,setDays]=useState("180");const[busy,setBusy]=useState(false);
+ const loadAll=async()=>{const[p,a]=await Promise.all([fetch("/api/projects",{cache:"no-store"}).then(r=>r.json()),fetch("/api/meta/audiences",{cache:"no-store"}).then(r=>r.json()).catch(()=>({audiences:[]}))]);setProjects(p.projects||[]);setList(a.audiences||[]);if(!projectId&&p.projects?.[0])setProjectId(p.projects[0].id);};
+ useEffect(()=>{void loadAll();},[]);
+ const create=async()=>{const proj=projects.find(p=>p.id===projectId);if(!proj?.pixelId){setMsg("O projeto precisa de um Pixel conectado.");return;}setBusy(true);setMsg("");try{const r=await fetch("/api/meta/audiences",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({accountId,pixelId:proj.pixelId,name,days:Number(days)})});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setMsg(`Público "${b.name}" criado na Meta.`);await loadAll();}catch(e){setMsg(e instanceof Error?e.message:"Falha.")}finally{setBusy(false)}};
+ return <div className="space-y-5">
+  <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-blue-600"/>Criar público de compradores</CardTitle></CardHeader><CardContent><p className="mb-4 text-sm leading-6 text-slate-600">Gera um público no Gerenciador a partir do Pixel (evento Purchase) para lookalike e remarketing.</p><div className="grid gap-3 md:grid-cols-2"><label className="text-sm">Conta de anúncio<select className={input} value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="">Escolha…</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label><label className="text-sm">Projeto (Pixel)<select className={input} value={projectId} onChange={e=>setProjectId(e.target.value)}>{projects.map(p=><option key={p.id} value={p.id}>{p.name}{p.pixelId?` · ${p.pixelId}`:" · sem Pixel"}</option>)}</select></label><label className="text-sm">Nome do público<input className={input} value={name} onChange={e=>setName(e.target.value)}/></label><label className="text-sm">Retenção (dias)<input type="number" min={1} max={180} className={input} value={days} onChange={e=>setDays(e.target.value)}/></label></div><div className="mt-4"><Button onClick={create} disabled={busy||!accountId||!projectId}>{busy?<Loader2 className="animate-spin"/>:<Plus/>}Criar na Meta</Button>{msg&&<span className="ml-3 text-sm text-slate-600">{msg}</span>}</div></CardContent></Card>
+  <Card className="metric-card"><CardHeader><CardTitle>Públicos existentes ({list.length})</CardTitle></CardHeader><CardContent>{list.length===0?<p className="text-sm text-slate-500">Nenhum público encontrado nas contas vinculadas.</p>:<div className="space-y-2">{list.map((a:any,i:number)=><div key={i} className="rounded-lg border border-slate-200 p-3 text-sm"><b>{a.name}</b><p className="mt-1 text-slate-600">{a.accountName} · tamanho aprox.: {a.approximate_count!=null?Number(a.approximate_count).toLocaleString("pt-BR"):"—"}</p></div>)}</div>}</CardContent></Card>
+ </div>;
+}
+
+function HistoryList(){
+ const docs=useApi<{history:any[]}>("/api/meta/history");
+ useEffect(()=>{void docs.load();},[]);
+ return <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2"><History className="size-5 text-blue-600"/>Histórico de ações</CardTitle></CardHeader><CardContent>{docs.loading?<Loader2 className="animate-spin"/>:docs.error?<p className="text-sm text-red-600">{docs.error}</p>:!docs.data?.history.length?<p className="text-sm text-slate-500">Nenhuma ação registrada ainda.</p>:<div className="space-y-2">{docs.data.history.map((h:any)=><div key={h.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 text-sm"><div><b>{h.action}</b> <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${h.actor==="rule"?"bg-violet-500/10 text-violet-700":"bg-slate-500/10 text-slate-600"}`}>{h.actor==="rule"?"regra":"manual"}</span><p className="mt-1 text-slate-600">{h.targetName||h.targetId||"—"}{h.detail?` · ${h.detail}`:""}</p></div><span className="text-xs text-slate-500">{when(h.createdAt)}</span></div>)}</div>}</CardContent></Card>;
+}
+
+export function LabClient(){
+ const[tab,setTab]=useState("diag");
+ const accs=useApi<{accounts:Account[]}>("/api/meta/accounts");
+ useEffect(()=>{void accs.load();},[]);
+ const accounts=(accs.data?.accounts||[]).map(a=>({id:a.id,adAccountId:(a as any).adAccountId||"",name:a.name}));
+ return <div className="space-y-5">
+  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+   {[["diag","Diagnóstico"],["rules","Regras"],["audiences","Públicos"],["history","Histórico"]].map(([v,l])=><button key={v} onClick={()=>setTab(v)} className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${tab===v?"border-blue-600 bg-blue-600/10 text-blue-700":"border-slate-200 bg-white text-slate-600 hover:border-blue-300"}`}>{l}</button>)}
+  </div>
+  {tab==="diag"&&<Diagnostics accounts={accounts}/>}
+  {tab==="rules"&&<Rules/>}
+  {tab==="audiences"&&<Audiences accounts={accounts}/>}
+  {tab==="history"&&<HistoryList/>}
+ </div>;
+}

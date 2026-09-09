@@ -2,7 +2,8 @@ import {and,eq} from "drizzle-orm";
 import {ensureDb,getDb} from "@/db";
 import {metaAccounts} from "@/db/schema";
 import {metaConfig,metaJson} from "@/lib/meta";
-import {decryptSecret,requestUserId} from "@/lib/trackbase-security";
+import {decryptSecret,requestUserId,sha256} from "@/lib/trackbase-security";
+import {logHistory} from "@/lib/meta-rules";
 
 type Action="activate"|"pause"|"duplicate"|"budget"|"delete";
 
@@ -17,13 +18,14 @@ export async function POST(request:Request){
     const token=await decryptSecret(account.accessTokenCipher,account.accessTokenIv),config=metaConfig(),base=`https://graph.facebook.com/${config.version}/${encodeURIComponent(body.objectId)}`;
     const object=await metaJson<{account_id?:string}>(`${base}?fields=account_id&access_token=${encodeURIComponent(token)}`);
     if(String(object.account_id||"").replace("act_","")!==account.adAccountId)return Response.json({error:"O item não pertence à conta escolhida."},{status:403});
-    if(body.action==="delete"){await metaJson(`${base}?access_token=${encodeURIComponent(token)}`,{method:"DELETE"});return Response.json({ok:true,action:body.action})}
+    if(body.action==="delete"){await metaJson(`${base}?access_token=${encodeURIComponent(token)}`,{method:"DELETE"});await logHistory(getDb(),{workspaceId:"ws_"+(await sha256(userId)).slice(0,24),userId,actor:"manual",action:"delete",targetLevel:String(body.level||""),targetId:String(body.objectId||"")});return Response.json({ok:true,action:body.action})}
     const params=new URLSearchParams({access_token:token});
     if(body.action==="activate")params.set("status","ACTIVE");
     if(body.action==="pause")params.set("status","PAUSED");
     if(body.action==="budget"){if(!body.value||body.value<=0)return Response.json({error:"Informe um orçamento válido."},{status:400});params.set("daily_budget",String(Math.round(body.value*100)))}
-    if(body.action==="duplicate"){const copy=new URLSearchParams({access_token:token});if(body.level==="campaign")copy.set("deep_copy","true");const result=await metaJson(`${base}/copies`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:copy});return Response.json({ok:true,action:body.action,result})}
+    if(body.action==="duplicate"){const copy=new URLSearchParams({access_token:token});if(body.level==="campaign")copy.set("deep_copy","true");const result=await metaJson(`${base}/copies`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:copy});await logHistory(getDb(),{workspaceId:"ws_"+(await sha256(userId)).slice(0,24),userId,actor:"manual",action:"duplicate",targetLevel:String(body.level||""),targetId:String(body.objectId||"")});return Response.json({ok:true,action:body.action,result})}
     const result=await metaJson(base,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:params});
+    await logHistory(getDb(),{workspaceId:"ws_"+(await sha256(userId)).slice(0,24),userId,actor:"manual",action:String(body.action||""),targetLevel:String(body.level||""),targetId:String(body.objectId||"")});
     return Response.json({ok:true,action:body.action,result});
   }catch(error){console.error("Meta action",error);return Response.json({error:error instanceof Error?error.message:"A Meta recusou a alteração."},{status:500})}
 }

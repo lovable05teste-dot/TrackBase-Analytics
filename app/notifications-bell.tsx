@@ -129,7 +129,7 @@ return ()=>{window.removeEventListener("pointerdown",unlock);clearInterval(timer
     </div>
     <div className="space-y-2.5 border-t border-slate-200 p-3">
      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Mostrar na notificação</p>
-     {[["showValue","Valor da venda"],["showProduct","Nome do produto"],["showUtm","UTM de campanha"],["showProject","Nome do projeto"]].map(([k,label])=>{const key=k as keyof NotifyPrefs;return <label key={k} className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>{label}</span><Switch checked={prefs[key]} onCheckedChange={v=>savePrefs({...prefs,[key]:v})}/></label>})}
+     {[["showValue","Valor da venda"],["showProduct","Nome do produto"],["showUtm","UTM de campanha"],["showProject","Nome do projeto"],["dailyDigest","Resumo diário às 21h"]].map(([k,label])=>{const key=k as keyof NotifyPrefs;return <label key={k} className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>{label}</span><Switch checked={prefs[key]} onCheckedChange={v=>savePrefs({...prefs,[key]:v})}/></label>})}
     </div>
     <div className="space-y-2.5 border-t border-slate-200 p-3">
      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Som da notificação</p>

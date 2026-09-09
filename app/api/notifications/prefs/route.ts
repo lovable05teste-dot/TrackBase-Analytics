@@ -22,6 +22,6 @@ export async function POST(request:Request){
  const[row]=await db.select().from(notificationPrefs).where(eq(notificationPrefs.workspaceId,workspaceId)).limit(1);
  const next={...parsePrefs(row?.prefs),...sanitizePrefs(body)};
  const prefs=JSON.stringify(next),now=Math.floor(Date.now()/1000);
- await db.insert(notificationPrefs).values({workspaceId,prefs,updatedAt:now}).onConflictDoUpdate({target:[notificationPrefs.workspaceId],set:{prefs,updatedAt:now}});
+ await db.insert(notificationPrefs).values({workspaceId,userId,prefs,updatedAt:now}).onConflictDoUpdate({target:[notificationPrefs.workspaceId],set:{userId,prefs,updatedAt:now}});
  return Response.json({prefs:next});
 }
