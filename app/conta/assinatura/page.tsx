@@ -1,4 +1,4 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ const PLANS = [
 
 export default function Page() {
   return (
-    <PrivateSection title="Assinatura" description="Escolha o plano ideal para o seu volume.">
+    <AppShell title="Assinatura" subtitle="Escolha o plano ideal para o seu volume.">
       <div className="grid gap-4 md:grid-cols-3">
         {PLANS.map((p) => (
           <div key={p.name} className={`metric-card rounded-xl p-6 ${p.hot ? "border-violet-400/40" : ""}`}>
@@ -23,6 +23,6 @@ export default function Page() {
         ))}
       </div>
       <p className="mt-4 text-xs text-slate-500">Precisa de TikTok + Meta juntos? Veja a <a href="/conta/assinatura-avancada" className="underline text-violet-300">Assinatura Avançado</a>.</p>
-    </PrivateSection>
+    </AppShell>
   );
 }

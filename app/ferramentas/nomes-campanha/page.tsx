@@ -1,12 +1,12 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 import { NamesClient } from "./names-client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
-    <PrivateSection title="Nomes de Campanha" description="Padronize CBO, ABO e remarketing.">
+    <AppShell title="Nomes de Campanha" subtitle="Padronize CBO, ABO e remarketing.">
       <NamesClient />
-    </PrivateSection>
+    </AppShell>
   );
 }

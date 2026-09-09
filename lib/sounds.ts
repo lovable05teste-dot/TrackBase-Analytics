@@ -1,7 +1,21 @@
 type SoundFn = (ctx: AudioContext) => void;
 
-function createCtx(): AudioContext {
-  return new AudioContext();
+let sharedCtx:AudioContext|null=null;
+function createCtx(): AudioContext|null {
+  try{
+    if(typeof window==="undefined")return null;
+    if(!sharedCtx){
+      const AC=window.AudioContext||(window as unknown as {webkitAudioContext:typeof AudioContext}).webkitAudioContext;
+      sharedCtx=new AC();
+    }
+    if(sharedCtx.state==="suspended")void sharedCtx.resume();
+    return sharedCtx;
+  }catch{return null;}
+}
+if(typeof window!=="undefined"){
+  const unlock=()=>{try{createCtx();}catch{}};
+  window.addEventListener("pointerdown",unlock,{once:true});
+  window.addEventListener("touchend",unlock,{once:true});
 }
 
 function scheduleNote(ctx: AudioContext, freq: number, start: number, dur: number, type: OscillatorType = "sine", gain = 0.3) {
@@ -16,8 +30,8 @@ function scheduleNote(ctx: AudioContext, freq: number, start: number, dur: numbe
   osc.stop(ctx.currentTime + start + dur);
 }
 
-function scheduleNoise(ctx: AudioContext, start: number, dur: number, gain = 0.15) {
-  const bufferSize = ctx.sampleRate * dur;
+function scheduleNoise(ctx: AudioContext, start: number, dur: number, gain = 0.15, filterFreq = 0) {
+  const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
@@ -26,162 +40,90 @@ function scheduleNoise(ctx: AudioContext, start: number, dur: number, gain = 0.1
   const g = ctx.createGain();
   g.gain.setValueAtTime(gain, ctx.currentTime + start);
   g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-  src.connect(g).connect(ctx.destination);
+  if (filterFreq > 0) {
+    const f = ctx.createBiquadFilter();
+    f.type = "bandpass"; f.frequency.value = filterFreq; f.Q.value = 0.8;
+    src.connect(f); f.connect(g); g.connect(ctx.destination);
+  } else {
+    src.connect(g); g.connect(ctx.destination);
+  }
   src.start(ctx.currentTime + start);
   src.stop(ctx.currentTime + start + dur);
 }
 
+// "KA" mecânico da registradora: pancada grave + clique metálico.
+function clunk(ctx: AudioContext, at: number) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = "sine"; o.frequency.setValueAtTime(220, ctx.currentTime + at);
+  o.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + at + 0.08);
+  g.gain.setValueAtTime(0.8, ctx.currentTime + at);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + at + 0.1);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 0.12);
+  scheduleNoise(ctx, at, 0.05, 0.5, 2600);
+}
+
+// "CHING": sino metálico com parciais inarmônicos e decaimento longo.
+function ching(ctx: AudioContext, at: number, vol = 1) {
+  const partials:[number,number][]=[[2093,0.55],[2794,0.4],[3520,0.34],[4699,0.24],[5593,0.16],[7040,0.1]];
+  for (const [f, g0] of partials) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = f * (1 + (Math.random() - 0.5) * 0.002);
+    g.gain.setValueAtTime(g0 * vol, ctx.currentTime + at);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + at + 0.9);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 1);
+  }
+  scheduleNoise(ctx, at, 0.12, 0.22 * vol, 6800);
+}
+
 export const sounds: { id: string; name: string; icon: string; fn: SoundFn }[] = [
   {
-    id: "ka-ching",
-    name: "Ka-Ching",
+    id: "caixa-registradora",
+    name: "Caixa registradora",
     icon: "💰",
     fn(ctx) {
-      scheduleNote(ctx, 1200, 0, 0.08, "triangle", 0.4);
-      scheduleNote(ctx, 1600, 0.06, 0.08, "triangle", 0.35);
-      scheduleNote(ctx, 2000, 0.12, 0.15, "triangle", 0.3);
-      scheduleNote(ctx, 2400, 0.18, 0.2, "sine", 0.2);
+      clunk(ctx, 0); ching(ctx, 0.08, 1);
     },
   },
   {
-    id: "moeda",
-    name: "Moeda",
-    icon: "🪙",
-    fn(ctx) {
-      scheduleNote(ctx, 3000, 0, 0.05, "sine", 0.35);
-      scheduleNote(ctx, 4000, 0.03, 0.1, "sine", 0.3);
-      scheduleNote(ctx, 5000, 0.08, 0.15, "sine", 0.2);
-      scheduleNote(ctx, 4500, 0.2, 0.1, "sine", 0.15);
-    },
-  },
-  {
-    id: "sino",
-    name: "Sino",
+    id: "cha-ching",
+    name: "Cha-ching alto",
     icon: "🔔",
     fn(ctx) {
-      scheduleNote(ctx, 880, 0, 0.4, "sine", 0.35);
-      scheduleNote(ctx, 1760, 0, 0.3, "sine", 0.15);
-      scheduleNote(ctx, 2640, 0, 0.2, "sine", 0.08);
+      ching(ctx, 0, 1); ching(ctx, 0.16, 0.7);
     },
   },
   {
-    id: "sucesso",
-    name: "Sucesso",
+    id: "moedas",
+    name: "Moedas caindo",
+    icon: "🪙",
+    fn(ctx) {
+      const pings = [4186, 3520, 4699, 3136, 3951, 5274];
+      pings.forEach((f, i) => scheduleNote(ctx, f, i * 0.07, 0.16, "triangle", 0.5));
+      scheduleNoise(ctx, 0, 0.3, 0.2, 8000);
+    },
+  },
+  {
+    id: "sino-venda",
+    name: "Sino de venda",
     icon: "✅",
     fn(ctx) {
-      scheduleNote(ctx, 523, 0, 0.15, "sine", 0.3);
-      scheduleNote(ctx, 659, 0.12, 0.15, "sine", 0.3);
-      scheduleNote(ctx, 784, 0.24, 0.3, "sine", 0.35);
-    },
-  },
-  {
-    id: "notificacao",
-    name: "Notificação",
-    icon: "🔔",
-    fn(ctx) {
-      scheduleNote(ctx, 800, 0, 0.1, "sine", 0.3);
-      scheduleNote(ctx, 1000, 0.12, 0.1, "sine", 0.3);
-      scheduleNote(ctx, 800, 0.24, 0.15, "sine", 0.25);
-    },
-  },
-  {
-    id: "triunfo",
-    name: "Triunfo",
-    icon: "🎺",
-    fn(ctx) {
-      scheduleNote(ctx, 523, 0, 0.12, "sawtooth", 0.2);
-      scheduleNote(ctx, 659, 0.1, 0.12, "sawtooth", 0.2);
-      scheduleNote(ctx, 784, 0.2, 0.12, "sawtooth", 0.2);
-      scheduleNote(ctx, 1047, 0.3, 0.35, "sawtooth", 0.25);
-    },
-  },
-  {
-    id: "pop",
-    name: "Pop",
-    icon: "💧",
-    fn(ctx) {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.08);
-      g.gain.setValueAtTime(0.5, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-      osc.connect(g).connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.1);
-    },
-  },
-  {
-    id: "brilho",
-    name: "Brilho",
-    icon: "✨",
-    fn(ctx) {
-      for (let i = 0; i < 6; i++) {
-        scheduleNote(ctx, 2000 + i * 500, i * 0.04, 0.12, "sine", 0.15);
-      }
-      scheduleNote(ctx, 4000, 0.25, 0.3, "sine", 0.2);
-    },
-  },
-  {
-    id: "whoosh",
-    name: "Whoosh",
-    icon: "💨",
-    fn(ctx) {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(100, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.15);
-      g.gain.setValueAtTime(0.001, ctx.currentTime);
-      g.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.08);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-      osc.connect(g).connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.2);
-      scheduleNote(ctx, 1500, 0.15, 0.25, "sine", 0.3);
-    },
-  },
-  {
-    id: "digital",
-    name: "Digital",
-    icon: "📱",
-    fn(ctx) {
-      scheduleNote(ctx, 1000, 0, 0.06, "square", 0.2);
-      scheduleNote(ctx, 1200, 0.08, 0.06, "square", 0.2);
-      scheduleNote(ctx, 1000, 0.16, 0.06, "square", 0.2);
-      scheduleNote(ctx, 1500, 0.28, 0.15, "square", 0.25);
-    },
-  },
-  {
-    id: "moeda-caindo",
-    name: "Moeda Caindo",
-    icon: "🪙",
-    fn(ctx) {
-      const notes = [3000, 2500, 3000, 2000, 2500, 3000, 3500];
-      notes.forEach((freq, i) => {
-        scheduleNote(ctx, freq, i * 0.06, 0.08, "sine", 0.25 - i * 0.02);
-      });
-    },
-  },
-  {
-    id: "fanfarra",
-    name: "Fanfarra",
-    icon: "🎉",
-    fn(ctx) {
-      scheduleNote(ctx, 392, 0, 0.15, "sawtooth", 0.2);
-      scheduleNote(ctx, 523, 0.12, 0.15, "sawtooth", 0.2);
-      scheduleNote(ctx, 659, 0.24, 0.15, "sawtooth", 0.2);
-      scheduleNote(ctx, 784, 0.36, 0.15, "sawtooth", 0.2);
-      scheduleNote(ctx, 1047, 0.48, 0.4, "sawtooth", 0.3);
+      scheduleNote(ctx, 1046, 0, 0.25, "sine", 0.55);
+      scheduleNote(ctx, 1568, 0.13, 0.4, "sine", 0.55);
+      scheduleNote(ctx, 2093, 0.13, 0.2, "sine", 0.25);
     },
   },
 ];
 
+export const DEFAULT_SOUND_ID = "caixa-registradora";
+
 export function playSound(id: string) {
-  const sound = sounds.find((s) => s.id === id);
-  if (!sound) return;
+  const sound = sounds.find((s) => s.id === id) || sounds[0];
   const ctx = createCtx();
-  sound.fn(ctx);
-  setTimeout(() => ctx.close(), 3000);
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") { void ctx.resume().then(() => { try { sound.fn(ctx); } catch {} }); return; }
+    sound.fn(ctx);
+  } catch {}
 }

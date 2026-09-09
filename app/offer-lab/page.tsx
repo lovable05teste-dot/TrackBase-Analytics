@@ -1,12 +1,12 @@
-import { PrivateSection } from "../private-section";
+import { AppShell } from "@/components/AppShell";
 import { OfferLabClient } from "./offer-lab-client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
-    <PrivateSection title="Offer Lab" description="Teste variações de oferta, preço e hook com método.">
+    <AppShell title="Offer Lab" subtitle="Teste variações de oferta, preço e hook com método.">
       <OfferLabClient />
-    </PrivateSection>
+    </AppShell>
   );
 }

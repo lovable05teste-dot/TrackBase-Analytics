@@ -1,4 +1,4 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 import { getProjectIds, getWorkspace } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ if(window.top!==window.self){document.body.innerHTML="<h1>Bloqueado</h1>";return
 if(allowed.length&&!allowed.some(function(d){return location.hostname.indexOf(d)>-1})){console.warn("[TrackBase] Domínio não autorizado:",location.hostname);}})();
 </script>`;
   return (
-    <PrivateSection title="Anti-Clone" description="Proteja a página de vendas contra cópia em iframe e domínios clonados.">
+    <AppShell title="Anti-Clone" subtitle="Proteja a página de vendas contra cópia em iframe e domínios clonados.">
       <div className="grid gap-4">
         <div className="metric-card rounded-xl p-5">
           <b>Como funciona</b>
@@ -33,6 +33,6 @@ if(allowed.length&&!allowed.some(function(d){return location.hostname.indexOf(d)
           </div>
         </div>
       </div>
-    </PrivateSection>
+    </AppShell>
   );
 }

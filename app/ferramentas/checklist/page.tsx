@@ -1,12 +1,12 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 import { ChecklistClient } from "./checklist-client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
-    <PrivateSection title="Checklist Campanha" description="Suba campanha sem esquecer nada.">
+    <AppShell title="Checklist Campanha" subtitle="Suba campanha sem esquecer nada.">
       <ChecklistClient />
-    </PrivateSection>
+    </AppShell>
   );
 }

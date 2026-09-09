@@ -1,4 +1,4 @@
-import { PrivateSection } from "../private-section";
+import { AppShell } from "@/components/AppShell";
 import { brl, getEventTotals, getOrdersSummary, getProjectIds, getWorkspace, pct } from "@/lib/analytics";
 import { SoundNotifications } from "@/components/SoundNotifications";
 
@@ -19,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
   const nPur = byName.get("Purchase") ?? 0;
 
   return (
-    <PrivateSection title="Relatórios" description="Consolidado de eventos do tracker + pedidos dos gateways no período.">
+    <AppShell title="Relatórios" subtitle="Consolidado de eventos do tracker + pedidos dos gateways no período.">
       <SoundNotifications />
       <div className="mb-4 flex gap-2">
         {[["last_7d", "7 dias"], ["last_30d", "30 dias"], ["all", "Tudo"]].map(([p, l]) => (
@@ -55,6 +55,6 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
           </div>
         </div>
       )}
-    </PrivateSection>
+    </AppShell>
   );
 }

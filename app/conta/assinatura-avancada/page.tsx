@@ -1,10 +1,10 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
-    <PrivateSection title="Assinatura Avançado (TikTok + Meta)" description="Atribuição multi-canal: Meta + TikTok no mesmo dashboard.">
+    <AppShell title="Assinatura Avançado (TikTok + Meta)" subtitle="Atribuição multi-canal: Meta + TikTok no mesmo dashboard.">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="metric-card rounded-xl p-6">
           <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-300">TikTok + Meta</span>
@@ -27,6 +27,6 @@ export default function Page() {
           </ol>
         </div>
       </div>
-    </PrivateSection>
+    </AppShell>
   );
 }

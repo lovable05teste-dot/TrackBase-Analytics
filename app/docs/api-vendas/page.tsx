@@ -1,18 +1,22 @@
-import { PrivateSection } from "../../private-section";
+import { PlugZap } from "lucide-react";
+import { Box, Code, H3, Table } from "../components";
 
-export const dynamic = "force-dynamic";
-
-export default function Page() {
+export default function ApiVendasDoc() {
   return (
-    <PrivateSection title="Docs API Vendas" description="Endpoint universal para gateways enviarem vendas.">
-      <div className="grid gap-4">
-        <div className="metric-card rounded-xl p-5">
-          <b>POST {"{BASE_URL}"}/api/webhooks/gateway</b>
-          <p className="mt-2 text-sm text-slate-400">Autenticação: <code className="text-sky-300">Authorization: Bearer tb_live_...</code> (ou <code>X-TrackBase-Key</code> ou <code>?token=</code>). Gere o token em <a href="/integracoes" className="text-violet-300 underline">Integrações → Gateways</a>.</p>
-          <pre className="mt-4 overflow-x-auto rounded-lg bg-black/40 p-4 text-xs leading-6 text-sky-300">{`{
+    <section className="space-y-6">
+      <div>
+        <h2 className="flex items-center gap-2 text-2xl font-semibold"><PlugZap className="size-6 text-violet-300" />API de Vendas</h2>
+        <p className="mt-1 text-sm text-slate-500">Endpoint universal para gateways enviarem vendas ao TrackBase.</p>
+      </div>
+      <Box>
+        <H3>POST {"{BASE_URL}"}/api/webhooks/gateway</H3>
+        <p>Autenticação: <Code lang="bash">Authorization: Bearer tb_live_...</Code> (ou <Code lang="bash">X-TrackBase-Key</Code> ou <Code lang="bash">?token=</Code>). Gere o token em <a href="/integracoes" className="text-violet-300 underline">Integrações → Gateways</a>.</p>
+      </Box>
+      <div>
+        <H3>Payload</H3>
+        <Code lang="json">{`{
   "id": "TX123456",
-  "transaction_id": "TX123456",
-  "status": "approved", // approved | pending | refunded | cancelled | chargeback
+  "status": "approved",
   "amount": 197.0,
   "currency": "BRL",
   "tracking": {
@@ -21,14 +25,16 @@ export default function Page() {
     "utm_content": "criativo-03",
     "fbclid": "IwAR..."
   }
-}`}</pre>
-          <p className="mt-3 text-sm text-slate-400">Resposta: <code className="text-emerald-300">200 {"{received:true, orderId, status, event}"}</code>. Reenvios atualizam o pedido (idempotente por provider + external_id). Teste em <a href="/webhooks" className="text-violet-300 underline">/webhooks</a>.</p>
-        </div>
-        <div className="metric-card rounded-xl p-5 text-sm leading-6 text-slate-300">
-          <b>Guia completo</b>
-          <p className="mt-2">Veja <a href="/docs/gateways" className="text-violet-300 underline">/docs/gateways</a> para FortPay, Hotmart, Kiwify e Utmify, com exemplos cURL e tabela de status.</p>
-        </div>
+}`}</Code>
       </div>
-    </PrivateSection>
+      <div>
+        <H3>Status aceitos</H3>
+        <Table head={["Status", "Efeito"]} rows={[["approved", "Vira Purchase (faturamento)"], ["pending", "Conta como pendente"], ["refunded / cancelled", "Estorna a venda"], ["chargeback", "Marca chargeback"]]} />
+      </div>
+      <Box tone="ok">
+        <H3>Teste rápido</H3>
+        <p>Resposta: <Code lang="json">{`{received:true, orderId, status, event}`}</Code>. Reenvios atualizam o pedido (idempotente por provider + external_id). Teste em <a href="/webhooks" className="text-violet-300 underline">/webhooks</a> ou veja o guia completo em <a href="/docs/gateways" className="text-violet-300 underline">/docs/gateways</a>.</p>
+      </Box>
+    </section>
   );
 }

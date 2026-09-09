@@ -1,4 +1,4 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 import { brl, getProjectIds, getUtmBreakdown, getWorkspace, pct } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function Page() {
   const topReceita = [...campaigns].sort((a, b) => b.receita - a.receita).slice(0, 10);
   const topConv = [...campaigns].filter((c) => c.views >= 20).sort((a, b) => pct(b.compras, b.views || b.cliques) - pct(a.compras, a.views || a.cliques)).slice(0, 10);
   return (
-    <PrivateSection title="Rankings" description="Quem converte mais: ranking por faturamento e conversão.">
+    <AppShell title="Rankings" subtitle="Quem converte mais: ranking por faturamento e conversão.">
       {!rows.length ? <div className="metric-card rounded-xl p-8 text-center text-slate-400">Sem dados para rankear.</div> : (
         <div className="grid gap-4 md:grid-cols-2">
           <div className="metric-card overflow-hidden rounded-xl">
@@ -28,6 +28,6 @@ export default async function Page() {
           </div>
         </div>
       )}
-    </PrivateSection>
+    </AppShell>
   );
 }

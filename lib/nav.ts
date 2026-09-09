@@ -8,6 +8,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Dashboard", href: "/" },
       { label: "Novo Projeto", href: "/projetos/novo" },
       { label: "Campanhas", href: "/campanhas" },
+      { label: "Meta Lab", href: "/meta-lab" },
       { label: "Vendas", href: "/vendas" },
       { label: "Eventos", href: "/eventos" },
     ],

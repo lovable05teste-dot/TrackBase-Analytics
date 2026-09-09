@@ -1,12 +1,12 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 import { BlacklistClient } from "./blacklist-client";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
-    <PrivateSection title="Blacklist de IP" description="Bloqueie bots, concorrentes e cliques repetidos.">
+    <AppShell title="Blacklist de IP" subtitle="Bloqueie bots, concorrentes e cliques repetidos.">
       <BlacklistClient />
-    </PrivateSection>
+    </AppShell>
   );
 }

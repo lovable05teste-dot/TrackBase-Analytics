@@ -1,4 +1,4 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 import { brl, getProjectIds, getUtmBreakdown, getWorkspace, pct } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function Page() {
     getUtmBreakdown(ids, since, "utm_term", 30),
   ]);
   return (
-    <PrivateSection title="Relatórios de UTMs" description="Performance por source, campaign, medium, content e term nos últimos 30 dias.">
+    <AppShell title="Relatórios de UTMs" subtitle="Performance por source, campaign, medium, content e term nos últimos 30 dias.">
       {!rows.length ? <div className="metric-card rounded-xl p-8 text-center text-slate-400">Crie um projeto e instale as UTMs para ver dados aqui.</div> : (
         <div className="grid gap-4">
           <Table title="utm_source" desc="De onde veio o clique: facebook, instagram, etc." rows={sources} />
@@ -43,6 +43,6 @@ export default async function Page() {
           <Table title="utm_term" desc="Conjunto + ID (adset)." rows={terms} />
         </div>
       )}
-    </PrivateSection>
+    </AppShell>
   );
 }

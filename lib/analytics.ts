@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, sql, sum } from "drizzle-orm";
+import { and, count, eq, gte, inArray, sum } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { ensureDb, getDb } from "@/db";
 import { events, orders, projects } from "@/db/schema";
@@ -24,22 +24,49 @@ export async function getProjectIds(workspaceId: string | null) {
   return { rows, ids: rows.map((p) => p.id) };
 }
 
-export async function getEventTotals(ids: string[], since: number | null) {
-  if (!ids.length) return { byName: new Map<string, number>(), revenue: 0 };
+export type TrackEvent = {
+  eventName: string;
+  value: number;
+  occurredAt: number;
+  visitorId: string | null;
+  fbclid: string | null;
+  utmSource: string | null;
+  utmCampaign: string | null;
+  utmMedium: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
+};
+
+export async function getEvents(ids: string[], since: number | null): Promise<TrackEvent[]> {
+  if (!ids.length) return [];
   await ensureDb();
-  const db = getDb();
   const conds = [inArray(events.projectId, ids)];
   if (since) conds.push(gte(events.occurredAt, since));
-  const rows = await db
-    .select({ eventName: events.eventName, n: count(), v: sum(events.value) })
+  const rows = await getDb()
+    .select({
+      eventName: events.eventName,
+      value: events.value,
+      occurredAt: events.occurredAt,
+      visitorId: events.visitorId,
+      fbclid: events.fbclid,
+      utmSource: events.utmSource,
+      utmCampaign: events.utmCampaign,
+      utmMedium: events.utmMedium,
+      utmContent: events.utmContent,
+      utmTerm: events.utmTerm,
+    })
     .from(events)
-    .where(and(...conds))
-    .groupBy(events.eventName);
+    .where(and(...conds));
+  return rows.map((r) => ({ ...r, value: Number(r.value ?? 0) }));
+}
+
+export async function getEventTotals(ids: string[], since: number | null) {
+  const list = await getEvents(ids, since);
   const byName = new Map<string, number>();
   let revenue = 0;
-  for (const r of rows) {
-    byName.set(r.eventName, Number(r.n));
-    if (r.eventName === "Purchase") revenue += Number(r.v ?? 0);
+  for (const e of list) {
+    byName.set(e.eventName, (byName.get(e.eventName) ?? 0) + 1);
+    if (e.eventName === "Purchase") revenue += e.value;
   }
   return { byName, revenue };
 }
@@ -68,24 +95,27 @@ export async function getOrdersSummary(ids: string[], since: number | null) {
   return { byStatus, total, totalValue };
 }
 
-export async function getUtmBreakdown(ids: string[], since: number | null, field: "utm_source" | "utm_campaign" | "utm_medium" | "utm_content" | "utm_term", limit = 50) {
-  if (!ids.length) return [];
-  await ensureDb();
-  const rows = await getDb().execute(sql`
-    SELECT ${sql.identifier(field)} AS name, event_name, COUNT(*)::int AS n, COALESCE(SUM(value),0)::float AS revenue
-    FROM events
-    WHERE project_id = ANY(${ids}) AND ${sql.identifier(field)} IS NOT NULL AND ${sql.identifier(field)} <> '' AND occurred_at >= ${since ?? 0}
-    GROUP BY ${sql.identifier(field)}, event_name
-    ORDER BY n DESC LIMIT ${limit * 5}
-  `);
+const UTM_KEYS = {
+  utm_source: "utmSource",
+  utm_campaign: "utmCampaign",
+  utm_medium: "utmMedium",
+  utm_content: "utmContent",
+  utm_term: "utmTerm",
+} as const;
+
+export async function getUtmBreakdown(ids: string[], since: number | null, field: keyof typeof UTM_KEYS, limit = 50) {
+  const list = await getEvents(ids, since);
+  const key = UTM_KEYS[field];
   const map = new Map<string, { name: string; cliques: number; views: number; ics: number; compras: number; receita: number }>();
-  for (const r of rows as unknown as { name: string; event_name: string; n: number; revenue: number }[]) {
-    const e = map.get(r.name) ?? { name: r.name, cliques: 0, views: 0, ics: 0, compras: 0, receita: 0 };
-    if (r.event_name === "AdClick") e.cliques += Number(r.n);
-    else if (r.event_name === "PageView") e.views += Number(r.n);
-    else if (r.event_name === "InitiateCheckout") e.ics += Number(r.n);
-    else if (r.event_name === "Purchase") { e.compras += Number(r.n); e.receita += Number(r.revenue ?? 0); }
-    map.set(r.name, e);
+  for (const e of list) {
+    const name = (e[key] || "").trim();
+    if (!name) continue;
+    const row = map.get(name) ?? { name, cliques: 0, views: 0, ics: 0, compras: 0, receita: 0 };
+    if (e.eventName === "AdClick") row.cliques += 1;
+    else if (e.eventName === "PageView") row.views += 1;
+    else if (e.eventName === "InitiateCheckout") row.ics += 1;
+    else if (e.eventName === "Purchase") { row.compras += 1; row.receita += e.value; }
+    map.set(name, row);
   }
   return [...map.values()].sort((a, b) => b.compras - a.compras || b.cliques - a.cliques).slice(0, limit);
 }

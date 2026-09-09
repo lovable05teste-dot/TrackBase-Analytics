@@ -1,4 +1,4 @@
-import { PrivateSection } from "../../private-section";
+import { AppShell } from "@/components/AppShell";
 import { brl, getProjectIds, getWorkspace } from "@/lib/analytics";
 import { ensureDb, getDb } from "@/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
@@ -15,7 +15,7 @@ export default async function Page() {
   const lastOrders = ids.length ? await db.select({ provider: orders.provider, status: orders.status, value: orders.value, externalId: orders.externalId, updatedAt: orders.updatedAt }).from(orders).where(inArray(orders.projectId, ids)).orderBy(desc(orders.updatedAt)).limit(20) : [];
   void and;
   return (
-    <PrivateSection title="Gateways" description="Credenciais de webhook e últimos pedidos por gateway.">
+    <AppShell title="Gateways" subtitle="Credenciais de webhook e últimos pedidos por gateway.">
       <div className="grid gap-4">
         <div className="metric-card rounded-xl p-5">
           <div className="flex items-center justify-between"><b>Credenciais ativas ({creds.length})</b><a href="/integracoes" className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">+ Nova credencial</a></div>
@@ -32,6 +32,6 @@ export default async function Page() {
           </table>
         </div>
       </div>
-    </PrivateSection>
+    </AppShell>
   );
 }

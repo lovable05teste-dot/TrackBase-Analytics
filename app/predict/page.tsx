@@ -1,4 +1,4 @@
-import { PrivateSection } from "../private-section";
+import { AppShell } from "@/components/AppShell";
 import { brl, getEventTotals, getProjectIds, getWorkspace, pct } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export default async function Page() {
   }
 
   return (
-    <PrivateSection title="Predict (IA)" description="Projeção simples baseada nos últimos 7 e 30 dias + recomendações.">
+    <AppShell title="Predict (IA)" subtitle="Projeção simples baseada nos últimos 7 e 30 dias + recomendações.">
       <div className="grid gap-4 md:grid-cols-4">
         {[
           ["Health score", `${score}/100`, `Tendência: ${trend}`],
@@ -56,6 +56,6 @@ export default async function Page() {
         </ul>
         <p className="mt-4 text-xs text-slate-500">Modelo heurístico local (sem IA externa): média móvel + regras de funil. Conecte mais volume para previsões mais estáveis. Projetos: {rows.length}.</p>
       </div>
-    </PrivateSection>
+    </AppShell>
   );
 }
