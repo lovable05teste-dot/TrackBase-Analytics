@@ -52,9 +52,11 @@ export async function POST(request: Request) {
   else value=0;
   if(!Number.isFinite(value)||value<0)return Response.json({error:"Valor da venda inválido"},{status:400,headers:cors});
   const rawUtm=String(pick(body,["utm_campaign","tracking.utm_campaign","metadata.utm_campaign","data.tracking.utm_campaign"])||"").trim();
-  const utmCampaign=rawUtm?rawUtm.split("|")[0].trim()||null:null;
+  const utmName=(v:string)=>{const t=v.trim();return t?t.split("|")[0].trim()||null:null;};
+  const utmCampaign=utmName(rawUtm);
   const utmOf=(k:string)=>{const v=String(pick(body,[k,`tracking.${k}`,`metadata.${k}`,`data.tracking.${k}`])||"").trim();return v||null;};
-  const utmSource=utmOf("utm_source"),utmMedium=utmOf("utm_medium"),utmContent=utmOf("utm_content"),utmTerm=utmOf("utm_term");
+  const utmSource=utmOf("utm_source"),utmMedium=utmOf("utm_medium");
+  const utmContent=utmName(utmOf("utm_content")||""),utmTerm=utmName(utmOf("utm_term")||"");
   const productTitle=itemsList.length?String(itemsList[0].title||itemsList[0].name||""):"";
   const currency=String(pick(body,["currency","data.currency","data.transaction.currency"])||"BRL").toUpperCase();
   const eventId=String(pick(body,["event_id","eventId","tracking.event_id","metadata.event_id","data.event_id"])||(status==="approved"?`purchase_${externalId}`:`gw_${credential.provider}_${externalId}_${status}`));
