@@ -65,9 +65,11 @@ export function NotificationsBell(){
  useEffect(()=>{
   try{setSeen(Number(localStorage.getItem(SEEN_KEY)||0));}catch{}
   unlockAudio();
-  const unlock=()=>unlockAudio();
-  window.addEventListener("pointerdown",unlock,{once:true});
-  void load(true);
+const unlock=()=>unlockAudio();
+   window.addEventListener("pointerdown",unlock,{once:true});
+   const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){if(m.enabled!==false)playSound(sounds.some(s=>s.id===m.soundId)?m.soundId:"ka-ching");}};
+   try{if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",onSwMessage);}catch{}
+   void load(true);
   fetch("/api/notifications/prefs",{cache:"no-store"}).then(r=>r.json()).then(b=>{if(b.prefs)setPrefs(b.prefs);}).catch(()=>{});
   const timer=setInterval(()=>{if(!document.hidden)void load(false);},30000);
   (async()=>{
@@ -77,8 +79,10 @@ export function NotificationsBell(){
     setPush(sub?"on":"off");
    }catch{setPush("unsupported");}
   })();
-  return ()=>{window.removeEventListener("pointerdown",unlock);clearInterval(timer);};
- },[load]);
+return ()=>{window.removeEventListener("pointerdown",unlock);clearInterval(timer);try{if(navigator.serviceWorker)navigator.serviceWorker.removeEventListener("message",onSwMessage);}catch{}};
+  },[load]);
+
+  useEffect(()=>{(async()=>{try{if(!("serviceWorker" in navigator))return;const reg=await navigator.serviceWorker.ready;if(reg.active)reg.active.postMessage({type:"set-sound",soundId:sound.selected,enabled:sound.enabled});}catch{}})();},[sound]);
 
  const markSeen=()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}};
  const toggle=()=>{if(!open)markSeen();setOpen(v=>!v);};
