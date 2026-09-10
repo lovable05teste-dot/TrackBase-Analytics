@@ -381,7 +381,7 @@ function ScaleSimulator() {
           <b className="mt-1 block text-3xl text-emerald-300">+{brl(extra)}<span className="text-sm font-normal text-emerald-300/70">/semana</span></b>
         </div>
         <small className="mt-3 text-center text-[11px] text-slate-600">Simulação educativa. Resultados variam por operação.</small>
-        <div className="mt-4 text-center"><ArrowCta href="/login">Quero esse rastreio</ArrowCta></div>
+        <div className="mt-4 text-center"><ArrowCta href="/login?modo=register">Quero esse rastreio</ArrowCta></div>
       </div>
     </div>
   );
@@ -427,7 +427,7 @@ function PriceCalculator() {
           </li>
         ))}
       </ul>
-      <div className="mt-7"><ArrowCta href="/login">Criar conta agora</ArrowCta></div>
+      <div className="mt-7"><ArrowCta href="/login?modo=register">Criar conta agora</ArrowCta></div>
     </div>
   );
 }
@@ -515,7 +515,7 @@ export function LandingPage() {
               Entrar
             </a>
             <a
-              href="/login"
+              href="/login?modo=register"
               className="group hidden items-center gap-2 rounded-xl bg-[#ff0030] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#d60029] hover:shadow-[0_12px_36px_-8px_#ff0030aa] sm:inline-flex"
             >
               Criar conta grátis
@@ -550,7 +550,7 @@ export function LandingPage() {
             <b className="text-slate-200"> sem depender de pixel cego e sem medo de clone.</b>
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <ArrowCta href="/login">Criar conta grátis</ArrowCta>
+            <ArrowCta href="/login?modo=register">Criar conta grátis</ArrowCta>
             <ArrowCta href="#simulador" variant="ghost">
               Simular minha operação
             </ArrowCta>
@@ -700,7 +700,7 @@ export function LandingPage() {
           </table>
         </div>
         <div className="reveal mt-8 text-center">
-          <ArrowCta href="/login">Experimente a diferença</ArrowCta>
+                      <ArrowCta href="/login?modo=register">Experimente a diferença</ArrowCta>
         </div>
       </section>
 
@@ -739,7 +739,7 @@ export function LandingPage() {
           ))}
         </div>
         <div className="reveal mt-8 flex flex-wrap gap-3">
-          <ArrowCta href="/login">Começar agora — é grátis</ArrowCta>
+                      <ArrowCta href="/login?modo=register">Começar agora — é grátis</ArrowCta>
           <ArrowCta href="/docs" variant="ghost">
             <BookOpen className="size-4" /> Ler documentação
           </ArrowCta>
@@ -812,7 +812,7 @@ export function LandingPage() {
             Teste sem compromisso. Só continua quem vê resultado — e resultado aqui aparece no primeiro dia.
           </p>
           <div className="relative mt-8 flex flex-wrap justify-center gap-3">
-            <ArrowCta href="/login" variant="light">
+            <ArrowCta href="/login?modo=register" variant="light">
               Criar conta grátis agora
             </ArrowCta>
             <a
