@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, sum } from "drizzle-orm";
+import { and, count, eq, gte, inArray, not, sum } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { ensureDb, getDb } from "@/db";
 import { events, orders, projects } from "@/db/schema";
@@ -40,7 +40,7 @@ export type TrackEvent = {
 export async function getEvents(ids: string[], since: number | null): Promise<TrackEvent[]> {
   if (!ids.length) return [];
   await ensureDb();
-  const conds = [inArray(events.projectId, ids)];
+  const conds = [inArray(events.projectId, ids), not(inArray(events.eventName, ["Click", "Scroll", "InvalidTraffic"]))];
   if (since) conds.push(gte(events.occurredAt, since));
   const rows = await getDb()
     .select({
@@ -58,6 +58,24 @@ export async function getEvents(ids: string[], since: number | null): Promise<Tr
     .from(events)
     .where(and(...conds));
   return rows.map((r) => ({ ...r, value: Number(r.value ?? 0) }));
+}
+
+export async function getEventPayloads(ids: string[], since: number | null, names: string[], limit = 5000): Promise<Array<{ eventName: string; occurredAt: number; payload: Record<string, unknown> }>> {
+  if (!ids.length) return [];
+  await ensureDb();
+  const conds = [inArray(events.projectId, ids), inArray(events.eventName, names)];
+  if (since) conds.push(gte(events.occurredAt, since));
+  const rows = await getDb()
+    .select({ eventName: events.eventName, occurredAt: events.occurredAt, payload: events.payload })
+    .from(events)
+    .where(and(...conds));
+  return rows.slice(-limit).map((r) => {
+    let payload: Record<string, unknown> = {};
+    try {
+      payload = JSON.parse(r.payload || "{}");
+    } catch {}
+    return { eventName: r.eventName, occurredAt: r.occurredAt, payload };
+  });
 }
 
 export async function getEventTotals(ids: string[], since: number | null) {

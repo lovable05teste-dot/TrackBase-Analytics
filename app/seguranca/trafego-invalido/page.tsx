@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/AppShell";
-import { getEvents, getProjectIds, getWorkspace, pct } from "@/lib/analytics";
+import { getEventPayloads, getEvents, getProjectIds, getWorkspace, pct } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +8,7 @@ export default async function Page() {
   const { rows, ids } = await getProjectIds(workspaceId);
   const since = Math.floor(Date.now() / 1000) - 30 * 86400;
   const list = await getEvents(ids, since);
+  const invalid = await getEventPayloads(ids, since, ["InvalidTraffic"], 2000);
   let ad = 0, pv = 0, err = 0;
   const perVisitor = new Map<string, number>();
   for (const e of list) {
@@ -17,20 +18,27 @@ export default async function Page() {
     const v = (e.visitorId || "").trim();
     if (v) perVisitor.set(v, (perVisitor.get(v) ?? 0) + 1);
   }
+  const invalidByReason = new Map<string, number>();
+  for (const e of invalid) {
+    const r = String(e.payload.reason || "outro");
+    invalidByReason.set(r, (invalidByReason.get(r) ?? 0) + 1);
+  }
+  const blocked = invalidByReason.get("blocklisted") ?? 0;
+  const bots = invalidByReason.get("bot") ?? 0;
   let dupVisitors = 0;
   for (const n of perVisitor.values()) if (n > 30) dupVisitors += 1;
   const stats = { ad, pv, err, dupVisitors };
   const lost = Math.max(0, stats.ad - stats.pv);
   return (
-    <AppShell title="Tráfego Inválido" subtitle="Detecte bots, cliques perdidos e erros que drenam orçamento.">
+    <AppShell title="Tráfego Inválido" subtitle="Bots e IPs bloqueados no servidor, cliques perdidos e erros que drenam orçamento.">
       {!rows.length ? <div className="metric-card rounded-xl p-8 text-center text-slate-400">Sem dados.</div> : (
         <div className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
+              ["Bloqueados no servidor", String(invalid.length), `${blocked} blacklist · ${bots} bots`],
               ["Cliques sem PageView", String(lost), `${pct(lost, stats.ad)}% dos cliques`],
               ["PageErrors", String(stats.err), "Falhas de carregamento"],
               ["Visitantes hiperativos", String(stats.dupVisitors), ">30 eventos em 30d (possível bot)"],
-              ["Saúde do tráfego", lost > 0 && pct(lost, stats.ad) > 30 ? "Crítica" : "OK", "Meta: perda < 20%"],
             ].map(([k, v, s]) => (
               <div key={k} className="metric-card rounded-xl p-5"><p className="text-sm text-slate-400">{k}</p><p className="mt-2 text-2xl font-semibold">{v}</p><p className="mt-1 text-xs text-slate-500">{s}</p></div>
             ))}
@@ -39,8 +47,8 @@ export default async function Page() {
             <b>Plano de ação</b>
             <ul className="mt-2 list-disc pl-5">
               <li>Perda alta? Confira velocidade mobile, bloqueios de cookie e redirecionamentos.</li>
-              <li>Erros altos? Veja <a href="/eventos" className="text-violet-300 underline">Eventos → PageError</a> e corrija scripts.</li>
-              <li>Bots? Adicione os IPs em <a href="/seguranca/blacklist" className="text-violet-300 underline">Blacklist</a> e ative o <a href="/seguranca/anti-clone" className="text-violet-300 underline">Anti-Clone</a>.</li>
+              <li>Erros altos? Veja <a href="/eventos" className="text-violet-300 underline">Eventos → PageError</a> e corrija scripts. Tentativas de clone aparecem como <code>[Clone]</code>.</li>
+              <li>Bots? Adicione os IPs em <a href="/seguranca/blacklist" className="text-violet-300 underline">Blacklist</a> — o bloqueio vale no servidor a partir daí.</li>
             </ul>
           </div>
         </div>

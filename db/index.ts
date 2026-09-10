@@ -38,6 +38,17 @@ const statements=[
 "CREATE TABLE IF NOT EXISTS notification_prefs(workspace_id text PRIMARY KEY,prefs text NOT NULL,updated_at integer NOT NULL)",
 "CREATE TABLE IF NOT EXISTS automation_rules(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,name text NOT NULL,level text NOT NULL,metric text NOT NULL,operator text NOT NULL,value real NOT NULL,window_days integer NOT NULL,min_spend real NOT NULL,action text NOT NULL,active integer NOT NULL DEFAULT 1,cooldown_hours integer NOT NULL DEFAULT 24,last_triggered_at integer,created_at integer NOT NULL,updated_at integer NOT NULL)",
 "CREATE TABLE IF NOT EXISTS action_history(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,rule_id text,actor text NOT NULL,action text NOT NULL,target_level text,target_id text,target_name text,detail text,created_at integer NOT NULL)",
-"CREATE INDEX IF NOT EXISTS idx_action_history_ws ON action_history(workspace_id,created_at)"
+ "CREATE INDEX IF NOT EXISTS idx_action_history_ws ON action_history(workspace_id,created_at)",
+ "CREATE TABLE IF NOT EXISTS blocked_ips(id text PRIMARY KEY,workspace_id text NOT NULL,ip text NOT NULL,reason text,created_at integer NOT NULL)",
+ "CREATE UNIQUE INDEX IF NOT EXISTS idx_blocked_ws_ip ON blocked_ips(workspace_id,ip)",
+ "CREATE INDEX IF NOT EXISTS idx_blocked_ws ON blocked_ips(workspace_id)",
+ "CREATE TABLE IF NOT EXISTS monitored_sites(id text PRIMARY KEY,workspace_id text NOT NULL,url text NOT NULL,active integer NOT NULL DEFAULT 1,last_status text,last_ms integer,last_code integer,last_checked_at integer,consecutive_failures integer NOT NULL DEFAULT 0,created_at integer NOT NULL)",
+ "CREATE INDEX IF NOT EXISTS idx_monitored_ws ON monitored_sites(workspace_id)",
+ "CREATE TABLE IF NOT EXISTS site_checks(id text PRIMARY KEY,site_id text NOT NULL,status text NOT NULL,ms integer,code integer,checked_at integer NOT NULL)",
+ "CREATE INDEX IF NOT EXISTS idx_checks_site_time ON site_checks(site_id,checked_at)",
+ "CREATE TABLE IF NOT EXISTS community_messages(id text PRIMARY KEY,name text NOT NULL,text text NOT NULL,created_at integer NOT NULL)",
+ "CREATE INDEX IF NOT EXISTS idx_community_time ON community_messages(created_at)",
+ "CREATE TABLE IF NOT EXISTS offers(id text PRIMARY KEY,workspace_id text NOT NULL,name text NOT NULL,price real NOT NULL DEFAULT 0,hook text,status text NOT NULL DEFAULT 'em teste',created_at integer NOT NULL,updated_at integer NOT NULL)",
+ "CREATE INDEX IF NOT EXISTS idx_offers_ws ON offers(workspace_id)"
 ];
 export async function ensureDb(){if(!initialized)initialized=(async()=>{const binding=d1();const addCols=["ALTER TABLE orders ADD COLUMN utm_campaign text","ALTER TABLE orders ADD COLUMN utm_source text","ALTER TABLE orders ADD COLUMN utm_medium text","ALTER TABLE orders ADD COLUMN utm_content text","ALTER TABLE orders ADD COLUMN utm_term text","ALTER TABLE notification_prefs ADD COLUMN user_id text","ALTER TABLE users ADD COLUMN name text","ALTER TABLE users ADD COLUMN cpf text"];if(binding){for(const statement of statements)await binding.prepare(statement).run();for(const add of addCols){try{await binding.prepare(add).run()}catch{}}}else{await getSql().unsafe(statements.map(s=>s+';').join('\n'));for(const add of addCols){try{await getSql().unsafe(add)}catch{}}}})().catch(error=>{initialized=undefined;throw error});return initialized}

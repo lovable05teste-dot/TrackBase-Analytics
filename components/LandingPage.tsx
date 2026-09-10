@@ -373,20 +373,21 @@ const solutions = [
   { icon: Zap, title: "CAPI + Pixel deduplicados", desc: "Navegador e servidor enviam o mesmo event_id. A Meta recebe tudo, sem duplicar nada." },
   { icon: Webhook, title: "Webhook universal", desc: "FortPay, Hotmart, Kiwify, Braip, Stripe e qualquer outro no mesmo endpoint." },
   { icon: Crosshair, title: "Atribuição real por UTM", desc: "Cada venda carrega source, campaign, medium, content e term até o ROAS." },
-  { icon: ShieldCheck, title: "Anti-clone + blacklist", desc: "Detecta cópias, barra IP suspeito e protege o checkout que você pagou pra aquecer." },
-  { icon: BarChart3, title: "Funil + heatmaps", desc: "Veja onde o visitante desiste e o que ele realmente olha na sua página." },
-  { icon: Sparkles, title: "Predict com IA", desc: "Projeção de faturamento e alerta de anomalia antes do prejuízo virar bola de neve." },
-  { icon: BellRing, title: "Monitoramento 24/7", desc: "Site fora do ar? Você descobre em minutos, não depois de torrar a verba do dia." },
+  { icon: ShieldCheck, title: "Anti-clone + blacklist real", desc: "Snippet anti-iframe com alerta no painel, IPs bloqueados no servidor e bots filtrados automaticamente." },
+  { icon: BarChart3, title: "Funil + heatmap de cliques", desc: "Mapa visual de onde clicam, profundidade de scroll e top elementos por página." },
+  { icon: Sparkles, title: "Insights + alertas", desc: "Projeção heurística e regras que pausam campanha ruim e avisam no push." },
+  { icon: BellRing, title: "Monitoramento do site", desc: "Checagem no servidor a cada 5 minutos com push quando cai ou volta." },
   { icon: Trophy, title: "Rankings + comunidade", desc: "Badges, níveis e troca com quem vive de tráfego todos os dias." },
 ];
 
 const compareRows: [string, boolean, string][] = [
-  ["Anti-clone de verdade", true, "Não tem"],
+  ["Anti-clone com alerta + blacklist no servidor", true, "Não tem"],
   ["CAPI com deduplicação automática", true, "Manual ou parcial"],
+  ["Filtragem de bots no servidor", true, "Não tem"],
   ["Webhook universal multi-gateway", true, "Um plugin por checkout"],
   ["Base fixa + R$0,10 só no excedente", true, "Mensalidade + excedentes caros"],
-  ["Monitoramento de site 24/7", true, "Não tem"],
-  ["Predict com IA + alertas", true, "Não tem"],
+  ["Monitoramento do site com alerta push", true, "Não tem"],
+  ["Insights + automação de campanhas", true, "Não tem"],
   ["Setup em 5 minutos, sem programar", true, "Precisa de dev"],
 ];
 
