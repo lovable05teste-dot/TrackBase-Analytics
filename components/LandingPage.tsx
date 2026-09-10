@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -59,7 +59,176 @@ function Tag({ children }: { children: ReactNode }) {
   );
 }
 
-/* Seta turbinada: a bolinha cresce, acende e a seta dispara pra frente */
+/* Headline viva: digita, apaga e gira copys fortes */
+const heroPhrases = [
+  "dinheiro no seu bolso.",
+  "ROAS de verdade.",
+  "escala sem achismo.",
+  "lucro previsível.",
+];
+function useTypewriter() {
+  const [text, setText] = useState(heroPhrases[0]);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let phrase = 0;
+    let chars = heroPhrases[0].length;
+    let deleting = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      if (deleting) {
+        chars -= 1;
+        setText(heroPhrases[phrase].slice(0, Math.max(0, chars)));
+        if (chars <= 0) {
+          deleting = false;
+          phrase = (phrase + 1) % heroPhrases.length;
+          timer = setTimeout(tick, 350);
+        } else {
+          timer = setTimeout(tick, 26);
+        }
+      } else {
+        const next = heroPhrases[phrase];
+        chars += 1;
+        setText(next.slice(0, chars));
+        if (chars >= next.length) {
+          deleting = true;
+          timer = setTimeout(tick, 2300);
+        } else {
+          timer = setTimeout(tick, 55);
+        }
+      }
+    };
+    timer = setTimeout(tick, 2300);
+    return () => clearTimeout(timer);
+  }, []);
+  return text;
+}
+
+/* Cursor customizado (só PC): setona preta grossa + rastro de pontinhos brancos */
+function CustomCursor() {
+  const arrowRef = useRef<HTMLDivElement>(null);
+  const trailRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(pointer:coarse)").matches) return;
+    document.documentElement.classList.add("ghost-cursor");
+    const arrow = arrowRef.current;
+    const trail = trailRef.current;
+    if (!arrow || !trail) return;
+    const dots: { x: number; y: number; life: number; el: HTMLSpanElement }[] = [];
+    let x = -100;
+    let y = -100;
+    let ax = -100;
+    let ay = -100;
+    let raf = 0;
+    let last = 0;
+    const spawn = (px: number, py: number) => {
+      let d = dots.find((o) => o.life <= 0);
+      if (!d) {
+        if (dots.length >= 26) return;
+        const el = document.createElement("span");
+        el.className = "ghost-dot";
+        trail.appendChild(el);
+        d = { x: 0, y: 0, life: 0, el };
+        dots.push(d);
+      }
+      d.x = px;
+      d.y = py;
+      d.life = 1;
+    };
+    const onMove = (e: MouseEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      const t = e.target as HTMLElement | null;
+      const hot = !!t?.closest?.("a,button,summary,[role=button]");
+      const typing = !!t?.closest?.("input,textarea,select");
+      if (hot) arrow.setAttribute("data-hot", "1");
+      else arrow.removeAttribute("data-hot");
+      arrow.style.opacity = typing ? "0" : "1";
+      const now = performance.now();
+      if (now - last > 30) {
+        last = now;
+        spawn(x, y);
+      }
+    };
+    const loop = () => {
+      ax += (x - ax) * 0.4;
+      ay += (y - ay) * 0.4;
+      const hot = arrow.hasAttribute("data-hot");
+      arrow.style.transform = `translate3d(${ax}px,${ay}px,0) scale(${hot ? 1.3 : 1})`;
+      const path = arrow.querySelector("path");
+      if (path) path.setAttribute("fill", hot ? "#ff0030" : "#0b0e17");
+      for (const d of dots) {
+        if (d.life <= 0) {
+          d.el.style.opacity = "0";
+          continue;
+        }
+        d.life -= 0.05;
+        const s = Math.max(0, d.life);
+        d.el.style.opacity = String(s * 0.9);
+        d.el.style.transform = `translate3d(${d.x}px,${d.y}px,0) scale(${0.35 + s})`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    window.addEventListener("mousemove", onMove, { passive: true });
+    raf = requestAnimationFrame(loop);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(raf);
+      document.documentElement.classList.remove("ghost-cursor");
+      trail.innerHTML = "";
+    };
+  }, []);
+  return (
+    <>
+      <div ref={trailRef} className="ghost-trail" aria-hidden />
+      <div ref={arrowRef} className="ghost-arrow" aria-hidden>
+        <svg width="36" height="36" viewBox="0 0 24 24">
+          <path
+            d="M5.5 3.5 19 11l-6.4 1.7-2.9 6.3L5.5 3.5z"
+            fill="#0b0e17"
+            stroke="#fff"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </>
+  );
+}
+
+/* Chuva de métricas atrás do CTA vermelho */
+const ctaMetrics = [
+  "ROAS 4,2x",
+  "+312 vendas hoje",
+  "CPA −18%",
+  "R$ 18,4k faturados",
+  "Atribuição 100%",
+  "Chargeback −32%",
+  "Ticket +24%",
+  "Pixel + CAPI ativos",
+];
+function MetricsRain() {
+  const row = (items: string[], reverse: boolean, label: string) => (
+    <div className="flex overflow-hidden">
+      <div className={`flex w-max items-center gap-3 py-2 pr-3 ${reverse ? "marquee-reverse" : "marquee"}`}>
+        {items.concat(items).map((m, i) => (
+          <span
+            key={`${label}-${i}`}
+            className="shrink-0 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/85 backdrop-blur-sm"
+          >
+            {m}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+  return (
+    <div className="pointer-events-none absolute inset-0 flex flex-col justify-center gap-2 overflow-hidden opacity-60" aria-hidden>
+      <div className="-rotate-3 scale-105">{row(ctaMetrics, false, "a")}</div>
+      <div className="rotate-2 scale-105">{row(ctaMetrics.slice().reverse(), true, "b")}</div>
+      <div className="-rotate-2 scale-105">{row(ctaMetrics.slice(3).concat(ctaMetrics.slice(0, 3)), false, "c")}</div>
+    </div>
+  );
+}
 function ArrowCta({
   href,
   children,
@@ -309,9 +478,11 @@ export function LandingPage() {
   const scrolled = useScrolled();
   useReveal();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const typed = useTypewriter();
 
   return (
     <main className="min-h-screen bg-[#080b12] text-slate-100">
+      <CustomCursor />
       {/* NAV */}
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
@@ -367,8 +538,12 @@ export function LandingPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
             Quem fatura com tráfego já rastreia cada venda
           </p>
-          <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-6xl">
-            Saiba exatamente qual anúncio coloca <span className="text-[#ff3b5c]">dinheiro no seu bolso.</span>
+          <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-bold leading-[1.08] tracking-tight sm:min-h-[2.2em] sm:text-6xl min-h-[3.3em]">
+            Saiba exatamente qual anúncio coloca{" "}
+            <span className="text-[#ff3b5c]">
+              {typed}
+              <span className="type-caret" aria-hidden />
+            </span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-400 sm:text-lg">
             O GhostScale une Pixel + Conversions API deduplicados, webhook universal de vendas e ROAS por campanha —
@@ -628,6 +803,7 @@ export function LandingPage() {
       {/* CTA FINAL */}
       <section className="mx-auto max-w-6xl px-5 pb-16">
         <div className="reveal relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#ff0030] via-[#c40026] to-[#5c0013] p-10 text-center sm:p-14">
+          <MetricsRain />
           <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(600px_200px_at_50%_0%,#fff,transparent)]" />
           <h2 className="relative mx-auto max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
             Pronto pra parar de perder venda e escalar no dado?
