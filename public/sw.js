@@ -6,8 +6,8 @@ self.addEventListener("message",event=>{
 self.addEventListener("push",event=>{
  let data={};
  try{data=event.data?event.data.json():{};}catch{}
- const title=data.title||"TrackBase Analytics";
- const options={body:data.body||"Nova atualização nas suas vendas.",icon:"/icon-192.png",badge:"/icon-192.png",vibrate:[300,100,200,100,300],tag:data.tag||"trackbase-sale",renotify:true,data:{url:data.url||"/vendas"}};
+  const title=data.title||"GhostScale";
+ const options={body:data.body||"Nova atualização nas suas vendas.",icon:"/icon-192.png",badge:"/icon-192.png",vibrate:[300,100,200,100,300],tag:data.tag||"ghostscale-sale",renotify:true,data:{url:data.url||"/vendas"}};
  event.waitUntil((async()=>{
   const wins=await self.clients.matchAll({type:"window",includeUncontrolled:true});
   for(const w of wins){try{w.postMessage({type:"play-sale-sound",soundId:soundPref.soundId,enabled:soundPref.enabled});}catch{}}
