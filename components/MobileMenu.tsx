@@ -11,16 +11,16 @@ export function MobileMenu() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Abrir menu"
-        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm"
+        className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors"
       >
         <Menu className="size-4 shrink-0" />
         Menu
-        <span className="ml-auto text-xs font-normal text-slate-400">todas as seções</span>
+        <span className="ml-auto text-xs font-normal text-muted-foreground">todas as seções</span>
       </button>
       {open ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-white p-5 shadow-2xl">
+          <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-card p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <a href="/" className="flex items-center gap-2">
                 <img src="/ghostscale-logo.png" alt="GhostScale" className="h-8 w-auto object-contain" />
@@ -29,7 +29,7 @@ export function MobileMenu() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Fechar menu"
-                className="rounded-lg border border-slate-200 p-2 text-slate-500"
+                className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-accent"
               >
                 <X className="size-4" />
               </button>
@@ -44,7 +44,7 @@ export function MobileMenu() {
             </div>
             <a
               href="/conta/assinatura"
-              className="mt-2 block rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white"
+              className="mt-2 block rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground"
             >
               Ver assinatura
             </a>

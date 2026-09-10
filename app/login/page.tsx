@@ -55,7 +55,7 @@ export default function Login(){
     <Button type="submit" disabled={loading||!password||!email} className="h-12 w-full bg-[#ff0030] text-[15px] font-semibold text-white hover:bg-[#d60029] disabled:opacity-60">{loading?<span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin"/> Entrando...</span>:submitLabel}</Button>
     <div className="flex items-center gap-3 text-xs text-slate-600"><span className="h-px flex-1 bg-white/10"/> ou <span className="h-px flex-1 bg-white/10"/></div>
     <div className="grid gap-2">
-  <a href="/api/auth/google" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-slate-200 hover:bg-white/5 hover:text-slate-400">Continuar com Google</a>
+  <a href="/api/auth/google" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-slate-200 transition-colors hover:bg-white/5 hover:text-white">Continuar com Google</a>
   <a href="/docs" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200">Ver como funciona</a>
 </div>
    </form>

@@ -18,17 +18,17 @@ export function AppShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
-    <main className="min-h-screen bg-[#080b12] text-slate-100">
-      <aside className="fixed inset-y-0 hidden w-72 border-r border-white/10 bg-[#0b0e17] p-5 lg:block">
+    <main className="min-h-screen bg-background text-foreground transition-colors">
+      <aside className="fixed inset-y-0 hidden w-72 border-r border-border bg-card p-5 transition-colors lg:block">
         <AppSidebar />
       </aside>
 
       {mobileOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-80 max-w-[85vw] overflow-y-auto bg-[#0b0e17] p-5">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-80 max-w-[85vw] overflow-y-auto bg-card p-5 shadow-2xl">
             <div className="mb-4 flex justify-end">
-              <button onClick={() => setMobileOpen(false)} className="rounded-lg border border-white/10 p-2" aria-label="Fechar menu">
+              <button onClick={() => setMobileOpen(false)} className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-accent" aria-label="Fechar menu">
                 <X className="size-4" />
               </button>
             </div>
@@ -38,26 +38,26 @@ export function AppShell({
       ) : null}
 
       <section className="lg:pl-72">
-        <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4 lg:px-8">
+        <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-border bg-card/80 px-5 py-4 backdrop-blur transition-colors lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <button onClick={() => setMobileOpen(true)} className="rounded-lg border border-white/10 p-2 lg:hidden" aria-label="Abrir menu">
+            <button onClick={() => setMobileOpen(true)} className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-accent lg:hidden" aria-label="Abrir menu">
               <Menu className="size-4" />
             </button>
             <img src="/ghostscale-logo.png" alt="GhostScale" className="h-8 w-auto shrink-0 object-contain lg:hidden" />
             <div className="hidden min-w-0 lg:block">
               <h1 className="text-xl font-semibold">{title}</h1>
-              {subtitle ? <p className="hidden text-sm text-slate-500 sm:block">{subtitle}</p> : null}
+              {subtitle ? <p className="hidden text-sm text-muted-foreground sm:block">{subtitle}</p> : null}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {activeTracking === true ? (
-              <Badge className="bg-emerald-500/10 text-emerald-300">● Rastreamento ativo</Badge>
+              <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">● Rastreamento ativo</Badge>
             ) : activeTracking === false ? (
               <a href="/integracoes">
-                <Badge className="bg-amber-500/10 text-amber-300">● Configuração necessária</Badge>
+                <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">● Configuração necessária</Badge>
               </a>
             ) : null}
-            <a href="/docs" className="hidden items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-white sm:inline-flex">
+            <a href="/docs" className="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:inline-flex">
               <BookOpen className="size-4" />
               Docs
             </a>
