@@ -22,7 +22,7 @@ export default function Page() {
           <b>Como funciona o multi-canal</b>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
             <li>Use <a href="/ferramentas/utm-builder" className="text-violet-300 underline">UTM Builder</a> com <code>utm_source=tiktok</code> nos anúncios TT.</li>
-            <li>Instale o <a href="/ferramentas/ativador-tiktok" className="text-violet-300 underline">Pixel TikTok</a> junto ao tracker TrackBase.</li>
+            <li>Instale o <a href="/ferramentas/ativador-tiktok" className="text-violet-300 underline">Pixel TikTok</a> junto ao tracker GhostScale.</li>
             <li>Compare em <a href="/relatorios/utms" className="text-violet-300 underline">Relatórios de UTMs</a> e <a href="/atribuicao" className="text-violet-300 underline">Atribuição</a>.</li>
           </ol>
         </div>

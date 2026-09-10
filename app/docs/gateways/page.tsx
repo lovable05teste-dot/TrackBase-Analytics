@@ -9,7 +9,7 @@ export default function GatewaysDoc() {
     <section className="space-y-6">
       <div>
         <h2 className="flex items-center gap-2 text-2xl font-semibold"><PlugZap className="size-6 text-violet-300" />Integração para gateways</h2>
-        <p className="mt-1 text-sm text-slate-500">Envie pedidos do seu gateway para o TrackBase e veja as vendas atribuídas às campanhas do Meta Ads.</p>
+        <p className="mt-1 text-sm text-slate-500">Envie pedidos do seu gateway para o GhostScale e veja as vendas atribuídas às campanhas do Meta Ads.</p>
       </div>
 
       <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><PlugZap className="size-5 text-violet-300" />Visão geral</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -17,7 +17,7 @@ export default function GatewaysDoc() {
         <Code lang="http">{`POST ${BASE_URL}/api/webhooks/gateway
 Authorization: Bearer tb_live_<seu-token>
 Content-Type: application/json`}</Code>
-        <Box tone="info">O webhook aceita formatos livres — os campos são detectados por heurística. O <code className="rounded bg-black/30 px-1 text-violet-300">{BASE_URL}</code> é o domínio do TrackBase do cliente, fornecido no painel.</Box>
+        <Box tone="info">O webhook aceita formatos livres — os campos são detectados por heurística. O <code className="rounded bg-black/30 px-1 text-violet-300">{BASE_URL}</code> é o domínio da GhostScale do cliente, fornecido no painel.</Box>
       </CardContent></Card>
 
       <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><KeyRound className="size-5 text-violet-300" />Onde o cliente obtém a credencial</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -40,7 +40,7 @@ X-TrackBase-Key: tb_live_<64 hex>
 
 # Opção 3 — query string
 POST ${BASE_URL}/api/webhooks/gateway?token=tb_live_<64 hex>`}</Code>
-        <Box tone="danger">Sem token, token inválido ou desativado, a resposta é <b>401</b>. O token fica no TrackBase apenas como hash SHA-256.</Box>
+        <Box tone="danger">Sem token, token inválido ou desativado, a resposta é <b>401</b>. O token fica na GhostScale apenas como hash SHA-256.</Box>
       </CardContent></Card>
 
       <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><BookOpen className="size-5 text-violet-300" />Payload aceito (JSON livre)</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -75,7 +75,7 @@ POST ${BASE_URL}/api/webhooks/gateway?token=tb_live_<64 hex>`}</Code>
       </CardContent></Card>
 
       <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><Radio className="size-5 text-violet-300" />Status → evento</CardTitle></CardHeader><CardContent className="space-y-4">
-        <Table head={["Status do seu gateway", "Status TrackBase", "Evento na Meta"]} rows={[
+        <Table head={["Status do seu gateway", "Status GhostScale", "Evento na Meta"]} rows={[
           [["approved", "paid", "completed", "succeeded", "success", "aprovado", "pago"], "approved", "Purchase"],
           [["qualquer outro / ausente"], "pending", "PaymentPending"],
           [["refund", "refunded", "reembolso"], "refunded", "Refund"],

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const { workspaceId } = await getWorkspace();
   const { rows } = await getProjectIds(workspaceId);
-  const snippet = `<!-- Anti-Clone TrackBase: bloqueia iframe + domínio não autorizado -->
+  const snippet = `<!-- Anti-Clone GhostScale: bloqueia iframe + domínio não autorizado -->
 <script>
 (function(){var allowed=${JSON.stringify(rows.map((r) => r.domain).filter(Boolean))};
 if(window.top!==window.self){document.body.innerHTML="<h1>Bloqueado</h1>";return;}

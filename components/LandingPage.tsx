@@ -320,8 +320,8 @@ export function LandingPage() {
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <a href="#home" className="flex items-center gap-2.5">
-            <img src="/trackbase-logo.png" alt="Logo TrackBase Analytics" className="h-9 w-16 object-contain" />
-            <b className="text-[15px]">TrackBase Analytics</b>
+              <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-9 w-auto object-contain" />
+              <b className="text-[15px]">GhostScale</b>
           </a>
           <nav className="hidden items-center gap-7 text-sm text-slate-400 md:flex">
             {[
@@ -371,7 +371,7 @@ export function LandingPage() {
             Saiba exatamente qual anúncio coloca <span className="text-[#ff3b5c]">dinheiro no seu bolso.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-400 sm:text-lg">
-            O TrackBase une Pixel + Conversions API deduplicados, webhook universal de vendas e ROAS por campanha —
+            O GhostScale une Pixel + Conversions API deduplicados, webhook universal de vendas e ROAS por campanha —
             <b className="text-slate-200"> sem depender de pixel cego e sem medo de clone.</b>
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -394,7 +394,7 @@ export function LandingPage() {
               <span className="size-2.5 rounded-full bg-red-500/70" />
               <span className="size-2.5 rounded-full bg-amber-400/70" />
               <span className="size-2.5 rounded-full bg-emerald-400/70" />
-              <span className="ml-3 text-xs text-slate-500">painel.trackbase — tempo real</span>
+              <span className="ml-3 text-xs text-slate-500">painel.ghostscale — tempo real</span>
               <span className="ml-auto hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300 sm:inline-flex">
                 <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" /> ao vivo
               </span>
@@ -458,7 +458,7 @@ export function LandingPage() {
           ))}
         </div>
         <div className="reveal mt-8">
-          <ArrowCta href="#solucao">Ver como o TrackBase resolve</ArrowCta>
+          <ArrowCta href="#solucao">Ver como o GhostScale resolve</ArrowCta>
         </div>
       </section>
 
@@ -501,7 +501,7 @@ export function LandingPage() {
             <thead>
               <tr className="bg-white/[.03]">
                 <th className="p-4 text-left font-medium normal-case tracking-normal">Funcionalidade</th>
-                <th className="p-4 text-center font-semibold text-[#ff3b5c]">TrackBase</th>
+                <th className="p-4 text-center font-semibold text-[#ff3b5c]">GhostScale</th>
                 <th className="p-4 text-center font-medium text-slate-500">Trackers comuns</th>
               </tr>
             </thead>
@@ -658,8 +658,8 @@ export function LandingPage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-5 md:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
           <div>
             <div className="flex items-center gap-2.5">
-              <img src="/trackbase-logo.png" alt="Logo TrackBase Analytics" className="h-9 w-16 object-contain" />
-              <b className="text-[15px]">TrackBase Analytics</b>
+<img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-9 w-auto object-contain" />
+            <b className="text-[15px]">GhostScale</b>
             </div>
             <p className="mt-3 max-w-xs text-sm text-slate-500">Mais que tracking: a arma secreta de quem vive de tráfego pago.</p>
           </div>
@@ -682,7 +682,7 @@ export function LandingPage() {
             </div>
           ))}
         </div>
-        <p className="mx-auto mt-8 max-w-6xl px-5 text-xs text-slate-600">© 2026 TrackBase Analytics. Todos os direitos reservados.</p>
+        <p className="mx-auto mt-8 max-w-6xl px-5 text-xs text-slate-600">© 2026 GhostScale. Todos os direitos reservados.</p>
       </footer>
     </main>
   );

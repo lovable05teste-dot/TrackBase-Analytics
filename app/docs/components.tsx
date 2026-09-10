@@ -1,7 +1,7 @@
 export function Code({ children, lang }: { children: string; lang: string }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/30">
-      <div className="flex justify-between border-b border-white/8 px-4 py-2 text-xs text-slate-500"><span>{lang}</span><span className="text-slate-600">TrackBase</span></div>
+      <div className="flex justify-between border-b border-white/8 px-4 py-2 text-xs text-slate-500"><span>{lang}</span><span className="text-slate-600">GhostScale</span></div>
       <pre className="p-4 text-xs leading-6 text-sky-200">
         <code>{children}</code>
       </pre>

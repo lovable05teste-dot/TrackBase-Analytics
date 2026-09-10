@@ -76,7 +76,7 @@ export default function FaqDoc() {
     <section className="space-y-6">
       <div>
         <h2 className="flex items-center gap-2 text-2xl font-semibold"><HelpCircle className="size-6 text-violet-300" />Perguntas frequentes</h2>
-        <p className="mt-1 text-sm text-slate-500">Dúvidas comuns de quem conecta a TrackBase com gateways e páginas de vendas.</p>
+        <p className="mt-1 text-sm text-slate-500">Dúvidas comuns de quem conecta a GhostScale com gateways e páginas de vendas.</p>
       </div>
 
       <Card className="metric-card"><CardContent className="p-4">

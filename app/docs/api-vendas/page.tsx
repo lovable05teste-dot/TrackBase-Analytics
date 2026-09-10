@@ -6,7 +6,7 @@ export default function ApiVendasDoc() {
     <section className="space-y-6">
       <div>
         <h2 className="flex items-center gap-2 text-2xl font-semibold"><PlugZap className="size-6 text-violet-300" />API de Vendas</h2>
-        <p className="mt-1 text-sm text-slate-500">Endpoint universal para gateways enviarem vendas ao TrackBase.</p>
+        <p className="mt-1 text-sm text-slate-500">Endpoint universal para gateways enviarem vendas à GhostScale.</p>
       </div>
       <Box>
         <H3>POST {"{BASE_URL}"}/api/webhooks/gateway</H3>

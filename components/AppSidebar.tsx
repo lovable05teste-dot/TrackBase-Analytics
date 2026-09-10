@@ -19,11 +19,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <a href="/" className="flex items-center gap-3 px-1 py-1">
-        <img src="/trackbase-logo.png" alt="Logo TrackBase Analytics" className="h-11 w-20 shrink-0 object-contain" />
-        <div>
-          <b className="block text-[15px] leading-tight">TrackBase Analytics</b>
-          <small className="block text-xs text-slate-500">Meta Ads Intelligence</small>
-        </div>
+        <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-10 w-auto shrink-0 object-contain" />
       </a>
       <nav className="mt-6 flex-1 space-y-5 overflow-y-auto pb-4 pr-1">
         {NAV_GROUPS.map((g) => {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export const metadata: Metadata = { title: "Documentação — TrackBase Analytics", description: "Documentação de integração para gateways, páginas de vendas e administradores." };
+export const metadata: Metadata = { title: "Documentação — GhostScale", description: "Documentação de integração para gateways, páginas de vendas e administradores." };
 
 const tabs = [
   ["/docs", "Visão geral"],
@@ -19,7 +19,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
 
         <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="/trackbase-logo.png" alt="Logo TrackBase Analytics" className="h-11 w-20 shrink-0 object-contain" />
+            <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto shrink-0 object-contain" />
             <div>
               <h1 className="flex items-center gap-2 text-2xl font-semibold"><BookOpen className="size-6 text-violet-300" />Documentação</h1>
               <p className="text-sm text-slate-500">Integração, rastreamento e configuração</p>
@@ -35,7 +35,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         {children}
 
         <footer className="mt-12 border-t border-white/7 pt-6 text-center text-xs text-slate-600">
-          TrackBase Analytics — Meta Ads Intelligence · <a href="/" className="hover:text-slate-300">Voltar ao painel</a>
+          GhostScale — Meta Ads Intelligence · <a href="/" className="hover:text-slate-300">Voltar ao painel</a>
         </footer>
       </div>
     </main>

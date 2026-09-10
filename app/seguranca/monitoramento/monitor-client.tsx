@@ -17,7 +17,7 @@ export function MonitorClient() {
   async function checkOne(s: Site): Promise<Site> {
     const t0 = performance.now();
     try {
-      // Checagem simples: tenta carregar o tracker.js da TrackBase + no-cors no site
+      // Checagem simples: tenta carregar o tracker.js da GhostScale + no-cors no site
       await fetch(s.url, { mode: "no-cors", cache: "no-store" });
       return { ...s, status: "online", ms: Math.round(performance.now() - t0), checkedAt: new Date().toLocaleString("pt-BR") };
     } catch {

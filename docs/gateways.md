@@ -1,8 +1,8 @@
 # Guia de Integração para Gateways de Pagamento
 
-**TrackBase Analytics** — receba pedidos pelo nosso webhook universal e veja as vendas do seu usuário no painel de tráfego do Meta Ads, com atribuição por campanha.
+**GhostScale** — receba pedidos pelo nosso webhook universal e veja as vendas do seu usuário no painel de tráfego do Meta Ads, com atribuição por campanha.
 
-Este guia é destinado a **gateways de pagamento e plataformas de vendas** (FortPay, FlevoPay, Hotmart, Kiwify, Utmify e outros) que queiram enviar pedidos para o TrackBase de forma simples e segura.
+Este guia é destinado a **gateways de pagamento e plataformas de vendas** (FortPay, FlevoPay, Hotmart, Kiwify, Utmify e outros) que queiram enviar pedidos para a GhostScale de forma simples e segura.
 
 ---
 
@@ -16,7 +16,7 @@ Este guia é destinado a **gateways de pagamento e plataformas de vendas** (Fort
 | Ação | Registra a venda, atualiza a campanha e dispara o evento correto na Meta (Purchase, PaymentPending, Refund, Chargeback ou PaymentCancelled) |
 | Resposta de sucesso | `200` |
 
-O **`{BASE_URL}`** é o domínio onde o TrackBase está publicado (ex.: `https://seudominio.trackbase.app`). Ele é fornecido no painel junto com o token.
+O **`{BASE_URL}`** é o domínio onde a GhostScale está publicada (ex.: `https://seudominio.ghostscale.app`). Ele é fornecido no painel junto com o token.
 
 > Nós não exigimos formato fixo de payload: o webhook detecta campos comuns por heurística. Basta enviar `id`, `status`, `amount`/`value` e `currency`, e de preferência os dados de rastreamento (`tracking.*`). Dessa forma a integração funciona com qualquer nomenclatura do seu gateway.
 
@@ -30,7 +30,7 @@ O dono da conta, no painel **Integrações → aba "Gateways"**, cria uma creden
 - **Token** → `tb_live_<64 caracteres hex>`
 - **Authorization header** → `Bearer tb_live_<64 caracteres hex>`
 
-O token é exibido **uma única vez**. Ele fica guardado no TrackBase apenas como hash SHA-256, e o cliente pode criar/reagir credenciais quando quiser.
+O token é exibido **uma única vez**. Ele fica guardado na GhostScale apenas como hash SHA-256, e o cliente pode criar/reagir credenciais quando quiser.
 
 **Na sua plataforma**, ofereça na configuração do cliente os campos:
 
@@ -66,7 +66,7 @@ Se o seu painel permite configurar **apenas uma URL** (sem header custom), mante
 
 ## 4. Payload aceito
 
-O JSON é livre. O TrackBase procura os valores nos caminhos abaixo (na ordem indicada, da esquerda para a direita). Envie o que fizer sentido para o seu gateway — campos ausentes têm padrões seguros.
+O JSON é livre. O GhostScale procura os valores nos caminhos abaixo (na ordem indicada, da esquerda para a direita). Envie o que fizer sentido para o seu gateway — campos ausentes têm padrões seguros.
 
 ### 4.1 Identificação do pedido
 
@@ -75,7 +75,7 @@ O JSON é livre. O TrackBase procura os valores nos caminhos abaixo (na ordem in
 | ID do pedido | `id` · `transaction_id` · `transactionId` · `sale_id` · `saleId` · `data.id` · `data.transaction.id` · `order.id` |
 | ID do evento | `event_id` · `eventId` · `tracking.event_id` · `metadata.event_id` · `data.event_id` |
 
-Se não enviar um ID, o TrackBase gera um automaticamente. O `event_id` é usado para **deduplicação** — se ele não for enviado, o TrackBase monta um estável como `gw_<provider>_<orderId>_<status>`.
+Se não enviar um ID, o GhostScale gera um automaticamente. O `event_id` é usado para **deduplicação** — se ele não for enviado, o GhostScale monta um estável como `gw_<provider>_<orderId>_<status>`.
 
 ### 4.2 Status da transação
 
@@ -131,7 +131,7 @@ Recomendado: quando o checkout do seu gateway receber `?fbclid=`, `?utm_*`, `_fb
 
 A seguir a conversão automática. A detecção é feita por **palavra-chave** no status em minúsculas:
 
-| Status do seu gateway (exemplos) | Status TrackBase | Evento gerado |
+| Status do seu gateway (exemplos) | Status GhostScale | Evento gerado |
 |---|---|---|
 | `approved`, `paid`, `completed`, `succeeded`, `success`, `aprovado`, `pago` | `approved` | `Purchase` |
 | `pending`, `processing`, `waiting`, `analysing`, … (qualquer outro) | `pending` | `PaymentPending` |
@@ -261,7 +261,7 @@ Pode reenviar com segurança em caso de falha de rede ou `5xx`; a operação é 
 1. **Envie assim que a transação mudar de estado** — aprovado, pendente, reembolsado, cancelado e chargeback. Quanto mais estados enviados, mais completo o painel e o funil do cliente.
 2. **Reenvie tentativas falhas** com backoff (`Authorization`/token válido) — `2xx` = sucesso; `401` = token inválido (prompe o usuário a gerar um novo).
 3. **Preserve os dados de rastreamento** (`tracking.*`, `metadata.*`) recebidos na URL/cookies, devolvendo-os no webhook — é o que conecta a venda à campanha de anúncio.
-4. **Envie valores decimais** (ex.: `129.90`) ou inteiros consistentes (centavos) — o TrackBase detecta centavos automaticamente para valores > 10000.
+4. **Envie valores decimais** (ex.: `129.90`) ou inteiros consistentes (centavos) — o GhostScale detecta centavos automaticamente para valores > 10000.
 5. **Não envie dados sensíveis** desnecessários. Guardamos o payload inteiro para auditoria, mas o importante mesmo são: `id`, `status`, valor, moeda e rastreamento.
 6. **Configure um token por cliente/ambiente**. O cliente pode criar credenciais separadas por gateway (ex.: FortPay produção / FortPay teste), cada uma com seu próprio token.
 

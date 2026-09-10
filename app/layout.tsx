@@ -3,18 +3,18 @@ import "./globals.css";
 import {PwaRegister} from "./pwa-register";
 
 export const metadata: Metadata = {
-  title: "TrackBase Analytics",
+  title: "GhostScale",
   description: "Rastreamento de eventos, vendas e performance para Meta Ads.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/apple-touch-icon.png",
+    icon: "/ghostscale-ghost.png",
+    shortcut: "/ghostscale-ghost.png",
+    apple: "/ghostscale-ghost.png",
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "TrackBase",
+    title: "GhostScale",
   },
 };
 

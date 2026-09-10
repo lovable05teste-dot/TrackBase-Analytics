@@ -1,6 +1,6 @@
 {
-  "name": "TrackBase Analytics",
-  "short_name": "TrackBase",
+  "name": "GhostScale",
+  "short_name": "GhostScale",
   "description": "Rastreamento de eventos, vendas e performance para Meta Ads.",
   "start_url": "/",
   "scope": "/",
