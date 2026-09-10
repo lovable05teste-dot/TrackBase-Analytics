@@ -320,8 +320,8 @@ export function LandingPage() {
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <a href="#home" className="flex items-center gap-2.5">
-              <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-9 w-auto object-contain" />
-              <b className="text-[15px]">GhostScale</b>
+              <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto object-contain" />
+              <b className="text-xl font-extrabold tracking-tight">GhostScale</b>
           </a>
           <nav className="hidden items-center gap-7 text-sm text-slate-400 md:flex">
             {[
@@ -658,8 +658,8 @@ export function LandingPage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-5 md:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
           <div>
             <div className="flex items-center gap-2.5">
-<img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-9 w-auto object-contain" />
-            <b className="text-[15px]">GhostScale</b>
+<img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto object-contain" />
+            <b className="text-xl font-extrabold tracking-tight">GhostScale</b>
             </div>
             <p className="mt-3 max-w-xs text-sm text-slate-500">Mais que tracking: a arma secreta de quem vive de tráfego pago.</p>
           </div>
