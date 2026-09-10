@@ -295,17 +295,39 @@ function ScaleSimulator() {
   );
 }
 
-/* Calculadora do preço — 1 slider, conta na hora */
+/* Calculadora do preço — 4 planos + R$0,10 excedente */
 function PriceCalculator() {
   const [sales, setSales] = useState(1200);
+  const plans = [
+    { name: "Start", base: 39.9, included: 500 },
+    { name: "Pro", base: 69.9, included: 1000 },
+    { name: "Scale", base: 89.9, included: 2000 },
+    { name: "Black", base: 119.9, included: Infinity },
+  ];
+  const calc = (p: typeof plans[number]) =>
+    !Number.isFinite(p.included) ? p.base : p.base + Math.max(0, sales - p.included) * 0.1;
+  const best = plans.reduce((a, b) => (calc(a) <= calc(b) ? a : b));
   return (
-    <div className="reveal mx-auto mt-8 max-w-md rounded-3xl border border-[#ff0030]/30 bg-gradient-to-b from-[#ff0030]/10 to-transparent p-8 shadow-[0_24px_80px_-24px_#ff003066] transition-transform duration-300 hover:-translate-y-1.5">
-      <small className="text-sm text-slate-400">Taxa única</small>
-      <div className="mt-2 flex items-end justify-center gap-1">
-        <b className="text-6xl font-bold tracking-tight">R$ 0,25</b>
+    <div className="reveal mx-auto mt-8 max-w-4xl">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {plans.map((p) => {
+          const total = calc(p);
+          const isBest = p.name === best.name;
+          return (
+            <div key={p.name} className={`rounded-3xl border p-6 text-left transition-transform duration-300 hover:-translate-y-1.5 ${isBest ? "border-[#ff0030]/50 bg-gradient-to-b from-[#ff0030]/10 to-transparent shadow-[0_24px_80px_-24px_#ff003066]" : "border-white/10 bg-black/40"}`}>
+              <small className="text-sm text-slate-400">{p.name}</small>
+              <div className="mt-1 flex items-end gap-1">
+                <b className="text-3xl font-bold tracking-tight">{brl(p.base)}</b>
+                <span className="pb-1 text-xs text-slate-500">/mês</span>
+              </div>
+              <p className="mt-1 text-xs text-slate-400">{Number.isFinite(p.included) ? `até ${p.included.toLocaleString("pt-BR")} vendas inclusas` : "vendas ilimitadas"}</p>
+              <p className="mt-2 text-sm">Sua conta: <b className="text-emerald-300">{brl(total)}</b></p>
+              {isBest && <p className="mt-1 text-[11px] font-semibold text-[#ff3b5c]">Melhor pra você</p>}
+            </div>
+          );
+        })}
       </div>
-      <p className="mt-1 text-sm text-slate-400">por venda aprovada. Só isso.</p>
-      <div className="mt-6 rounded-2xl bg-black/40 p-5 text-left">
+      <div className="mx-auto mt-4 max-w-md rounded-2xl bg-black/40 p-5 text-left">
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-400">Suas vendas/mês</span>
           <b className="text-lg">{sales.toLocaleString("pt-BR")}</b>
@@ -320,13 +342,10 @@ function PriceCalculator() {
           className="mt-3 w-full accent-[#ff0030]"
           aria-label="Vendas por mês"
         />
-        <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-          <span className="text-sm text-slate-400">Sua conta fecha em</span>
-          <b className="text-2xl text-emerald-300">{brl(sales * 0.25)}<span className="text-sm font-normal text-slate-500">/mês</span></b>
-        </div>
+        <p className="mt-2 text-xs text-slate-500">Excedente: R$ 0,10 por venda aprovada além da franquia. Black sem excedente.</p>
       </div>
       <ul className="mx-auto mt-6 max-w-xs space-y-2.5 text-left text-sm">
-        {["Sem mensalidade", "Só cobra em venda aprovada", "CAPI + Pixel incluídos", "Gateways ilimitados", "Cancele quando quiser"].map((f) => (
+        {["Só venda aprovada conta", "Pendente/reembolso/chargeback = R$0", "CAPI + Pixel incluídos", "Gateways ilimitados", "Cancele quando quiser"].map((f) => (
           <li key={f} className="flex items-center gap-2.5 text-slate-300">
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
               <Check className="size-3" />
@@ -365,7 +384,7 @@ const compareRows: [string, boolean, string][] = [
   ["Anti-clone de verdade", true, "Não tem"],
   ["CAPI com deduplicação automática", true, "Manual ou parcial"],
   ["Webhook universal multi-gateway", true, "Um plugin por checkout"],
-  ["Preço por venda aprovada, sem mensalidade", true, "Mensalidade + excedentes"],
+  ["Base fixa + R$0,10 só no excedente", true, "Mensalidade + excedentes caros"],
   ["Monitoramento de site 24/7", true, "Não tem"],
   ["Predict com IA + alertas", true, "Não tem"],
   ["Setup em 5 minutos, sem programar", true, "Precisa de dev"],
@@ -398,8 +417,7 @@ export function LandingPage() {
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <a href="#home" className="flex items-center gap-2.5">
-              <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto object-contain" />
-              <b className="text-xl font-extrabold tracking-tight">GhostScale</b>
+              <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[220px] object-contain" />
           </a>
           <nav className="hidden items-center gap-7 text-sm text-slate-400 md:flex">
             {[
@@ -741,8 +759,7 @@ export function LandingPage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-5 md:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
           <div>
             <div className="flex items-center gap-2.5">
-<img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto object-contain" />
-            <b className="text-xl font-extrabold tracking-tight">GhostScale</b>
+<img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[220px] object-contain" />
             </div>
             <p className="mt-3 max-w-xs text-sm text-slate-500">Mais que tracking: a arma secreta de quem vive de tráfego pago.</p>
           </div>

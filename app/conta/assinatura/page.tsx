@@ -3,15 +3,16 @@ import { AppShell } from "@/components/AppShell";
 export const dynamic = "force-dynamic";
 
 const PLANS = [
-  { name: "Start", price: "R$ 97/mês", feats: ["3 projetos", "Relatórios + UTMs", "Funil + Atribuição", "Suporte chat"], cta: "Assinar Start" },
-  { name: "Scale", price: "R$ 197/mês", feats: ["15 projetos", "Tudo do Start", "Predict IA + Agent Hub", "Anti-Clone + Blacklist", "Comunidade + Rankings"], cta: "Assinar Scale", hot: true },
-  { name: "Black Belt", price: "R$ 497/mês", feats: ["Projetos ilimitados", "Tudo do Scale", "Monitoramento + Offer Lab", "Onboarding 1:1"], cta: "Falar com time" },
+  { name: "Start", price: "R$ 39,90/mês", feats: ["3 projetos", "Até 500 vendas/mês inclusas", "Excedente R$ 0,10/venda aprovada", "Relatórios + UTMs + Funil", "Suporte chat"], cta: "Assinar Start" },
+  { name: "Pro", price: "R$ 69,90/mês", feats: ["10 projetos", "Até 1.000 vendas/mês inclusas", "Excedente R$ 0,10/venda aprovada", "Tudo do Start + Predict IA", "Comunidade + Rankings"], cta: "Assinar Pro", hot: true },
+  { name: "Scale", price: "R$ 89,90/mês", feats: ["20 projetos", "Até 2.000 vendas/mês inclusas", "Excedente R$ 0,10/venda aprovada", "Tudo do Pro + Anti-Clone + Blacklist", "Monitoramento + Offer Lab"], cta: "Assinar Scale" },
+  { name: "Black", price: "R$ 119,90/mês", feats: ["Projetos ilimitados", "Vendas ilimitadas sem excedente", "Tudo do Scale + Agent Hub", "Onboarding 1:1"], cta: "Assinar Black" },
 ];
 
 export default function Page() {
   return (
-    <AppShell title="Assinatura" subtitle="Escolha o plano ideal para o seu volume.">
-      <div className="grid gap-4 md:grid-cols-3">
+    <AppShell title="Assinatura" subtitle="Base mensal + R$ 0,10 por venda aprovada excedente. Black é ilimitado.">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {PLANS.map((p) => (
           <div key={p.name} className={`metric-card rounded-xl p-6 ${p.hot ? "border-violet-400/40" : ""}`}>
             {p.hot ? <span className="mb-3 inline-block rounded-full bg-violet-500/20 px-3 py-1 text-xs text-violet-200">Mais popular</span> : null}

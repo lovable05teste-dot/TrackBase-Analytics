@@ -27,7 +27,7 @@ export default function Login(){
  <section className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
   <div className="pointer-events-none absolute inset-0" style={{background:"radial-gradient(900px 420px at 15% 10%, #ff003026, transparent 60%), radial-gradient(700px 500px at 90% 90%, #755cff22, transparent 60%), linear-gradient(180deg,#0b0e17 0%,#080b12 100%)"}}/>
   <div className="relative">
-   <div className="flex items-center gap-3"><img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto object-contain"/><div><b className="block text-xl font-extrabold leading-tight tracking-tight">GhostScale</b><small className="block text-xs text-slate-500">Meta Ads Intelligence</small></div></div>
+   <div className="flex items-center gap-3"><img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto object-contain"/><div><b className="block text-xs text-slate-500">Meta Ads Intelligence</b></div></div>
    <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs text-red-200"><span className="inline-block size-1.5 rounded-full bg-red-500"/>+ vendas rastreadas em tempo real</div>
    <h1 className="mt-5 max-w-xl text-4xl font-bold leading-[1.1] tracking-tight xl:text-5xl">Rastreamento feito para quem domina o <span className="text-red-500">tráfego.</span></h1>
    <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-slate-400">Quando a operação entra em pressão, você precisa de um sistema que aguente pico de escala, recusa de checkout e troca de gateway <b className="text-slate-200">sem perder nenhuma venda nem o ROAS.</b></p>
@@ -41,7 +41,7 @@ export default function Login(){
   </div>
  </section>
  <section className="flex items-center justify-center border-t border-white/10 bg-[#0b0e17] p-5 sm:p-10 lg:border-l lg:border-t-0"><div className="w-full max-w-md">
-  <div className="mb-6 lg:hidden"><div className="flex items-center gap-3"><img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-10 w-auto object-contain"/><div><b className="block text-xl font-extrabold tracking-tight">GhostScale</b><small className="block text-xs text-slate-500">Meta Ads Intelligence</small></div></div>
+  <div className="mb-6 lg:hidden"><div className="flex items-center gap-3"><img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-10 w-auto object-contain"/><div><small className="block text-xs text-slate-500">Meta Ads Intelligence</small></div></div>
   <h1 className="mt-4 text-2xl font-bold leading-tight">Rastreamento feito para quem domina o <span className="text-red-500">tráfego.</span></h1></div>
   <div className="rounded-2xl border border-white/10 bg-[#101521] p-6 shadow-[0_16px_60px_#0006] sm:p-8">
    <div className="flex items-center justify-between"><h2 className="text-xl font-semibold">{mode==="register"?"Criar sua conta":"Entrar no painel"}</h2><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300">● online</span></div>
