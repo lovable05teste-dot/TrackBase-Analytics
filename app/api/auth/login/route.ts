@@ -18,7 +18,7 @@ export async function POST(request:Request){
       if(user.passwordHash!==await sha256(body.password))return Response.json({error:"E-mail ou senha inválidos."},{status:401});
       const token=await sha256(`trackbase:${user.passwordHash}`);
       return Response.json({ok:true},{headers:{"set-cookie":sessionCookie(token)}});
-    }catch(error){console.error("login email",error);return Response.json({error:"Erro interno."},{status:500})}
+    }catch(error){console.error("login email",error);const msg=error instanceof Error?error.message:"";if(/não configurad/i.test(msg))return Response.json({error:"Banco de dados não configurado. Fale com o suporte."},{status:503});return Response.json({error:"Erro interno."},{status:500})}
   }
   const secret=process.env.ADMIN_PASSWORD;
   if(!secret)return Response.json({error:"Configure ADMIN_PASSWORD na Vercel."},{status:503});

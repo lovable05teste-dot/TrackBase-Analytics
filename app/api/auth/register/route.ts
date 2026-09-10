@@ -24,5 +24,5 @@ export async function POST(request:Request){
     await db.insert(users).values({id,email,passwordHash,createdAt:Math.floor(Date.now()/1000)});
     const token=await sha256(`trackbase:${passwordHash}`);
     return Response.json({ok:true},{headers:{"set-cookie":sessionCookie(token)}});
-  }catch(error){console.error("register",error);return Response.json({error:"Erro interno."},{status:500})}
+  }catch(error){console.error("register",error);const msg=error instanceof Error?error.message:"";if(/não configurad/i.test(msg))return Response.json({error:"Banco de dados não configurado. Fale com o suporte."},{status:503});return Response.json({error:"Erro interno."},{status:500})}
 }
