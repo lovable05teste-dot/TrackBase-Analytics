@@ -37,7 +37,7 @@ export function AppShell({
       ) : null}
 
       <section className="lg:pl-72">
-        <header className="flex min-h-20 items-center justify-between gap-3 border-b border-white/10 px-5 py-4 lg:px-8">
+        <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4 lg:px-8">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="rounded-lg border border-white/10 p-2 lg:hidden" aria-label="Abrir menu">
               <Menu className="size-4" />

@@ -39,7 +39,7 @@ export default async function Page() {
               <div key={k} className="metric-card rounded-xl p-5"><p className="text-sm text-slate-400">{k}</p><p className="mt-2 text-2xl font-semibold">{v}</p><p className="mt-1 text-xs text-slate-500">{s}</p></div>
             ))}
           </div>
-          <div className="metric-card overflow-hidden rounded-xl">
+          <div className="metric-card overflow-x-auto rounded-xl">
             <div className="border-b border-white/10 p-5"><b>Modelo Last-Click por utm_source</b><p className="mt-1 text-sm text-slate-500">Todo o crédito vai para a última fonte marcada. {both} acessos têm fbclid + UTM (ideal).</p></div>
             <table className="w-full min-w-[520px] text-sm">
               <thead><tr>{["Fonte", "Eventos", "Compras", "Participação"].map((h) => <th key={h}>{h}</th>)}</tr></thead>

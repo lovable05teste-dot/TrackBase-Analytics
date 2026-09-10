@@ -47,7 +47,7 @@ export default async function Page() {
             ))}
           </div>
         </div>
-        <div className="metric-card overflow-hidden rounded-xl">
+        <div className="metric-card overflow-x-auto rounded-xl">
           <div className="border-b border-white/10 p-5"><b>Funil por campanha</b><p className="mt-1 text-sm text-slate-500">Compare conversão acesso → compra por utm_campaign.</p></div>
           <table className="w-full min-w-[560px] text-sm">
             <thead><tr>{["Campanha", "Cliques", "Acessos", "ICs", "Compras", "Conv."].map((h) => <th key={h}>{h}</th>)}</tr></thead>

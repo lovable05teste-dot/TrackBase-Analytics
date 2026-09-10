@@ -31,7 +31,7 @@ export default async function Page() {
           <div className="metric-card rounded-xl p-5">
             <b>Calor por hora (UTC) · 30 dias</b>
             <p className="mt-1 text-sm text-slate-500">Intensidade = volume de eventos. Número = compras.</p>
-            <div className="mt-4 grid grid-cols-6 gap-2 sm:grid-cols-12">
+            <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8 xl:grid-cols-12">
               {hours.map(({ h, n, compras: c }) => {
                 const intensity = Math.round((n / maxH) * 100);
                 return (

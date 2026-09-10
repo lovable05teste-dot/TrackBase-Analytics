@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MobileMenu } from "@/components/MobileMenu";
 
 export const metadata: Metadata = { title: "Documentação — GhostScale", description: "Documentação de integração para gateways, páginas de vendas e administradores." };
 
@@ -9,6 +10,7 @@ const tabs = [
   ["/docs/gateways", "Gateways"],
   ["/docs/pagina", "Página de vendas"],
   ["/docs/faq", "FAQ"],
+  ["/docs/api-vendas", "API de vendas"],
 ] as const;
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +29,8 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
           </div>
           <Badge className="bg-emerald-500/10 text-emerald-300">Webhook universal</Badge>
         </header>
+
+        <div className="mb-4 lg:hidden"><MobileMenu /></div>
 
         <nav className="sticky top-0 z-10 mb-8 flex flex-wrap gap-2 rounded-xl border border-white/10 bg-[#0b0e17]/95 p-2 backdrop-blur">
           {tabs.map(([href, label]) => <a key={href} href={href} className="rounded-lg px-3 py-1.5 text-sm text-slate-400 hover:bg-white/5 hover:text-white">{label}</a>)}
