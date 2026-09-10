@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     const [credential] = await getDb()
       .select()
       .from(apiCredentials)
-      .where(eq(apiCredentials.tokenHash, await hash(token)))
+      .where(eq(apiCredentials.tokenHash, (await hash(token)) ?? ""))
       .limit(1);
 
     if (!credential || !credential.active) {
