@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getUserIdFromSessionCookie } from "@/lib/trackbase-security";
 
 export type ChatGPTUser = {
   displayName: string;
@@ -21,10 +22,18 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!email) {
     const session=(await cookies()).get("tb_session")?.value;
-    if(!session||!process.env.ADMIN_PASSWORD)return null;
-    const expected=await digest(`trackbase:${process.env.ADMIN_PASSWORD}`);
-    if(session!==expected)return null;
-    return {displayName:"Administrador",email:"admin@trackbase.local",fullName:"Administrador"};
+    const userId=await getUserIdFromSessionCookie(session);
+    if(!userId)return null;
+    if(userId==="trackbase-owner")return {displayName:"Administrador",email:"admin@trackbase.local",fullName:"Administrador"};
+    try{
+      const { ensureDb, getDb }=await import("@/db");
+      const { users }=await import("@/db/schema");
+      const { eq }=await import("drizzle-orm");
+      await ensureDb();
+      const [row]=await getDb().select({email:users.email,name:users.name}).from(users).where(eq(users.id,userId)).limit(1);
+      const mail=row?.email||"conta@trackbase.local";
+      return {displayName:row?.name||mail,email:mail,fullName:row?.name||null};
+    }catch(error){console.error("getChatGPTUser profile",error);return {displayName:"Conta",email:"conta@trackbase.local",fullName:null};}
   }
 
   const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
@@ -91,7 +100,3 @@ function safeDecodeURIComponent(value: string): string | null {
   }
 }
 
-async function digest(value:string){
-  const data=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(data),b=>b.toString(16).padStart(2,"0")).join("");
-}

@@ -34,20 +34,24 @@ export async function decryptSecret(cipher: string, iv: string) {
   return dec.decode(decrypted);
 }
 
-export async function requestUserId(request: Request) {
-  const forwarded=request.headers.get("oai-authenticated-user-id");
-  if(forwarded)return forwarded;
-  const cookie=request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
-  if(!cookie)return null;
-  if(process.env.ADMIN_PASSWORD&&cookie===await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`))return "trackbase-owner";
+export async function getUserIdFromSessionCookie(session: string|undefined|null){
+  if(!session)return null;
+  if(process.env.ADMIN_PASSWORD&&session===await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`))return "trackbase-owner";
   try{
     const { ensureDb, getDb }=await import("@/db");
     const { users }=await import("@/db/schema");
     await ensureDb();
     const allUsers=await getDb().select({id:users.id,passwordHash:users.passwordHash}).from(users);
     for(const u of allUsers){
-      if(cookie===await sha256(`trackbase:${u.passwordHash}`))return u.id;
+      if(session===await sha256(`trackbase:${u.passwordHash}`))return u.id;
     }
-  }catch(error){console.error("requestUserId users lookup",error)}
+  }catch(error){console.error("session users lookup",error)}
   return null;
+}
+
+export async function requestUserId(request: Request) {
+  const forwarded=request.headers.get("oai-authenticated-user-id");
+  if(forwarded)return forwarded;
+  const cookie=request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
+  return getUserIdFromSessionCookie(cookie);
 }
