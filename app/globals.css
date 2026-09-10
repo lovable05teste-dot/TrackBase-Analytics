@@ -40,13 +40,6 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:I
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
 .reveal-visible{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.marquee,.marquee-reverse,.float-anim,.bar-anim{animation:none}.reveal{opacity:1;transform:none}}
-/* cursor customizado GhostScale (só PC) */
-.ghost-cursor,.ghost-cursor a,.ghost-cursor button,.ghost-cursor summary,.ghost-cursor [role=button]{cursor:none}
-.ghost-cursor input,.ghost-cursor textarea,.ghost-cursor select{cursor:auto}
-.ghost-arrow{position:fixed;left:0;top:0;z-index:9999;pointer-events:none;will-change:transform;filter:drop-shadow(0 2px 8px rgba(0,0,0,.55))}
-.ghost-trail{position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden}
-.ghost-dot{position:fixed;left:-3px;top:-3px;width:7px;height:7px;border-radius:9999px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.85);opacity:0;will-change:transform,opacity}
-@media (pointer:coarse){.ghost-arrow,.ghost-trail{display:none}}
 /* caret da headline viva */
 .type-caret{display:inline-block;width:3px;height:1em;margin-left:5px;vertical-align:-0.12em;background:#ff3b5c;animation:tb-blink 1s steps(1) infinite}
 @keyframes tb-blink{50%{opacity:0}}

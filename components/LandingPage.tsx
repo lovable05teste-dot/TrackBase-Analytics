@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -101,98 +101,6 @@ function useTypewriter() {
     return () => clearTimeout(timer);
   }, []);
   return text;
-}
-
-/* Cursor customizado (só PC): setona preta grossa + rastro de pontinhos brancos */
-function CustomCursor() {
-  const arrowRef = useRef<HTMLDivElement>(null);
-  const trailRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (window.matchMedia("(pointer:coarse)").matches) return;
-    document.documentElement.classList.add("ghost-cursor");
-    const arrow = arrowRef.current;
-    const trail = trailRef.current;
-    if (!arrow || !trail) return;
-    const dots: { x: number; y: number; life: number; el: HTMLSpanElement }[] = [];
-    let x = -100;
-    let y = -100;
-    let ax = -100;
-    let ay = -100;
-    let raf = 0;
-    let last = 0;
-    const spawn = (px: number, py: number) => {
-      let d = dots.find((o) => o.life <= 0);
-      if (!d) {
-        if (dots.length >= 26) return;
-        const el = document.createElement("span");
-        el.className = "ghost-dot";
-        trail.appendChild(el);
-        d = { x: 0, y: 0, life: 0, el };
-        dots.push(d);
-      }
-      d.x = px;
-      d.y = py;
-      d.life = 1;
-    };
-    const onMove = (e: MouseEvent) => {
-      x = e.clientX;
-      y = e.clientY;
-      const t = e.target as HTMLElement | null;
-      const hot = !!t?.closest?.("a,button,summary,[role=button]");
-      const typing = !!t?.closest?.("input,textarea,select");
-      if (hot) arrow.setAttribute("data-hot", "1");
-      else arrow.removeAttribute("data-hot");
-      arrow.style.opacity = typing ? "0" : "1";
-      const now = performance.now();
-      if (now - last > 30) {
-        last = now;
-        spawn(x, y);
-      }
-    };
-    const loop = () => {
-      ax += (x - ax) * 0.4;
-      ay += (y - ay) * 0.4;
-      const hot = arrow.hasAttribute("data-hot");
-      arrow.style.transform = `translate3d(${ax}px,${ay}px,0) scale(${hot ? 1.3 : 1})`;
-      const path = arrow.querySelector("path");
-      if (path) path.setAttribute("fill", hot ? "#ff0030" : "#0b0e17");
-      for (const d of dots) {
-        if (d.life <= 0) {
-          d.el.style.opacity = "0";
-          continue;
-        }
-        d.life -= 0.05;
-        const s = Math.max(0, d.life);
-        d.el.style.opacity = String(s * 0.9);
-        d.el.style.transform = `translate3d(${d.x}px,${d.y}px,0) scale(${0.35 + s})`;
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    window.addEventListener("mousemove", onMove, { passive: true });
-    raf = requestAnimationFrame(loop);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      cancelAnimationFrame(raf);
-      document.documentElement.classList.remove("ghost-cursor");
-      trail.innerHTML = "";
-    };
-  }, []);
-  return (
-    <>
-      <div ref={trailRef} className="ghost-trail" aria-hidden />
-      <div ref={arrowRef} className="ghost-arrow" aria-hidden>
-        <svg width="36" height="36" viewBox="0 0 24 24">
-          <path
-            d="M5.5 3.5 19 11l-6.4 1.7-2.9 6.3L5.5 3.5z"
-            fill="#0b0e17"
-            stroke="#fff"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-    </>
-  );
 }
 
 /* Chuva de métricas atrás do CTA vermelho */
@@ -482,7 +390,6 @@ export function LandingPage() {
 
   return (
     <main className="min-h-screen bg-[#080b12] text-slate-100">
-      <CustomCursor />
       {/* NAV */}
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
