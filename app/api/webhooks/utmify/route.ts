@@ -170,7 +170,7 @@ export async function POST(request: Request) {
           const email = pick(body, ["email", "customer.email", "data.customer.email", "buyer.email", "customer_email"]);
           const phone = pick(body, ["phone", "customer.phone", "data.customer.phone", "buyer.phone", "customer_phone"]);
           const sourceUrl = String(pick(body, ["url", "checkout_url", "tracking.url", "metadata.url"]) || "");
-          const capi = {
+          const capi:{data:unknown[];test_event_code?:string} = {
             data: [
               {
                 event_name: "Purchase",
