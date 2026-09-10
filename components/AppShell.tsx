@@ -3,6 +3,7 @@ import { useState } from "react";
 import { BookOpen, Menu, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "./AppSidebar";
+import { AccountMenu } from "./AccountMenu";
 
 export function AppShell({
   title,
@@ -38,11 +39,12 @@ export function AppShell({
 
       <section className="lg:pl-72">
         <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="rounded-lg border border-white/10 p-2 lg:hidden" aria-label="Abrir menu">
               <Menu className="size-4" />
             </button>
-            <div>
+            <img src="/ghostscale-logo.png" alt="GhostScale" className="h-8 w-auto shrink-0 object-contain lg:hidden" />
+            <div className="hidden min-w-0 lg:block">
               <h1 className="text-xl font-semibold">{title}</h1>
               {subtitle ? <p className="hidden text-sm text-slate-500 sm:block">{subtitle}</p> : null}
             </div>
@@ -59,6 +61,7 @@ export function AppShell({
               <BookOpen className="size-4" />
               Docs
             </a>
+            <AccountMenu />
           </div>
         </header>
         <div className="mx-auto max-w-[1500px] p-5 lg:p-8">{children}</div>

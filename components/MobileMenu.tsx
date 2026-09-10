@@ -48,6 +48,12 @@ export function MobileMenu() {
             >
               Ver assinatura
             </a>
+            <a
+              href="/api/auth/logout"
+              className="mt-2 block rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-red-600"
+            >
+              Sair da conta
+            </a>
           </div>
         </div>
       ) : null}
