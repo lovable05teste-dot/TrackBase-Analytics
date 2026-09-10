@@ -1,6 +1,7 @@
 "use client";
 import {FormEvent,useEffect,useState} from "react";
-import {BarChart3,Crosshair,Eye,EyeOff,Loader2,Lock,Mail,ShieldCheck,Zap} from "lucide-react";
+import {BarChart3,Crosshair,Eye,EyeOff,Fingerprint,Loader2,Lock,Mail,ShieldCheck,User,Zap} from "lucide-react";
+import {formatCpf,stripCpf} from "@/lib/cpf";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 
@@ -16,10 +17,12 @@ const oauthErrors:Record<string,string>={config:"Login com Google não configura
 export default function Login(){
  const[mode,setMode]=useState<"login"|"register">("login");
  const[email,setEmail]=useState("");const[password,setPassword]=useState("");const[show,setShow]=useState(false);
+ const[name,setName]=useState("");const[cpf,setCpf]=useState("");const[confirmPassword,setConfirmPassword]=useState("");
  const[remember,setRemember]=useState(true);const[error,setError]=useState("");const[loading,setLoading]=useState(false);
  useEffect(()=>{try{const e=new URLSearchParams(window.location.search).get("erro");if(e)setError(oauthErrors[e]||"Não foi possível entrar com o Google.")}catch{}},[]);
- async function submit(e:FormEvent){e.preventDefault();setLoading(true);setError("");try{const url=mode==="register"?"/api/auth/register":"/api/auth/login";const payload={email:email.trim(),password};const r=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível entrar.");if(!remember)sessionStorage.setItem("tb_noremember","1");location.href="/";}catch(e){setError(e instanceof Error?e.message:"Não foi possível entrar.");}finally{setLoading(false)}}
+ async function submit(e:FormEvent){e.preventDefault();setLoading(true);setError("");try{if(mode==="register"&&password!==confirmPassword)throw new Error("As senhas não coincidem.");const url=mode==="register"?"/api/auth/register":"/api/auth/login";const payload=mode==="register"?{name:name.trim(),email:email.trim(),cpf:stripCpf(cpf),password,confirmPassword}:{email:email.trim(),password};const r=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível entrar.");if(!remember)sessionStorage.setItem("tb_noremember","1");location.href="/";}catch(e){setError(e instanceof Error?e.message:"Não foi possível entrar.");}finally{setLoading(false)}}
  const submitLabel=mode==="register"?"Criar conta grátis":"Entrar no painel";
+ const registerValid=name.trim().length>=3&&email.includes("@")&&stripCpf(cpf).length===11&&password.length>=8&&confirmPassword.length>0;
  return <main className="min-h-screen bg-[#080b12] text-slate-100"><div className="grid min-h-screen lg:grid-cols-[1.05fr_.95fr]">
  <section className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
   <div className="pointer-events-none absolute inset-0" style={{background:"radial-gradient(900px 420px at 15% 10%, #ff003026, transparent 60%), radial-gradient(700px 500px at 90% 90%, #755cff22, transparent 60%), linear-gradient(180deg,#0b0e17 0%,#080b12 100%)"}}/>
@@ -45,14 +48,20 @@ export default function Login(){
    <p className="mt-1.5 text-sm text-slate-400">{mode==="register"?"Grátis para começar. Leva 20 segundos.":"Entre com seu e-mail ou crie uma conta grátis."} <a href="/docs" className="font-medium text-red-400 hover:text-red-300">Ver documentação</a></p>
    <div className="mt-5 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/30 p-1 text-sm">{([["login","Entrar"],["register","Criar conta"]] as const).map(([m,label])=><button key={m} type="button" onClick={()=>{setMode(m);setError("")}} className={m===mode?"rounded-lg bg-[#ff0030] px-2 py-2 font-semibold text-white":"rounded-lg px-2 py-2 text-slate-400 hover:bg-white/5 hover:text-slate-200"}>{label}</button>)}</div>
    <form onSubmit={submit} className="mt-5 space-y-4">
+    {mode==="register"&&<div><label htmlFor="tb-name" className="mb-1.5 flex items-center gap-1.5 text-sm text-slate-300"><User className="size-3.5 text-slate-500"/> Nome completo</label>
+     <Input id="tb-name" type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Seu nome completo" autoFocus required autoComplete="name" maxLength={120} className="h-12"/></div>}
     <div><label htmlFor="tb-email" className="mb-1.5 flex items-center gap-1.5 text-sm text-slate-300"><Mail className="size-3.5 text-slate-500"/> E-mail</label>
-     <Input id="tb-email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="voce@empresa.com" autoFocus required autoComplete="email" className="h-12"/></div>
+     <Input id="tb-email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="voce@empresa.com" autoFocus={mode!=="register"} required autoComplete="email" className="h-12"/></div>
+    {mode==="register"&&<div><label htmlFor="tb-cpf" className="mb-1.5 flex items-center gap-1.5 text-sm text-slate-300"><Fingerprint className="size-3.5 text-slate-500"/> CPF</label>
+     <Input id="tb-cpf" type="text" inputMode="numeric" value={cpf} onChange={e=>setCpf(formatCpf(e.target.value))} placeholder="000.000.000-00" required maxLength={14} autoComplete="off" className="h-12"/></div>}
     <div><label htmlFor="tb-password" className="mb-1.5 flex items-center gap-1.5 text-sm text-slate-300"><Lock className="size-3.5 text-slate-500"/> Senha</label>
      <div className="relative"><Input id="tb-password" type={show?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder={mode==="register"?"Mínimo 8 caracteres":"••••••••"} required minLength={mode==="register"?8:1} autoComplete={mode==="register"?"new-password":"current-password"} className="h-12 pr-11"/>
       <button type="button" onClick={()=>setShow(s=>!s)} aria-label={show?"Ocultar senha":"Mostrar senha"} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-white/5 hover:text-slate-200">{show?<EyeOff className="size-4"/>:<Eye className="size-4"/>}</button></div></div>
+    {mode==="register"&&<div><label htmlFor="tb-confirm" className="mb-1.5 flex items-center gap-1.5 text-sm text-slate-300"><Lock className="size-3.5 text-slate-500"/> Confirmar senha</label>
+     <Input id="tb-confirm" type={show?"text":"password"} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Repita a senha" required autoComplete="new-password" className="h-12"/></div>}
     <div className="flex items-center justify-between text-sm"><label className="flex cursor-pointer items-center gap-2 text-slate-400"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} className="size-4 accent-red-600"/>Manter conectado</label><a href="/docs/faq" className="text-slate-400 hover:text-slate-200">Esqueci a senha</a></div>
     {error&&<p role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">{error}</p>}
-    <Button type="submit" disabled={loading||!password||!email} className="h-12 w-full bg-[#ff0030] text-[15px] font-semibold text-white hover:bg-[#d60029] disabled:opacity-60">{loading?<span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin"/> Entrando...</span>:submitLabel}</Button>
+    <Button type="submit" disabled={loading||(mode==="register"?!registerValid:(!email||!password))} className="h-12 w-full bg-[#ff0030] text-[15px] font-semibold text-white hover:bg-[#d60029] disabled:opacity-60">{loading?<span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin"/> Entrando...</span>:submitLabel}</Button>
     <div className="flex items-center gap-3 text-xs text-slate-600"><span className="h-px flex-1 bg-white/10"/> ou <span className="h-px flex-1 bg-white/10"/></div>
     <div className="grid gap-2">
   <a href="/api/auth/google" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-slate-200 transition-colors hover:bg-white/5 hover:text-white">Continuar com Google</a>
