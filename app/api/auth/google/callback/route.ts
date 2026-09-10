@@ -35,7 +35,7 @@ export async function GET(request:Request){
     if(!email)return fail("email");
     const [existing]=await db.select().from(users).where(eq(users.email,email)).limit(1);
     let passwordHash:string;
-    if(existing){passwordHash=existing[0].passwordHash}
+    if(existing){passwordHash=existing.passwordHash}
     else{
       passwordHash=await sha256(`google:${email}:${crypto.randomUUID()}`);
       await db.insert(users).values({id:crypto.randomUUID(),email,passwordHash,createdAt:now});
