@@ -394,7 +394,7 @@ const faqs = [
   { q: "Preciso saber programar?", a: "Não. Você cola um script na página e configura o webhook no checkout seguindo o passo a passo em /docs. Em minutos está rastreando." },
   { q: "Funciona com o meu checkout?", a: "Se o seu gateway envia webhook, funciona. FortPay, Hotmart, Kiwify, Braip, Stripe, FlevoPay, Utmify e qualquer outro — o endpoint aceita qualquer formato e detecta os campos sozinho." },
   { q: "E se o pixel for bloqueado?", a: "É exatamente pra isso que existe o CAPI: o servidor reenvia cada evento com o mesmo event_id, então a conversão chega na Meta mesmo com iOS restrito ou bloqueador ativo." },
-  { q: "Como funciona a taxa de R$ 0,25?", a: "Só existe cobrança sobre venda aprovada. Pendente, reembolso, cancelamento e chargeback não geram cobrança. Sem mensalidade e sem fidelidade." },
+  { q: "Como funciona a taxa de R$ 0,10?", a: "Cada plano inclui uma franquia de vendas (500/1.000/2.000, Black ilimitado). Só o que passar paga R$ 0,10 por venda aprovada. Pendente, reembolso, cancelamento e chargeback não geram cobrança." },
   { q: "Posso cancelar quando quiser?", a: "Sim. Sem multa, sem burocracia. Seus dados de eventos e pedidos continuam auditáveis." },
   { q: "Meus dados estão seguros?", a: "Tokens cifrados com AES-GCM, webhooks autenticados por Bearer e payload guardado pra auditoria. Nada de dado espalhado." },
   { q: "Serve pra afiliado e agência?", a: "Sim. Projetos separados por operação, atribuição por campanha e rankings pra acompanhar performance de cada frente." },
@@ -676,10 +676,10 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-5 text-center">
           <Tag>Preço transparente</Tag>
           <h2 className="reveal mx-auto mt-3 max-w-xl text-3xl font-bold tracking-tight sm:text-4xl">
-            Um preço só. Sem plano confuso.
+            4 planos. Sem letra miúda.
           </h2>
           <p className="reveal mx-auto mt-3 max-w-xl text-[15px] text-slate-400">
-            Enquanto outros cobram mensalidade + excedente + add-on, aqui a conta cabe num post-it: vendeu, pagou. Não vendeu, não pagou.
+            Base fixa + R$ 0,10 só no excedente. Arraste e veja qual fecha mais barato pro seu volume.
           </p>
           <PriceCalculator />
         </div>
