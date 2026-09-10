@@ -21,9 +21,10 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
 
         <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto shrink-0 object-contain" />
+            <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-12 w-auto shrink-0 object-contain" />
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-semibold"><BookOpen className="size-6 text-violet-300" />Documentação</h1>
+              <p className="text-2xl font-extrabold leading-none tracking-tight text-white">GhostScale</p>
+              <h1 className="mt-1 flex items-center gap-2 text-lg font-semibold text-slate-300"><BookOpen className="size-5 text-violet-300" />Documentação</h1>
               <p className="text-sm text-slate-500">Integração, rastreamento e configuração</p>
             </div>
           </div>

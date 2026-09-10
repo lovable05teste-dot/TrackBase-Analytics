@@ -19,7 +19,8 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <a href="/" className="flex items-center gap-3 px-1 py-1">
-        <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-10 w-auto shrink-0 object-contain" />
+        <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto shrink-0 object-contain" />
+        <span className="truncate text-xl font-extrabold tracking-tight text-white">GhostScale</span>
       </a>
       <nav className="mt-6 flex-1 space-y-5 overflow-y-auto pb-4 pr-1">
         {NAV_GROUPS.map((g) => {

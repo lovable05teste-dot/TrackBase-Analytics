@@ -12,7 +12,7 @@ export async function PrivateSection({title,description,children}:{title:string;
  await requireChatGPTUser("/");
  return <main className="min-h-screen bg-slate-50 text-slate-900 lg:pl-64">
   <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-card p-5 lg:block">
-   <a href="/" className="flex items-center gap-3 border-b border-slate-200 pb-6"><img src="/ghostscale-logo.png" alt="GhostScale" className="h-9 w-auto object-contain"/></a>
+   <a href="/" className="flex items-center gap-3 border-b border-slate-200 pb-6"><img src="/ghostscale-logo.png" alt="GhostScale" className="h-11 w-auto object-contain"/><span><b className="block text-xl font-extrabold leading-none tracking-tight text-slate-900">GhostScale</b></span></a>
    <nav className="mt-7 space-y-1"><FullMenu/><SoundSidebar/></nav>
    <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-blue-100 bg-blue-50 p-3"><p className="text-xs font-medium text-blue-700">Dados protegidos</p><p className="mt-1 text-xs leading-4 text-slate-500">Eventos e credenciais ficam isolados por projeto.</p></div>
   </aside>
