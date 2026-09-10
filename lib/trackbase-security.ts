@@ -38,6 +38,16 @@ export async function requestUserId(request: Request) {
   const forwarded=request.headers.get("oai-authenticated-user-id");
   if(forwarded)return forwarded;
   const cookie=request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
-  if(!cookie||!process.env.ADMIN_PASSWORD)return null;
-  return cookie===await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`)?"trackbase-owner":null;
+  if(!cookie)return null;
+  if(process.env.ADMIN_PASSWORD&&cookie===await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`))return "trackbase-owner";
+  try{
+    const { ensureDb, getDb }=await import("@/db");
+    const { users }=await import("@/db/schema");
+    await ensureDb();
+    const allUsers=await getDb().select({id:users.id,passwordHash:users.passwordHash}).from(users);
+    for(const u of allUsers){
+      if(cookie===await sha256(`trackbase:${u.passwordHash}`))return u.id;
+    }
+  }catch(error){console.error("requestUserId users lookup",error)}
+  return null;
 }

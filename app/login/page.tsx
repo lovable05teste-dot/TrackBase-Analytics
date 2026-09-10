@@ -46,7 +46,10 @@ export default function Login(){
     {error&&<p role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">{error}</p>}
     <Button type="submit" disabled={loading||!password} className="h-12 w-full bg-[#ff0030] text-[15px] font-semibold text-white hover:bg-[#d60029] disabled:opacity-60">{loading?<span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin"/> Entrando...</span>:"Entrar no painel"}</Button>
     <div className="flex items-center gap-3 text-xs text-slate-600"><span className="h-px flex-1 bg-white/10"/> ou <span className="h-px flex-1 bg-white/10"/></div>
-    <div className="grid gap-2"><a href="/docs" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-slate-200 hover:bg-white/5">Criar conta / ver como funciona</a><a href="/docs/gateways" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200">Sou gateway — integrar vendas</a></div>
+    <div className="grid gap-2">
+  <a href="/docs" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-slate-200 hover:bg-white/5">Criar conta / ver como funciona</a>
+  <a href="/api/auth/google" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-slate-200 hover:bg-white/5 hover:text-slate-400">Continuar com Google</a>
+</div>
    </form>
    <div className="mt-6 flex items-center justify-center gap-4 border-t border-white/10 pt-5 text-[11px] text-slate-500"><span className="inline-flex items-center gap-1"><ShieldCheck className="size-3.5"/> AES-GCM</span><span>CAPI deduplicado</span><span>LGPD</span></div>
   </div>
