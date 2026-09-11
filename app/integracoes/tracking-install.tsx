@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Loader2, Plus, PlugZap, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { copyText } from "@/lib/clipboard";
 
 type Project = { id: string; name: string; domain?: string; publicKey?: string; pixelId?: string; metaConnectedAt?: string };
 
@@ -44,12 +45,16 @@ export function TrackingInstall() {
     }
   };
 
-  const script = (p: Project) => `<script async src="${location.origin}/tracker.js?key=${p.publicKey}"></script>`;
+  const script = (p: Project) => `<script async src="${location.origin}/tracker.js?key=${p.publicKey || ""}"></script>`;
 
   const copy = async (p: Project) => {
-    await navigator.clipboard.writeText(script(p));
-    setCopied(p.id);
-    setTimeout(() => setCopied(""), 1600);
+    if (!p.publicKey) { setError("Este projeto ainda não tem chave pública."); return; }
+    if (await copyText(script(p))) {
+      setCopied(p.id);
+      setTimeout(() => setCopied(""), 1600);
+    } else {
+      setError("Não foi possível copiar. Selecione o script e use Ctrl+C.");
+    }
   };
 
   const connect = async (p: Project) => {

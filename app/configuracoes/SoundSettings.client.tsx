@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Loader2, Volume2 } from "lucide-react";
 import { playSound, sounds, DEFAULT_SOUND_ID } from "@/lib/sounds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 const STORAGE = "trackbase:notification";
 
@@ -42,7 +41,7 @@ export function SoundSettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Volume2 className="size-5" />
-          Som de venda <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-normal text-blue-700">4 sons</span>
+          Som de venda <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-normal text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">{sounds.length} sons</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

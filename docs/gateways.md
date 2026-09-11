@@ -168,14 +168,14 @@ A seguir a conversão automática. A detecção é feita por **palavra-chave** n
     "transaction": {
       "id": "tran_ABC123",
       "status": "paid",
-      "amount": 4990,
+      "amount": 12990,
       "currency": "BRL"
     }
   }
 }
 ```
 
-*`4990` inteiro → convertido para `49.90`.*
+*`12990` inteiro (maior que 10000) → convertido para `129.90`.*
 
 #### Envio completo (com rastreamento)
 

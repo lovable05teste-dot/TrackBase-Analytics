@@ -58,7 +58,7 @@ POST ${BASE_URL}/api/webhooks/gateway?token=tb_live_<64 hex>`}</Code>
           [["Valor"], ["amount", "value", "total", "price", "data.amount", "data.value", "data.transaction.amount", "order.total"], "0"],
           [["Moeda"], ["currency", "data.currency", "data.transaction.currency"], "BRL"],
         ]} />
-        <Box tone="warn"><b>Regra de centavos:</b> se o valor for inteiro e maior que 10000, ele é dividido por 100 — <code className="rounded bg-black/30 px-1 text-violet-300">4990</code> vira <b>49.90</b>.</Box>
+        <Box tone="warn"><b>Regra de centavos:</b> se o valor for inteiro e maior que 10000, ele é dividido por 100 — <code className="rounded bg-black/30 px-1 text-violet-300">12990</code> vira <b>R$ 129,90</b>. Valores decimais (ex.: <code className="rounded bg-black/30 px-1 text-violet-300">129.90</code>) entram direto.</Box>
 
         <H3>Rastreamento (atribuição da campanha)</H3>
         <p className="text-sm leading-6 text-slate-400">Repasse o que vier do navegador do cliente em <code className="rounded bg-black/30 px-1 text-violet-300">tracking</code>, <code className="rounded bg-black/30 px-1 text-violet-300">metadata</code> ou <code className="rounded bg-black/30 px-1 text-violet-300">data</code>:</p>

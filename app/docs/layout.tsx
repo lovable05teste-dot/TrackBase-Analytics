@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MobileMenu } from "@/components/MobileMenu";
+import { DocsTabs } from "./tabs-nav";
 
 export const metadata: Metadata = { title: "Documentação — GhostScale", description: "Documentação de integração para gateways, páginas de vendas e administradores." };
 
@@ -32,9 +33,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
 
         <div className="mb-4 lg:hidden"><MobileMenu /></div>
 
-        <nav className="sticky top-0 z-10 mb-8 flex flex-wrap gap-2 rounded-xl border border-white/10 bg-[#0b0e17]/95 p-2 backdrop-blur">
-          {tabs.map(([href, label]) => <a key={href} href={href} className="rounded-lg px-3 py-1.5 text-sm text-slate-400 hover:bg-white/5 hover:text-white">{label}</a>)}
-        </nav>
+        <DocsTabs tabs={tabs} />
 
         {children}
 

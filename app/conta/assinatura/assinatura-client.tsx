@@ -39,7 +39,7 @@ function luhn(num: string) {
 }
 
 function formatCard(num: string) {
-  return num.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+  return num.replace(/\D/g, "").slice(0, 19).replace(/(\d{4})(?=\d)/g, "$1 ");
 }
 
 function formatExp(v: string) {
@@ -84,17 +84,19 @@ export function AssinaturaClient() {
   const [cvv, setCvv] = useState("");
   const [installments, setInstallments] = useState(1);
 
+  const [loadError, setLoadError] = useState("");
+
   async function load() {
     try {
       const r = await fetch("/api/billing/cakto/status");
       const b = await r.json();
-      if (r.ok) {
-        setPlans(b.plans || []);
-        setSub(b.subscription || null);
-        setSdkOk(!!b.sdkClientId);
-      }
-    } catch {
-      /* mantém vazio */
+      if (!r.ok) throw new Error(b.error || "Falha ao carregar assinatura.");
+      setPlans(b.plans || []);
+      setSub(b.subscription || null);
+      setSdkOk(!!b.sdkClientId);
+      setLoadError("");
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Falha ao carregar. Verifique sua conexão e recarregue.");
     } finally {
       setLoading(false);
     }
@@ -129,6 +131,7 @@ export function AssinaturaClient() {
   function openCheckout(plan: Plan) {
     setPayError("");
     setPayOk(false);
+    setInstallments(1);
     setModalPlan(plan);
   }
 
@@ -142,7 +145,7 @@ export function AssinaturaClient() {
     if (!validateCpf(cpf)) return setPayError("Confira o CPF.");
     const phoneDigits = phone.replace(/\D/g, "");
     const phoneE164 = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
-    if (phoneE164.length < 14) return setPayError("Informe o celular com DDD.");
+    if (phoneE164.length < 12 || phoneE164.length > 13) return setPayError("Informe o celular com DDD (10 ou 11 dígitos).");
     if (!luhn(digits)) return setPayError("Número do cartão inválido.");
     if (holder.trim().length < 3) return setPayError("Informe o nome impresso no cartão.");
     if (!validExp(exp)) return setPayError("Validade inválida ou vencida.");
@@ -183,16 +186,19 @@ export function AssinaturaClient() {
     }
   }
 
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
   async function cancel() {
-    if (!confirm("Cancelar sua assinatura? Você perde o acesso no fim do ciclo.")) return;
+    if (!confirmCancel) { setConfirmCancel(true); return; }
     setCanceling(true);
     try {
       const r = await fetch("/api/billing/cakto/cancel", { method: "POST" });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Não foi possível cancelar.");
+      setConfirmCancel(false);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Não foi possível cancelar.");
+      setPayError(err instanceof Error ? err.message : "Não foi possível cancelar.");
     } finally {
       setCanceling(false);
     }
@@ -207,14 +213,23 @@ export function AssinaturaClient() {
   }
 
   const activePlan = sub && (sub.status === "active" || sub.status === "past_due") ? sub : null;
+  const activePlanName = plans.find((p) => p.id === activePlan?.plan)?.name || activePlan?.plan || "";
 
   return (
     <AppShell title="Assinatura" subtitle="Base mensal + R$ 0,10 por venda aprovada excedente. Black é ilimitado.">
+      {loadError ? (
+        <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-300">
+          {loadError}{" "}
+          <button onClick={() => { setLoading(true); setLoadError(""); load(); }} className="font-medium underline underline-offset-2">
+            Tentar de novo
+          </button>
+        </p>
+      ) : null}
       {activePlan ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[.06] p-4">
           <div>
             <b className="text-emerald-700 dark:text-emerald-300">
-              Plano {activePlan.plan} · {statusLabel[activePlan.status] || activePlan.status}
+              Plano {activePlanName} · {statusLabel[activePlan.status] || activePlan.status}
             </b>
             <p className="mt-1 text-sm text-slate-500">
               {activePlan.currentPeriodEnd
@@ -225,9 +240,9 @@ export function AssinaturaClient() {
           <button
             onClick={cancel}
             disabled={canceling}
-            className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
+            className={`rounded-lg border px-4 py-2 text-sm transition disabled:opacity-60 ${confirmCancel ? "border-red-500 bg-red-500 text-white hover:bg-red-600" : "border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"}`}
           >
-            {canceling ? "Cancelando..." : "Cancelar assinatura"}
+            {canceling ? "Cancelando..." : confirmCancel ? "Clique de novo para confirmar" : "Cancelar assinatura"}
           </button>
         </div>
       ) : (
@@ -366,7 +381,7 @@ export function AssinaturaClient() {
                   <label className="block text-sm">
                     <span className="mb-1 block text-slate-300">Parcelas</span>
                     <select value={installments} onChange={(e) => setInstallments(Number(e.target.value))} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-2 text-slate-200 outline-none focus:border-red-500/60">
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                      {Array.from({ length: Math.min(12, Math.max(1, Math.floor(modalPlan.price / 5))) }, (_, i) => i + 1).map((n) => (
                         <option key={n} value={n} className="bg-[#101522]">
                           {n}x de {brl(modalPlan.price / n)}
                         </option>

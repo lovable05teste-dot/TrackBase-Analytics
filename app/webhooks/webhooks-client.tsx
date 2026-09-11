@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Check, Copy, Send } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -11,10 +12,18 @@ export function WebhooksClient() {
   const [resp, setResp] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState("");
 
   async function test() {
     setLoading(true);
     setResp("");
+    try {
+      JSON.parse(payload);
+    } catch {
+      setResp("Payload inválido: confira o JSON antes de enviar.");
+      setLoading(false);
+      return;
+    }
     try {
       const target = url || `${location.origin}/api/webhooks/gateway`;
       const r = await fetch(target, { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: payload });
@@ -28,7 +37,15 @@ export function WebhooksClient() {
   }
 
   const doc = `POST {BASE}/api/webhooks/gateway\nAuthorization: Bearer tb_live_...\nContent-Type: application/json`;
-  async function copyDoc() { await navigator.clipboard.writeText(doc); setCopied(true); setTimeout(() => setCopied(false), 1200); }
+  async function copyDoc() {
+    setCopyError("");
+    if (await copyText(doc)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } else {
+      setCopyError("Não foi possível copiar. Selecione o texto e use Ctrl+C.");
+    }
+  }
 
   return (
     <div className="grid gap-4">
@@ -46,7 +63,7 @@ export function WebhooksClient() {
       </Card>
       <Card className="metric-card">
         <CardHeader><CardTitle>Formato universal</CardTitle></CardHeader>
-        <CardContent><pre className="rounded-lg bg-black/40 p-4 text-xs leading-6 text-sky-300">{doc}</pre><Button variant="outline" size="sm" className="mt-3" onClick={copyDoc}>{copied ? <Check /> : <Copy />}Copiar</Button></CardContent>
+        <CardContent><pre className="rounded-lg bg-black/40 p-4 text-xs leading-6 text-sky-300">{doc}</pre><Button variant="outline" size="sm" className="mt-3" onClick={copyDoc}>{copied ? <Check /> : <Copy />}Copiar</Button>{copyError ? <p role="alert" className="mt-2 text-xs text-amber-300">{copyError}</p> : null}</CardContent>
       </Card>
     </div>
   );

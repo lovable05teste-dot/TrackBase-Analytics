@@ -44,9 +44,9 @@ export default async function Page() {
             <table className="w-full min-w-[520px] text-sm">
               <thead><tr>{["Fonte", "Eventos", "Compras", "Participação"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
               <tbody>
-                {bySource.map((s) => (
+                {bySource.length ? bySource.map((s) => (
                   <tr key={s.source}><td className="font-medium">{s.source}</td><td>{s.n}</td><td>{s.compras}</td><td>{pct(s.n, total)}%</td></tr>
-                ))}
+                )) : <tr><td colSpan={4} className="py-8 text-center text-slate-500">Sem eventos no período.</td></tr>}
               </tbody>
             </table>
           </div>

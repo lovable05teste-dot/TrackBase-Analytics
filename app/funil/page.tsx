@@ -16,9 +16,10 @@ export default async function Page() {
   const nPur = byName.get("Purchase") ?? 0;
   const campaigns = await getUtmBreakdown(ids, since, "utm_campaign", 15);
 
+  const lostClicks = Math.max(0, nAd - nPv);
   const steps: [string, number, number, string][] = [
     ["Cliques no anúncio", nAd, 100, "Base do funil"],
-    ["Acessos (PageView)", nPv, pct(nPv, nAd), nAd ? `${nAd - nPv} cliques perdidos` : "Sem dados"],
+    ["Acessos (PageView)", nPv, pct(nPv, nAd), nAd ? (nPv >= nAd ? "Tudo certo: nenhum clique perdido" : `${lostClicks} cliques perdidos`) : "Sem dados"],
     ["ViewContent", nVc, pct(nVc, nPv), "Página carregou e renderizou"],
     ["InitiateCheckout", nIc, pct(nIc, nPv), "Intenção de compra"],
     ["Purchase", nPur, pct(nPur, nIc), revenue > 0 ? brl(revenue) : "Sem faturamento"],
@@ -26,7 +27,7 @@ export default async function Page() {
 
   const gargalo = (() => {
     if (!nAd) return "Sem dados suficientes para diagnosticar.";
-    const lossClick = pct(nAd - nPv, nAd);
+    const lossClick = pct(lostClicks, nAd);
     const viewToIc = pct(nIc, nPv);
     const icToPur = nIc ? pct(nPur, nIc) : 0;
     if (lossClick > 30) return `Gargalo no carregamento: ${lossClick}% dos cliques não viram PageView. Otimize velocidade, hospedagem e anti-clone.`;
@@ -43,7 +44,7 @@ export default async function Page() {
           <h3 className="font-semibold">Funil geral · 30 dias</h3>
           <div className="mt-5 space-y-4">
             {steps.map(([k, v, p, s]) => (
-              <div key={k}><div className="mb-2 flex justify-between text-sm"><span>{k} · <b>{v}</b></span><span className="text-slate-400">{p}%</span></div><Progress value={Math.min(100, p)} className="h-2" /><p className="mt-1 text-xs text-slate-500">{s}</p></div>
+              <div key={k}><div className="mb-2 flex justify-between text-sm"><span>{k} · <b>{v}</b></span><span className="text-slate-400">{p}%</span></div><Progress value={Math.max(0, Math.min(100, p))} className="h-2" /><p className="mt-1 text-xs text-slate-500">{s}</p></div>
             ))}
           </div>
         </div>

@@ -30,7 +30,7 @@ export default function Termos() {
           </section>
           <section>
             <h2 className="text-lg font-semibold text-white">3. Preço e cobrança</h2>
-            <p className="mt-2">3.1. A GhostScale cobra uma <b className="text-white">base mensal conforme o plano</b> (Start R$ 39,90 · Pro R$ 69,90 · Scale R$ 89,90 · Black R$ 119,90), cada um com franquia de vendas aprovadas inclusa, mais <b className="text-white">R$ 0,10 (dez centavos) por venda aprovada excedente</b> — exceto o plano Black, ilimitado e sem excedente. 3.2. Vendas pendentes, reembolsadas, canceladas e chargebacks <b className="text-white">não geram cobrança</b>. 3.3. Não há mensalidade nem taxa de setup, salvo plano específico contratado à parte. 3.4. O não pagamento de valores devidos pode suspender o acesso até a regularização.</p>
+            <p className="mt-2">3.1. A GhostScale cobra uma <b className="text-white">base mensal conforme o plano</b> (Start R$ 39,90 · Pro R$ 69,90 · Scale R$ 89,90 · Black R$ 119,90), cada um com franquia de vendas aprovadas inclusa, mais <b className="text-white">R$ 0,10 (dez centavos) por venda aprovada excedente</b> — exceto o plano Black, ilimitado e sem excedente. 3.2. Vendas pendentes, reembolsadas, canceladas e chargebacks <b className="text-white">não geram cobrança</b>. 3.3. Não há taxa de setup. A base mensal varia conforme o plano contratado e pode ser alterada mediante aviso prévio. 3.4. O não pagamento de valores devidos pode suspender o acesso até a regularização.</p>
           </section>
           <section>
             <h2 className="text-lg font-semibold text-white">4. Uso aceitável</h2>

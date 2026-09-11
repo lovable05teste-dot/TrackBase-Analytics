@@ -40,9 +40,9 @@ const faqs: { q: string; a: React.ReactNode }[] = [
     ),
   },
   {
-    q: "Por que os valores ficam errados (ex.: 4990 → 49,90)?",
+    q: "Por que os valores ficam errados (ex.: 12990 → R$ 129,90)?",
     a: (
-      <span>Isso é a <b>regra de centavos</b>: valores inteiros acima de 10000 são interpretados como centavos e divididos por 100. Se sua API trabalha com centavos, envie inteiros (ex.: <code className="rounded bg-black/30 px-1 text-violet-300">4990</code>). Se trabalha com decimais, envie decimais (ex.: <code className="rounded bg-black/30 px-1 text-violet-300">49.90</code>). A conversão é automática.</span>
+      <span>Isso é a <b>regra de centavos</b>: valores inteiros acima de 10000 são interpretados como centavos e divididos por 100. Se sua API trabalha com centavos, envie inteiros acima de 10000 (ex.: <code className="rounded bg-black/30 px-1 text-violet-300">12990</code>). Se trabalha com decimais, envie decimais (ex.: <code className="rounded bg-black/30 px-1 text-violet-300">129.90</code>). A conversão é automática.</span>
     ),
   },
   {

@@ -1,3 +1,2 @@
 import { PrivateSection } from "../private-section";
-
-export const dynamic = "force-dynamic";export default function Page(){return <PrivateSection title="Equipe" description="Membros que podem acessar os projetos e relatórios."><div className="metric-card rounded-xl p-6 text-slate-400">Você é o titular desta conta. Convites de equipe estarão disponíveis aqui em breve.</div></PrivateSection>}
+export const dynamic="force-dynamic";export default function Page(){return <PrivateSection title="Equipe" description="Membros que podem acessar os projetos e relatórios."><div className="metric-card rounded-xl p-6 text-slate-400"><b className="text-slate-200">Você é o administrador.</b><p className="mt-2 text-sm">Convites por e-mail chegam em breve. Por enquanto, gerencie seus projetos em <a href="/conta/perfil" className="text-violet-300 underline">Meu Perfil</a>.</p></div></PrivateSection>}
