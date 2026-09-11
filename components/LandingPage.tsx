@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Crosshair,
   EyeOff,
+  Filter,
   MessageCircle,
   Moon,
   MousePointerClick,
@@ -26,9 +27,9 @@ import {
   Zap,
 } from "lucide-react";
 
-/* Troque pelo número oficial. Formato wa.me exige DDI+DDD+numero, sem espaços. */
+/* WhatsApp oficial: 67 99130-7721. Formato wa.me exige DDI+DDD+numero, sem espaços. */
 const WHATSAPP_URL =
-  "https://wa.me/5511999999999?text=Quero%20entender%20como%20o%20GhostScale%20rastreia%20minha%20opera%C3%A7%C3%A3o";
+  "https://wa.me/5567991307721?text=Quero%20entender%20como%20o%20GhostScale%20rastreia%20minha%20opera%C3%A7%C3%A3o";
 
 const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
@@ -172,7 +173,7 @@ const ScaleSimulator = memo(function ScaleSimulator() {
     </label>
   );
   return (
-    <div className="gs-glass gs-top-hi cv-auto mt-8 grid min-w-0 gap-4 overflow-hidden rounded-[24px] p-6 sm:p-8 lg:grid-cols-2">
+    <div className="gs-glass gs-top-hi mt-8 grid min-w-0 gap-4 overflow-hidden rounded-[24px] p-6 sm:p-8 lg:grid-cols-2">
       <div className="min-w-0">
         <b className="flex items-center gap-2.5 text-lg text-[#FFF3F5]">
           <span className="gs-icon-box">
@@ -231,7 +232,7 @@ const PriceCalculator = memo(function PriceCalculator() {
     !Number.isFinite(p.included) ? p.base : p.base + Math.max(0, sales - p.included) * 0.1;
   const best = plans.reduce((a, b) => (calc(a) <= calc(b) ? a : b));
   return (
-    <div className="cv-auto mx-auto mt-8 w-full max-w-4xl min-w-0">
+    <div className="mx-auto mt-8 w-full max-w-4xl min-w-0">
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((p) => {
           const total = calc(p);
@@ -415,6 +416,7 @@ export function LandingPage() {
             {[
               ["Dores", "#dores"],
               ["Solução", "#solucao"],
+              ["Segurança", "#anti-clone"],
               ["Simulador", "#simulador"],
               ["Preços", "#precos"],
               ["FAQ", "#faq"],
@@ -453,8 +455,10 @@ export function LandingPage() {
           </div>
           <h1 className="gs-enter gs-enter-1 mx-auto mt-5 w-full max-w-3xl text-[40px] leading-[1.05] font-extrabold break-words tracking-[-0.03em] text-[#FFF3F5] sm:text-[64px]">
             Saiba exatamente qual anúncio coloca{" "}
-            <span className="gs-display gs-gradient-text font-normal italic">{heroText}</span>
-            <span className="type-caret" aria-hidden />
+            <span className="mt-1 block min-h-[2.1em] sm:mt-0 sm:inline sm:min-h-0">
+              <span className="gs-display gs-gradient-text font-normal italic">{heroText}</span>
+              <span className="type-caret" aria-hidden />
+            </span>
           </h1>
           <p className="gs-enter gs-enter-2 mx-auto mt-5 w-full max-w-2xl text-[15px] leading-relaxed text-[#C99AA4] sm:text-lg">
             Pixel e Conversions API deduplicados, webhook universal de vendas e ROAS por campanha, com proteção contra pixel cego e clone.
@@ -534,7 +538,7 @@ export function LandingPage() {
         <SalesTicker />
       </section>
 
-      <section id="dores" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+      <section id="dores" className="mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
         <Eyebrow>O que está travando sua operação</Eyebrow>
         <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
           O lucro some entre o clique e a venda.
@@ -560,7 +564,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="solucao" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#150A0D]/60 py-16 sm:py-24">
+      <section id="solucao" className="w-full scroll-mt-20 border-y border-white/10 bg-[#150A0D]/60 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-6xl min-w-0 px-4 sm:px-5">
           <Eyebrow>Como o GhostScale resolve</Eyebrow>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
@@ -583,7 +587,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="diferencial" className="cv-auto mx-auto w-full max-w-4xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+      <section id="diferencial" className="mx-auto w-full max-w-4xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
         <Eyebrow>GhostScale na prática</Eyebrow>
         <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
           Por que não é só mais um tracker
@@ -625,7 +629,122 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="simulador" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#150A0D]/60 py-16 sm:py-24">
+      <section id="anti-clone" className="mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 sm:px-5">
+        <div className="relative min-w-0 overflow-hidden rounded-[24px] border border-[#FF4D67]/25 bg-gradient-to-br from-[#FF0030]/[.12] via-[#150A0D] to-[#150A0D] p-8 sm:p-12">
+          <div className="gs-hero-art pointer-events-none absolute inset-0" aria-hidden />
+          <div className="relative flex min-w-0 flex-col items-start gap-8 lg:flex-row lg:items-center">
+            <div className="min-w-0 flex-1">
+              <Eyebrow>Anti-clone + cloaker</Eyebrow>
+              <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
+                Você não vai ser clonado.
+              </h2>
+              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#C99AA4]">
+                Copiou, perdeu: snippet anti-iframe no checkout, blacklist automática de IP e filtro de bots e espiões. Se clonarem sua página, você recebe o alerta no painel — e o clone não converte.
+              </p>
+              <ul className="mt-5 space-y-2.5 text-sm">
+                {["Alerta de cópia direto no painel", "Checkout blindado contra iframe", "Blacklist de IP + cloaker anti-bot e anti-espião"].map((f) => (
+                  <li key={f} className="flex items-center gap-2.5 text-[#F2C2CB]">
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#FF0030]/15 text-[#FF8FA3]">
+                      <Check className="size-3" />
+                    </span>
+                    <span className="min-w-0">{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-7">
+                <GhostButton href="/login?modo=register">Proteger minha operação</GhostButton>
+              </div>
+            </div>
+            <div className="flex w-full shrink-0 flex-col items-center gap-4 lg:w-auto">
+              <div className="relative grid size-44 place-items-center rounded-full border border-[#FF4D67]/30 bg-[#FF0030]/10 shadow-[0_0_80px_-20px_rgba(255,0,48,.6)]">
+                <ShieldCheck className="size-20 text-[#FF4D67]" />
+                <span className="absolute top-2 left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-[#34D399]" />
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {["iframe bloqueado", "IP banido", "bot filtrado"].map((c) => (
+                  <span key={c} className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs whitespace-nowrap text-[#C99AA4]">
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="por-dentro" className="mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+        <Eyebrow>Prints do produto</Eyebrow>
+        <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
+          Veja por dentro antes de assinar.
+        </h2>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#C99AA4]">
+          Uma prévia das telas que você vai usar todo dia.
+        </p>
+        <div className="mt-8 grid min-w-0 gap-4 md:grid-cols-3">
+          <div className="gs-card min-w-0 overflow-hidden p-5">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#FFF3F5]">
+              <BarChart3 className="size-4 shrink-0 text-[#FF4D67]" /> Dashboard em tempo real
+            </p>
+            <div className="mt-4 flex h-24 items-end gap-1.5" aria-hidden>
+              {[38, 62, 45, 78, 56, 90, 70].map((h, i) => (
+                <div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-[#FF0030]/25 to-[#FF4D67]" style={{ height: `${h}%` }} />
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs">
+              <span className="text-[#C99AA4]">
+                ROAS <b className="text-[#FFF3F5]">3,8x</b>
+              </span>
+              <span className="font-medium text-[#7DE8B8]">+312 hoje</span>
+            </div>
+          </div>
+          <div className="gs-card min-w-0 overflow-hidden p-5">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#FFF3F5]">
+              <Filter className="size-4 shrink-0 text-[#FF4D67]" /> Funil de conversão
+            </p>
+            <div className="mt-4 space-y-2.5" aria-hidden>
+              {[
+                ["Cliques", "100%", "12,4k"],
+                ["Acessos", "64%", "7,9k"],
+                ["Checkout", "31%", "3,8k"],
+                ["Vendas", "18%", "2,2k"],
+              ].map(([label, w, v]) => (
+                <div key={label}>
+                  <div className="mb-1 flex items-center justify-between text-[11px]">
+                    <span className="text-[#C99AA4]">{label}</span>
+                    <span className="font-semibold text-[#FFF3F5] tabular-nums">{v}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#FF0030]/60 to-[#FF4D67]" style={{ width: w }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="gs-card min-w-0 overflow-hidden p-5">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#FFF3F5]">
+              <MousePointerClick className="size-4 shrink-0 text-[#FF4D67]" /> Heatmap de cliques
+            </p>
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/40 p-3" aria-hidden>
+              <div className="mb-2 flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-[#3A4358]" />
+                <span className="size-2 rounded-full bg-[#3A4358]" />
+                <span className="size-2 rounded-full bg-[#3A4358]" />
+              </div>
+              <div className="grid grid-cols-8 gap-1.5">
+                {Array.from({ length: 48 }).map((_, i) => {
+                  const heat = [0.07, 0.12, 0.18, 0.3, 0.55, 0.9][(i * 7 + (i % 4)) % 6];
+                  return <span key={i} className="size-2.5 rounded-full bg-[#FF4D67]" style={{ opacity: heat }} />;
+                })}
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-[#C99AA4]">
+              <b className="text-[#FFF3F5]">1.240 cliques</b> mapeados na dobra
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="simulador" className="w-full scroll-mt-20 border-y border-white/10 bg-[#150A0D]/60 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-4xl min-w-0 px-4 sm:px-5">
           <Eyebrow>Simulador de escala</Eyebrow>
           <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
@@ -638,7 +757,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="como-funciona" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+      <section id="como-funciona" className="mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
         <Eyebrow>Instalação em minutos</Eyebrow>
         <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">Do clique ao ROAS em 3 passos</h2>
         <div className="mt-8 grid min-w-0 gap-4 lg:grid-cols-3">
@@ -668,7 +787,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="precos" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#150A0D]/60 py-16 sm:py-24">
+      <section id="precos" className="w-full scroll-mt-20 border-y border-white/10 bg-[#150A0D]/60 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-6xl min-w-0 px-4 text-center sm:px-5">
           <Eyebrow>Preço transparente</Eyebrow>
           <h2 className="mx-auto mt-4 max-w-xl text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
@@ -681,7 +800,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="faq" className="cv-auto mx-auto w-full max-w-3xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+      <section id="faq" className="mx-auto w-full max-w-3xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
         <Eyebrow>Dúvidas comuns</Eyebrow>
         <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">Perguntas e respostas</h2>
         <div className="mt-8 min-w-0 space-y-3">
@@ -719,7 +838,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="cv-auto mx-auto w-full max-w-6xl min-w-0 px-4 pb-16 sm:px-5 sm:pb-24">
+      <section className="mx-auto w-full max-w-6xl min-w-0 px-4 pb-16 sm:px-5 sm:pb-24">
         <div className="gs-glass gs-top-hi relative min-w-0 overflow-hidden rounded-[24px] p-8 text-center sm:p-14">
           <div className="gs-hero-art pointer-events-none absolute inset-0" aria-hidden />
           <h2 className="relative mx-auto max-w-2xl text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-5xl">
