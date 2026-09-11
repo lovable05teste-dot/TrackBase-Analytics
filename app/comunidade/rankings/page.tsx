@@ -17,7 +17,7 @@ export default async function Page() {
           <div className="metric-card overflow-x-auto rounded-xl">
             <div className="border-b border-white/10 p-5"><b>🏆 Top faturamento</b></div>
             <table className="w-full text-sm"><thead><tr><th>#</th><th>Campanha</th><th>Compras</th><th>Receita</th></tr></thead>
-              <tbody>{topReceita.map((c, i) => <tr key={c.name}><td>{i + 1}</td><td className="max-w-[200px] truncate font-medium">{c.name}</td><td>{c.compras}</td><td>{c.receita ? brl(c.receita) : "—"}</td></tr>)}</tbody>
+              <tbody>{topReceita.length ? topReceita.map((c, i) => <tr key={c.name}><td>{i + 1}</td><td className="max-w-[200px] truncate font-medium">{c.name}</td><td>{c.compras}</td><td>{c.receita ? brl(c.receita) : "—"}</td></tr>) : <tr><td colSpan={4} className="py-8 text-center text-slate-500">Volume insuficiente.</td></tr>}</tbody>
             </table>
           </div>
           <div className="metric-card overflow-x-auto rounded-xl">

@@ -2,18 +2,15 @@ import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { planSubscriptions } from "@/db/schema";
 import { requestUserId, sha256 } from "@/lib/trackbase-security";
-import { CaktoError, createCardCharge, createPixAutoCharge, createSubscription } from "@/lib/cakto";
+import { CaktoError, createCardCharge, createSubscription } from "@/lib/cakto";
 import { isPlanId, planOfferId, PLANS } from "@/lib/cakto-plans";
 
 function friendlyCakto(e: CaktoError): string {
   const body = e.body as Record<string, unknown>;
   const first = (v: unknown) => (Array.isArray(v) ? String(v[0]) : typeof v === "string" ? v : "");
-  const detail = typeof body?.detail === "string" ? body.detail : "";
-  if (detail.toLowerCase().includes("banking"))
-    return "Pix Automático exige conta Cakto Banking ativa. Conclua a abertura no painel Cakto ou assine no cartão.";
   if (e.status === 401) return "Falha de autenticação com a Cakto. Fale com o suporte.";
   if (e.status === 429) return "Muitas tentativas. Aguarde 1 minuto e tente de novo.";
-  if (detail) return detail;
+  if (typeof body?.detail === "string" && body.detail) return body.detail;
   for (const key of ["items", "card", "customer", "antifraud_profiling_attempt_reference"]) {
     const msg = first((body as Record<string, unknown>)[key]);
     if (msg) return msg;
@@ -27,7 +24,6 @@ export async function POST(request: Request) {
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const body = (await request.json().catch(() => ({}))) as {
     plan?: unknown;
-    method?: unknown;
     cardToken?: unknown;
     antifraudReference?: unknown;
     installments?: unknown;
@@ -36,7 +32,10 @@ export async function POST(request: Request) {
   if (!isPlanId(body.plan)) return Response.json({ error: "Plano inválido." }, { status: 400 });
   const offerId = planOfferId(body.plan);
   if (!offerId) return Response.json({ error: `Cobrança do plano ${PLANS[body.plan].name} ainda não configurada. Fale com o suporte.` }, { status: 500 });
-  const method = body.method === "pix_auto" || body.method === "pix" ? "pix_auto" : "card";
+  const cardToken = typeof body.cardToken === "string" ? body.cardToken.trim() : "";
+  const antifraudReference = typeof body.antifraudReference === "string" ? body.antifraudReference.trim() : "";
+  if (!cardToken || !antifraudReference)
+    return Response.json({ error: "Dados do cartão incompletos. Preencha novamente." }, { status: 400 });
   const c = body.customer || {};
   const name = typeof c.name === "string" ? c.name.trim() : "";
   const email = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
@@ -45,56 +44,7 @@ export async function POST(request: Request) {
   const docType = c.docType === "cnpj" ? "cnpj" : "cpf";
   if (name.length < 3 || !/.+@.+\..+/.test(email) || phone.length < 12)
     return Response.json({ error: "Confira nome, e-mail e telefone com DDD." }, { status: 400 });
-  if (method === "pix_auto" && !docNumber)
-    return Response.json({ error: "Informe o CPF para gerar o Pix Automático." }, { status: 400 });
   try {
-    if (method === "pix_auto") {
-      const pix = await createPixAutoCharge({
-        plan: body.plan,
-        customer: {
-          name,
-          email,
-          phone,
-          fingerprint: `ghostscale-${userId}`,
-          docType,
-          ...(docNumber ? { docNumber } : {}),
-        },
-        metadata: { ghostscale_user: userId, ghostscale_plan: body.plan },
-      });
-      const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
-      const now = Math.floor(Date.now() / 1000);
-      const db = getDb();
-      await db.insert(planSubscriptions).values({
-        id: crypto.randomUUID(),
-        workspaceId,
-        userId,
-        email,
-        plan: body.plan,
-        status: "past_due",
-        caktoOrderId: pix.id,
-        caktoSubscriptionId: null,
-        caktoOfferId: offerId,
-        amount: pix.amount || String(PLANS[body.plan].price),
-        currency: "BRL",
-        currentPeriodEnd: null,
-        createdAt: now,
-        updatedAt: now,
-      });
-      return Response.json({
-        ok: true,
-        method: "pix_auto",
-        plan: body.plan,
-        status: pix.status || "waiting_payment",
-        orderId: pix.id,
-        qrCode: pix.pix?.qrCode || null,
-        expirationDate: pix.pix?.expirationDate || null,
-        checkoutUrl: pix.checkoutUrl || null,
-      });
-    }
-    const cardToken = typeof body.cardToken === "string" ? body.cardToken.trim() : "";
-    const antifraudReference = typeof body.antifraudReference === "string" ? body.antifraudReference.trim() : "";
-    if (!cardToken || !antifraudReference)
-      return Response.json({ error: "Dados do cartão incompletos. Preencha novamente." }, { status: 400 });
     const charge = await createCardCharge({
       plan: body.plan,
       customer: {

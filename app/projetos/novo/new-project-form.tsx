@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Check, Copy, Loader2, Plus } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -11,6 +12,7 @@ export function NewProjectForm() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ id: string; name: string; publicKey: string; script: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,9 +38,13 @@ export function NewProjectForm() {
 
   async function copy() {
     if (!result?.script) return;
-    await navigator.clipboard.writeText(result.script);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+    setCopyError("");
+    if (await copyText(result.script)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } else {
+      setCopyError("Não foi possível copiar. Selecione o script e use Ctrl+C.");
+    }
   }
 
   return (
@@ -64,6 +70,7 @@ export function NewProjectForm() {
               <Button type="button" variant="outline" onClick={copy}>{copied ? <Check /> : <Copy />}{copied ? "Copiado" : "Copiar script"}</Button>
               <a href="/integracoes" className="rounded-lg border border-white/10 px-4 py-2 text-sm hover:bg-white/5">Ir para Integrações</a>
             </div>
+            {copyError ? <p role="alert" className="text-sm text-amber-300">{copyError}</p> : null}
           </CardContent>
         </Card>
       ) : null}

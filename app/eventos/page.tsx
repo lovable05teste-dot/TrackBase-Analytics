@@ -1,2 +1,3 @@
 import { PrivateSection } from "../private-section";
-export const dynamic="force-dynamic";export default function Page(){return <PrivateSection title="Eventos" description="PageView, ViewContent, AddToCart, InitiateCheckout e Purchase recebidos em tempo real."/>}
+import { EventsClient } from "./events-client";
+export const dynamic="force-dynamic";export default function Page(){return <PrivateSection title="Eventos" description="Cliques, acessos, checkouts e eventos do tracker em tempo real."><EventsClient /></PrivateSection>}

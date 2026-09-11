@@ -24,14 +24,14 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
     const session=(await cookies()).get("tb_session")?.value;
     const userId=await getUserIdFromSessionCookie(session);
     if(!userId)return null;
+    if(userId==="trackbase-owner")return {displayName:"Administrador",email:"admin@trackbase.local",fullName:"Administrador"};
     try{
       const { ensureDb, getDb }=await import("@/db");
       const { users }=await import("@/db/schema");
       const { eq }=await import("drizzle-orm");
       await ensureDb();
       const [row]=await getDb().select({email:users.email,name:users.name}).from(users).where(eq(users.id,userId)).limit(1);
-      if(!row)return null;
-      const mail=row.email;
+      const mail=row?.email||"conta@trackbase.local";
       return {displayName:row?.name||mail,email:mail,fullName:row?.name||null};
     }catch(error){console.error("getChatGPTUser profile",error);return {displayName:"Conta",email:"conta@trackbase.local",fullName:null};}
   }

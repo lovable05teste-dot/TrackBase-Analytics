@@ -76,7 +76,7 @@ window.TrackBase.track("Purchase", {
           <p className="text-sm leading-6 text-slate-400">No <b className="text-slate-200">Gerenciador de Eventos da Meta</b>, abra o Pixel da conta e gere uma chave de acesso da Conversions API (token completo). Cole-o no campo <b className="text-slate-200">Token de acesso da Conversions API</b>.</p>
         </Step>
         <Step n={3} title="Validar e conectar">
-          <p className="text-sm leading-6 text-slate-400">Clique em <b className="text-slate-200">Validar e conectar Pixel + CAPI</b>. O GhostScale valida o Pixel e o token na Meta e passa a enviasi os mesmos eventos por navegador (Pixel) e servidor (CAPI) com o mesmo <code className="rounded bg-black/30 px-1 text-violet-300">event_id</code>.</p>
+          <p className="text-sm leading-6 text-slate-400">Clique em <b className="text-slate-200">Validar e conectar Pixel + CAPI</b>. O GhostScale valida o Pixel e o token na Meta e passa a enviar os mesmos eventos por navegador (Pixel) e servidor (CAPI) com o mesmo <code className="rounded bg-black/30 px-1 text-violet-300">event_id</code>.</p>
         </Step>
         <Box tone="warn"><b>Em produção real:</b> faça upload de eventos reais por 30 dias (ou use um <b>código de teste</b> da Meta, ex.: <code className="rounded bg-black/30 px-1 text-violet-300">TEST12345</code>, no campo opcional da conexão) para confirmar o recebimento.</Box>
         <Box tone="info">O token é guardado criptografado (AES-GCM) e usado apenas para enviar eventos ao pixel do seu projeto.</Box>
@@ -85,7 +85,7 @@ window.TrackBase.track("Purchase", {
       <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><Radio className="size-5 text-violet-300" />Verificando o funcionamento</CardTitle></CardHeader><CardContent className="space-y-4">
         <p className="text-sm leading-6 text-slate-400">Depois de instalar, acesse a página de vendas e confira:</p>
         <ul className="space-y-2 text-sm leading-6 text-slate-400">
-          <li>• O <b className="text-slate-200">Dashboard</b> passa a mostrar cliques, acessos, erros, iniciants e compras reais.</li>
+          <li>• O <b className="text-slate-200">Dashboard</b> passa a mostrar cliques, acessos, erros, inícios de checkout e compras reais.</li>
           <li>• A página <b className="text-slate-200">Eventos</b> lista PageView, ViewContent, InitiateCheckout e Purchase em tempo real.</li>
           <li>• Em <b className="text-slate-200">Campanhas</b>, o gasto da Meta é cruzado com acessos, ICs, vendas, faturamento e ROAS por campanha.</li>
           <li>• No teste da Meta, use um evento que você mesmo gerou e compare pelo <code className="rounded bg-black/30 px-1 text-violet-300">event_id</code>.</li>

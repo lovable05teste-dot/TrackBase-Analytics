@@ -39,7 +39,7 @@ function luhn(num: string) {
 }
 
 function formatCard(num: string) {
-  return num.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+  return num.replace(/\D/g, "").slice(0, 19).replace(/(\d{4})(?=\d)/g, "$1 ");
 }
 
 function formatExp(v: string) {
@@ -83,20 +83,20 @@ export function AssinaturaClient() {
   const [exp, setExp] = useState("");
   const [cvv, setCvv] = useState("");
   const [installments, setInstallments] = useState(1);
-  const [payMethod, setPayMethod] = useState<"card" | "pix">("card");
-  const [pixData, setPixData] = useState<{ qrCode: string; expirationDate: string | null; checkoutUrl: string | null } | null>(null);
+
+  const [loadError, setLoadError] = useState("");
 
   async function load() {
     try {
       const r = await fetch("/api/billing/cakto/status");
       const b = await r.json();
-      if (r.ok) {
-        setPlans(b.plans || []);
-        setSub(b.subscription || null);
-        setSdkOk(!!b.sdkClientId);
-      }
-    } catch {
-      /* mantém vazio */
+      if (!r.ok) throw new Error(b.error || "Falha ao carregar assinatura.");
+      setPlans(b.plans || []);
+      setSub(b.subscription || null);
+      setSdkOk(!!b.sdkClientId);
+      setLoadError("");
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Falha ao carregar. Verifique sua conexão e recarregue.");
     } finally {
       setLoading(false);
     }
@@ -131,19 +131,8 @@ export function AssinaturaClient() {
   function openCheckout(plan: Plan) {
     setPayError("");
     setPayOk(false);
-    setPixData(null);
-    setPayMethod("card");
+    setInstallments(1);
     setModalPlan(plan);
-  }
-
-  function validCustomer() {
-    const phoneDigits = phone.replace(/\D/g, "");
-    const phoneE164 = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
-    if (name.trim().length < 3) return "Informe seu nome completo.";
-    if (!/.+@.+\..+/.test(email.trim())) return "Informe um e-mail válido.";
-    if (!validateCpf(cpf)) return "Confira o CPF.";
-    if (phoneE164.length < 14) return "Informe o celular com DDD.";
-    return "";
   }
 
   async function pay(e: FormEvent) {
@@ -156,7 +145,7 @@ export function AssinaturaClient() {
     if (!validateCpf(cpf)) return setPayError("Confira o CPF.");
     const phoneDigits = phone.replace(/\D/g, "");
     const phoneE164 = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
-    if (phoneE164.length < 14) return setPayError("Informe o celular com DDD.");
+    if (phoneE164.length < 12 || phoneE164.length > 13) return setPayError("Informe o celular com DDD (10 ou 11 dígitos).");
     if (!luhn(digits)) return setPayError("Número do cartão inválido.");
     if (holder.trim().length < 3) return setPayError("Informe o nome impresso no cartão.");
     if (!validExp(exp)) return setPayError("Validade inválida ou vencida.");
@@ -180,7 +169,6 @@ export function AssinaturaClient() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           plan: modalPlan.id,
-          method: "card",
           cardToken,
           antifraudReference: reference,
           installments,
@@ -198,63 +186,19 @@ export function AssinaturaClient() {
     }
   }
 
-  async function payPix(e: FormEvent) {
-    e.preventDefault();
-    if (!modalPlan) return;
-    setPayError("");
-    const err = validCustomer();
-    if (err) return setPayError(err);
-    const phoneDigits = phone.replace(/\D/g, "");
-    const phoneE164 = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
-    setPaying(true);
-    try {
-      const r = await fetch("/api/billing/cakto/checkout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          plan: modalPlan.id,
-          method: "pix_auto",
-          customer: { name: name.trim(), email: email.trim(), phone: phoneE164, docType: "cpf", docNumber: stripCpf(cpf) },
-        }),
-      });
-      const b = await r.json();
-      if (!r.ok) throw new Error(b.error || "Não foi possível gerar o Pix.");
-      if (!b.qrCode) throw new Error("Cakto não devolveu o QR Code.");
-      setPixData({ qrCode: b.qrCode, expirationDate: b.expirationDate || null, checkoutUrl: b.checkoutUrl || null });
-      // Polling: ativa quando o webhook aprovar
-      for (let i = 0; i < 24; i++) {
-        await new Promise((res) => setTimeout(res, 5000));
-        try {
-          const s = await fetch("/api/billing/cakto/status");
-          const sb = await s.json();
-          if (s.ok && sb.subscription && (sb.subscription.status === "active" || sb.subscription.status === "past_due") && sb.subscription.plan === modalPlan.id) {
-            if (sb.subscription.status === "active") {
-              setPayOk(true);
-              await load();
-              break;
-            }
-          }
-        } catch {
-          /* tenta de novo */
-        }
-      }
-    } catch (err) {
-      setPayError(err instanceof Error ? err.message : "Não foi possível gerar o Pix.");
-    } finally {
-      setPaying(false);
-    }
-  }
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   async function cancel() {
-    if (!confirm("Cancelar sua assinatura? Você perde o acesso no fim do ciclo.")) return;
+    if (!confirmCancel) { setConfirmCancel(true); return; }
     setCanceling(true);
     try {
       const r = await fetch("/api/billing/cakto/cancel", { method: "POST" });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Não foi possível cancelar.");
+      setConfirmCancel(false);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Não foi possível cancelar.");
+      setPayError(err instanceof Error ? err.message : "Não foi possível cancelar.");
     } finally {
       setCanceling(false);
     }
@@ -269,14 +213,23 @@ export function AssinaturaClient() {
   }
 
   const activePlan = sub && (sub.status === "active" || sub.status === "past_due") ? sub : null;
+  const activePlanName = plans.find((p) => p.id === activePlan?.plan)?.name || activePlan?.plan || "";
 
   return (
     <AppShell title="Assinatura" subtitle="Base mensal + R$ 0,10 por venda aprovada excedente. Black é ilimitado.">
+      {loadError ? (
+        <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-300">
+          {loadError}{" "}
+          <button onClick={() => { setLoading(true); setLoadError(""); load(); }} className="font-medium underline underline-offset-2">
+            Tentar de novo
+          </button>
+        </p>
+      ) : null}
       {activePlan ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[.06] p-4">
           <div>
             <b className="text-emerald-700 dark:text-emerald-300">
-              Plano {activePlan.plan} · {statusLabel[activePlan.status] || activePlan.status}
+              Plano {activePlanName} · {statusLabel[activePlan.status] || activePlan.status}
             </b>
             <p className="mt-1 text-sm text-slate-500">
               {activePlan.currentPeriodEnd
@@ -287,9 +240,9 @@ export function AssinaturaClient() {
           <button
             onClick={cancel}
             disabled={canceling}
-            className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
+            className={`rounded-lg border px-4 py-2 text-sm transition disabled:opacity-60 ${confirmCancel ? "border-red-500 bg-red-500 text-white hover:bg-red-600" : "border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"}`}
           >
-            {canceling ? "Cancelando..." : "Cancelar assinatura"}
+            {canceling ? "Cancelando..." : confirmCancel ? "Clique de novo para confirmar" : "Cancelar assinatura"}
           </button>
         </div>
       ) : (
@@ -362,8 +315,7 @@ export function AssinaturaClient() {
                 </h3>
                 <p className="mt-1 text-sm text-slate-400">
                   Cobrança hoje: <b className="text-white">{brl(modalPlan.price)}</b>
-                  {payMethod === "card" && installments > 1 ? ` em ${installments}x de ${brl(modalPlan.price / installments)}` : " à vista"}
-                  {payMethod === "card" ? " no cartão." : " no Pix Automático (recorrência)."}
+                  {installments > 1 ? ` em ${installments}x de ${brl(modalPlan.price / installments)}` : " à vista"} no cartão.
                 </p>
               </div>
               <button
@@ -372,23 +324,6 @@ export function AssinaturaClient() {
                 className="rounded-lg border border-white/10 p-2 text-slate-400 hover:bg-white/5 hover:text-white"
               >
                 <X className="size-4" />
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-black/30 p-1">
-              <button
-                type="button"
-                onClick={() => { setPayMethod("card"); setPayError(""); }}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "card" ? "bg-white text-black" : "text-slate-400 hover:text-white"}`}
-              >
-                Cartão de crédito
-              </button>
-              <button
-                type="button"
-                onClick={() => { setPayMethod("pix"); setPayError(""); }}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "pix" ? "bg-white text-black" : "text-slate-400 hover:text-white"}`}
-              >
-                Pix Automático
               </button>
             </div>
 
@@ -406,82 +341,6 @@ export function AssinaturaClient() {
                   Começar a usar
                 </button>
               </div>
-            ) : payMethod === "pix" ? (
-              <form onSubmit={payPix} className="mt-6 space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-slate-300">Nome completo</span>
-                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" autoComplete="name" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 outline-none placeholder:text-slate-600 focus:border-red-500/60" />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-slate-300">E-mail</span>
-                    <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="voce@empresa.com" autoComplete="email" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 outline-none placeholder:text-slate-600 focus:border-red-500/60" />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-slate-300">CPF</span>
-                    <input value={cpf} onChange={(e) => setCpf(formatCpf(e.target.value))} inputMode="numeric" placeholder="000.000.000-00" maxLength={14} required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 outline-none placeholder:text-slate-600 focus:border-red-500/60" />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-slate-300">Celular</span>
-                    <input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 13))} inputMode="tel" placeholder="11999999999" autoComplete="tel" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 outline-none placeholder:text-slate-600 focus:border-red-500/60" />
-                  </label>
-                </div>
-                {!pixData ? (
-                  <>
-                    {payError ? (
-                      <p role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
-                        {payError}
-                      </p>
-                    ) : null}
-                    <button
-                      type="submit"
-                      disabled={paying}
-                      className="group flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#ff0030] text-[15px] font-semibold text-white transition hover:bg-[#d60029] disabled:opacity-60"
-                    >
-                      {paying ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Loader2 className="size-4 animate-spin" /> Gerando Pix...
-                        </span>
-                      ) : (
-                        <>Gerar Pix {brl(modalPlan.price)}</>
-                      )}
-                    </button>
-                    <p className="text-center text-[11px] text-slate-500">
-                      Pix Automático: você autoriza uma vez no app do banco e as próximas mensalidades debitam sozinhas. Exige conta Cakto Banking ativa do vendedor.
-                    </p>
-                  </>
-                ) : (
-                  <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[.06] p-5 text-center">
-                    <b className="text-emerald-200">Escaneie para autorizar a recorrência</b>
-                    <p className="mt-1 break-all rounded-xl bg-black/50 p-3 text-left text-xs text-slate-300">{pixData.qrCode}</p>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => navigator.clipboard?.writeText(pixData.qrCode)}
-                        className="h-11 flex-1 rounded-xl border border-white/15 text-sm font-semibold hover:bg-white/5"
-                      >
-                        Copiar código
-                      </button>
-                      {pixData.checkoutUrl ? (
-                        <a href={pixData.checkoutUrl} target="_blank" rel="noreferrer" className="grid h-11 flex-1 place-items-center rounded-xl bg-white text-sm font-semibold text-black">
-                          Abrir checkout
-                        </a>
-                      ) : null}
-                    </div>
-                    {pixData.expirationDate ? (
-                      <p className="mt-2 text-xs text-slate-400">Expira em {new Date(pixData.expirationDate).toLocaleString("pt-BR")}</p>
-                    ) : null}
-                    <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-400">
-                      <Loader2 className="size-3.5 animate-spin" /> Aguardando autorização no app do banco...
-                    </p>
-                    {payError ? (
-                      <p role="alert" className="mt-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
-                        {payError}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </form>
             ) : (
               <form onSubmit={pay} className="mt-6 space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -522,7 +381,7 @@ export function AssinaturaClient() {
                   <label className="block text-sm">
                     <span className="mb-1 block text-slate-300">Parcelas</span>
                     <select value={installments} onChange={(e) => setInstallments(Number(e.target.value))} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-2 text-slate-200 outline-none focus:border-red-500/60">
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                      {Array.from({ length: Math.min(12, Math.max(1, Math.floor(modalPlan.price / 5))) }, (_, i) => i + 1).map((n) => (
                         <option key={n} value={n} className="bg-[#101522]">
                           {n}x de {brl(modalPlan.price / n)}
                         </option>

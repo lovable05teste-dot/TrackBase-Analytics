@@ -2,6 +2,7 @@
 import { useEffect,useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check,CheckCircle2,Copy,ExternalLink,KeyRound,Loader2,RefreshCw } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 
 type Account={id:string;adAccountId:string;name:string;metaUserName?:string;currency?:string;timezoneName?:string;accountStatus?:number;selected:boolean;tokenExpiresAt?:number};
 
@@ -12,7 +13,7 @@ export function MetaAccountsClient(){
  useEffect(()=>{load();},[]);
  const select=async(account:Account)=>{setSaving(account.id);setError("");try{const r=await fetch("/api/meta/accounts",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({accountId:account.id,enabled:!account.selected})});const b=await readJson(r);if(!r.ok)throw new Error(b.error||"Falha ao vincular.");await load();}catch(e){setError(e instanceof Error?e.message:"Falha ao vincular.");}finally{setSaving("");}};
   const accounts=data?.accounts||[];const configured=data?.configured!==false;
- const copyLink=async()=>{await navigator.clipboard.writeText(`${location.origin}/api/meta/oauth/start`);setCopied(true);setTimeout(()=>setCopied(false),1800)};
+  const copyLink=async()=>{setError("");if(await copyText(`${location.origin}/api/meta/oauth/start`)){setCopied(true);setTimeout(()=>setCopied(false),1800)}else{setError("Não foi possível copiar. Copie o endereço da barra do navegador.")}};
  const connectManual=async()=>{setSending(true);setError("");setOkMsg("");try{const r=await fetch("/api/meta/manual-token",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({accessToken:token})});const b=await readJson(r);if(!r.ok)throw new Error(b.error||"Falha ao conectar.");setToken("");const until=b.validUntil?new Date(b.validUntil*1000).toLocaleDateString("pt-BR"):null;setOkMsg(`Conectado como ${b.metaUser||"usuário Meta"} com ${b.accounts} conta(s).${until?` Token válido até ${until}.`:""} Vincule abaixo.`);await load();}catch(e){setError(e instanceof Error?e.message:"Falha ao conectar.")}finally{setSending(false)}};
  return <div className="space-y-5">
    {data&&!configured&&<div role="alert" className="rounded-lg border border-amber-400/25 bg-amber-400/10 p-4"><h3 className="font-medium text-amber-700">Aplicativo Meta precisa das credenciais</h3><p className="mt-2 text-sm leading-6 text-slate-500">Configure META_APP_ID e META_APP_SECRET no ambiente do servidor. META_LOGIN_CONFIG_ID é usado pelo Facebook Login for Business.</p></div>}

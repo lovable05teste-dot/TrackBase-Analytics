@@ -1,5 +1,3 @@
-import {ThemeToggle} from "../theme-toggle";
-
 export const metadata={title:"Documentação de integração — GhostScale",description:"Como gateways e plataformas enviam vendas para a GhostScale: script, webhook, campos, status e testes."};
 const H="https://track-base-analytics.vercel.app";
 function Code({children}:{children:string}){return <pre className="overflow-x-auto rounded-xl bg-slate-900 p-4 text-xs leading-6 text-slate-100"><code>{children}</code></pre>}
@@ -10,9 +8,7 @@ function Sec({id,n,title,children}:{id:string;n:string;title:string;children:Rea
 
 export default function Docs(){
  const items:[string,string][]=[["visao","1 · Visão geral"],["script","2 · Script na página"],["webhook","3 · Webhook de vendas"],["campos","4 · Campos aceitos"],["status","5 · Status"],["fortpay","6 · FortPay"],["valores","7 · Valores e moeda"],["dedup","8 · Deduplicação"],["respostas","9 · Respostas e erros"],["testes","10 · Testando"],["seguranca","11 · Segurança"],["faq","12 · Perguntas frequentes"]];
- return <main className="min-h-screen bg-slate-50 text-slate-900">
-  <header className="border-b border-slate-200 bg-card/80 backdrop-blur"><div className="mx-auto flex max-w-[1100px] items-center justify-between gap-4 px-5 py-4"><div className="flex items-center gap-3"><img src="/ghostscale-logo.png" alt="GhostScale" className="h-9 w-auto object-contain"/><div><p className="text-xs font-medium uppercase tracking-[.18em] text-blue-600">GhostScale</p><h1 className="text-lg font-semibold leading-tight">Documentação de integração para gateways</h1></div></div><div className="flex items-center gap-2"><ThemeToggle/><a href="/login" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium transition hover:border-blue-300 hover:text-blue-600">Entrar</a></div></div></header>
-  <div className="mx-auto grid max-w-[1100px] gap-6 px-5 py-8 lg:grid-cols-[220px_1fr]">
+ return <div className="mx-auto grid max-w-[1100px] gap-6 px-5 py-8 lg:grid-cols-[220px_1fr]">
    <nav className="metric-card h-fit rounded-2xl p-4 lg:sticky lg:top-6"><p className="px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Nesta página</p><div className="mt-2 space-y-1">{items.map(([id,label])=><a key={id} href={`#${id}`} className="block rounded-lg px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">{label}</a>)}</div></nav>
    <div className="space-y-6">
     <Sec id="visao" n="Parte 1" title="Visão geral — como a venda chega">
@@ -75,6 +71,4 @@ export default function Docs(){
     </Sec>
    </div>
   </div>
-  <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-500">GhostScale · Documentação de integração · {H}</footer>
- </main>
 }

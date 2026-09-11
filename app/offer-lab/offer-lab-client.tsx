@@ -1,52 +1,37 @@
 "use client";
 import { useEffect, useState } from "react";
 import { FlaskConical, Plus, Trash2 } from "lucide-react";
+import { uid } from "@/lib/uid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type Offer = { id: string; name: string; price: number; hook: string | null; status: string };
+type Offer = { id: string; name: string; price: number; hook: string; status: string };
+const KEY = "tb_offer_lab";
 
 export function OfferLabClient() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [hook, setHook] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  async function load() {
-    try {
-      const r = await fetch("/api/offer-lab", { cache: "no-store" });
-      const v = await r.json();
-      if (r.ok) setOffers(v.offers || []);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [ready, setReady] = useState(false);
+  const [formError, setFormError] = useState("");
   useEffect(() => {
-    load();
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) setOffers(JSON.parse(raw));
+    } catch { /* mantém vazio */ } finally { setReady(true); }
   }, []);
-
-  async function add(e: React.FormEvent) {
+  useEffect(() => { if (!ready) return; try { localStorage.setItem(KEY, JSON.stringify(offers)); } catch { /* sem persistência */ } }, [offers, ready]);
+  const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number.isFinite(v) ? v : 0);
+  function add(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
-    const r = await fetch("/api/offer-lab", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, price, hook }) });
-    if (r.ok) {
-      setName(""); setPrice(""); setHook("");
-      await load();
-    }
+    setFormError("");
+    if (!name.trim()) { setFormError("Dê um nome para a variação."); return; }
+    const value = Number(String(price).replace(/\./g, "").replace(",", "."));
+    if (!Number.isFinite(value) || value <= 0) { setFormError("Informe um preço válido maior que zero."); return; }
+    setOffers((o) => [...o, { id: uid(), name: name.trim().slice(0, 80), price: Math.round(value * 100) / 100, hook: hook.trim().slice(0, 140), status: "em teste" }]);
+    setName(""); setPrice(""); setHook("");
   }
-
-  async function cycle(o: Offer) {
-    const next = o.status === "vencedora" ? "em teste" : o.status === "em teste" ? "vencedora" : "em teste";
-    await fetch("/api/offer-lab", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: o.id, status: next }) });
-    await load();
-  }
-
-  async function remove(id: string) {
-    await fetch(`/api/offer-lab?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-    await load();
-  }
-
   return (
     <div className="grid gap-4">
       <Card className="metric-card">
@@ -58,20 +43,20 @@ export function OfferLabClient() {
             <input value={hook} onChange={(e) => setHook(e.target.value)} placeholder="Hook principal" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm" />
             <Button type="submit" size="sm"><Plus className="size-4" />Adicionar</Button>
           </form>
-          <p className="mt-3 text-xs text-slate-500">Metodologia: rode cada variação com o mesmo orçamento por 3 dias, compare IC→compra em /funil e mantenha a vencedora. Salvo no servidor, vale em qualquer dispositivo.</p>
+          {formError ? <p role="alert" className="mt-2 text-sm text-red-400">{formError}</p> : null}
+          <p className="mt-3 text-xs text-slate-500">Metodologia: rode cada variação com o mesmo orçamento por 3 dias, compare IC→compra em /funil e mantenha a vencedora.</p>
         </CardContent>
       </Card>
       <div className="grid gap-3">
-        {loading ? <div className="metric-card rounded-xl p-8 text-center text-sm text-slate-500">Carregando...</div>
-          : offers.length ? offers.map((o) => (
-            <div key={o.id} className="metric-card flex items-center justify-between gap-3 rounded-xl p-4">
-              <div><b className="text-sm">{o.name} · R$ {o.price}</b><p className="mt-1 text-xs text-slate-500">{o.hook || "Sem hook"} · {o.status}</p></div>
-              <div className="flex gap-2">
-                <button onClick={() => cycle(o)} className="rounded-full bg-violet-500/15 px-3 py-1 text-xs text-violet-200">{o.status === "vencedora" ? "★ vencedora" : "marcar vencedora"}</button>
-                <button onClick={() => remove(o.id)} className="rounded-lg border border-white/10 p-2 text-slate-400 hover:text-red-300"><Trash2 className="size-4" /></button>
-              </div>
+        {offers.length ? offers.map((o) => (
+          <div key={o.id} className="metric-card flex items-center justify-between gap-3 rounded-xl p-4">
+            <div><b className="text-sm">{o.name} · {brl(o.price)}</b><p className="mt-1 text-xs text-slate-500">{o.hook || "Sem hook"} · {o.status}</p></div>
+            <div className="flex gap-2">
+              <button onClick={() => setOffers((l) => l.map((x) => x.id === o.id ? { ...x, status: x.status === "vencedora" ? "em teste" : "vencedora" } : x))} className="rounded-full bg-violet-500/15 px-3 py-1 text-xs text-violet-200">{o.status === "vencedora" ? "★ vencedora" : "marcar vencedora"}</button>
+              <button onClick={() => setOffers((l) => l.filter((x) => x.id !== o.id))} className="rounded-lg border border-white/10 p-2 text-slate-400 hover:text-red-300"><Trash2 className="size-4" /></button>
             </div>
-          )) : <div className="metric-card rounded-xl p-8 text-center text-sm text-slate-500">Nenhuma oferta em teste. Adicione a primeira variação acima.</div>}
+          </div>
+        )) : <div className="metric-card rounded-xl p-8 text-center text-sm text-slate-500">Nenhuma oferta em teste. Adicione a primeira variação acima.</div>}
       </div>
     </div>
   );

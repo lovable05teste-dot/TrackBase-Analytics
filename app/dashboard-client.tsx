@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {Area,AreaChart,Bar,BarChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
-import {BarChart3,BookOpen,Check,FlaskConical,LayoutDashboard,Link2,Loader2,RefreshCw,RotateCcw,Settings,Target,TrendingDown,TrendingUp,Volume2} from "lucide-react";
+import {Check,Loader2,RefreshCw,RotateCcw,Target,TrendingDown,TrendingUp,Volume2} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {NotificationsBell} from "./notifications-bell";
 import {SoundSidebar,SoundMobile} from "./sound-sidebar";

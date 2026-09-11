@@ -44,8 +44,8 @@ export function AppShell({
               <Menu className="size-4" />
             </button>
             <img src="/ghostscale-logo.png" alt="GhostScale" className="h-10 w-auto max-w-[200px] shrink-0 object-contain lg:hidden" />
-            <div className="hidden min-w-0 lg:block">
-              <h1 className="text-xl font-semibold">{title}</h1>
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-semibold sm:text-xl lg:text-xl">{title}</h1>
               {subtitle ? <p className="hidden text-sm text-muted-foreground sm:block">{subtitle}</p> : null}
             </div>
           </div>
