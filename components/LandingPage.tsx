@@ -344,9 +344,56 @@ const faqs = [
   { q: "Existe suporte?", a: "Sim. Documentação pública em /docs, FAQ e canal de suporte para dúvidas de operação e integração." },
 ];
 
+const heroPhrases = [
+  "dinheiro no seu bolso.",
+  "ROAS de verdade.",
+  "cada venda atribuída.",
+  "lucro sem achismo.",
+  "escala com dado real.",
+];
+
+function useTypewriter(phrases: string[]) {
+  const [text, setText] = useState(phrases[0]);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let phrase = 0;
+    let char = phrases[0].length;
+    let deleting = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const current = phrases[phrase];
+      if (!deleting) {
+        char += 1;
+        setText(current.slice(0, char));
+        if (char >= current.length) {
+          deleting = true;
+          timer = setTimeout(tick, 2000);
+          return;
+        }
+        timer = setTimeout(tick, 36 + Math.random() * 48);
+      } else {
+        char -= 1;
+        setText(current.slice(0, char));
+        if (char <= 0) {
+          deleting = false;
+          phrase = (phrase + 1) % phrases.length;
+          timer = setTimeout(tick, 380);
+          return;
+        }
+        timer = setTimeout(tick, 15 + Math.random() * 22);
+      }
+    };
+    timer = setTimeout(tick, 2000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return text;
+}
+
 export function LandingPage() {
   const scrolled = useScrolled();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const heroText = useTypewriter(heroPhrases);
 
   return (
     <main className="gs-landing gs-grain min-h-screen w-full max-w-full overflow-x-clip">
@@ -361,7 +408,7 @@ export function LandingPage() {
               src="/ghostscale-logo.png"
               alt="Logo GhostScale"
               decoding="async"
-              className="h-9 w-auto max-w-[160px] object-contain sm:h-11 sm:max-w-[220px]"
+              className="h-9 w-auto max-w-[160px] object-contain drop-shadow-[0_0_18px_rgba(255,48,80,.35)] sm:h-11 sm:max-w-[220px]"
             />
           </a>
           <nav className="hidden items-center gap-7 text-sm text-[#C99AA4] md:flex" aria-label="Navegação principal">
@@ -406,7 +453,8 @@ export function LandingPage() {
           </div>
           <h1 className="gs-enter gs-enter-1 mx-auto mt-5 w-full max-w-3xl text-[40px] leading-[1.05] font-extrabold break-words tracking-[-0.03em] text-[#FFF3F5] sm:text-[64px]">
             Saiba exatamente qual anúncio coloca{" "}
-            <span className="gs-display gs-gradient-text font-normal italic">dinheiro no seu bolso.</span>
+            <span className="gs-display gs-gradient-text font-normal italic">{heroText}</span>
+            <span className="type-caret" aria-hidden />
           </h1>
           <p className="gs-enter gs-enter-2 mx-auto mt-5 w-full max-w-2xl text-[15px] leading-relaxed text-[#C99AA4] sm:text-lg">
             Pixel e Conversions API deduplicados, webhook universal de vendas e ROAS por campanha, com proteção contra pixel cego e clone.
@@ -462,6 +510,23 @@ export function LandingPage() {
                   <b className="w-10 shrink-0 text-right text-[#FFF3F5] tabular-nums">{roas}</b>
                 </div>
               ))}
+            </div>
+            <div className="mt-3 flex min-w-0 items-center gap-3 rounded-xl border border-[#FF4D67]/25 bg-gradient-to-r from-[#FF0030]/[.09] to-transparent p-3.5">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#FF0030]/15 text-[#FF8FA3]">
+                <Sparkles className="size-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-xs font-semibold text-[#FFF3F5]">
+                  Insight IA
+                  <span className="rounded-md bg-[#FF0030]/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[#FF8FA3]">BETA</span>
+                </p>
+                <p className="mt-0.5 truncate text-xs text-[#C99AA4]">
+                  Pausar <b className="font-semibold text-[#FFF3F5]">teste-criativo-c</b> economiza ~R$ 38/dia com o mesmo faturamento.
+                </p>
+              </div>
+              <span className="hidden shrink-0 items-center gap-1.5 text-[11px] font-medium whitespace-nowrap text-[#7DE8B8] sm:inline-flex">
+                <span className="size-1.5 animate-pulse rounded-full bg-[#34D399]" /> 98% confiança
+              </span>
             </div>
           </div>
         </div>
@@ -682,7 +747,7 @@ export function LandingPage() {
                 alt="Logo GhostScale"
                 loading="lazy"
                 decoding="async"
-                className="h-9 w-auto max-w-[160px] object-contain sm:h-11 sm:max-w-[220px]"
+                className="h-9 w-auto max-w-[160px] object-contain drop-shadow-[0_0_18px_rgba(255,48,80,.3)] sm:h-11 sm:max-w-[220px]"
               />
             </div>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#C99AA4]">Mais que tracking. A operação de quem vive de tráfego pago.</p>
