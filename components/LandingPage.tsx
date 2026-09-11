@@ -1,7 +1,7 @@
 "use client";
 import { memo, useEffect, useState, type ReactNode } from "react";
 import {
-  ArrowRight,
+  ArrowUpRight,
   BarChart3,
   BellRing,
   BookOpen,
@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Crosshair,
   EyeOff,
+  MessageCircle,
   Moon,
   MousePointerClick,
   ShieldAlert,
@@ -25,11 +26,12 @@ import {
   Zap,
 } from "lucide-react";
 
+/* Troque pelo número oficial. Formato wa.me exige DDI+DDD+numero, sem espaços. */
+const WHATSAPP_URL =
+  "https://wa.me/5511999999999?text=Quero%20entender%20como%20o%20GhostScale%20rastreia%20minha%20opera%C3%A7%C3%A3o";
+
 const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
-
-/* Sem cursor customizado: usa a seta padrão do sistema (preta).
-   Nenhum mousemove / rAF / trail branco aqui — era o que travava o PC. */
 
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false);
@@ -50,170 +52,42 @@ function useScrolled() {
   return scrolled;
 }
 
-function useReveal() {
-  useEffect(() => {
-    const els = Array.from(document.querySelectorAll(".reveal"));
-    if (!els.length) return;
-    if (!("IntersectionObserver" in window)) {
-      els.forEach((el) => el.classList.add("reveal-visible"));
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            e.target.classList.add("reveal-visible");
-            io.unobserve(e.target);
-          }
-        }
-      },
-      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, []);
-}
-
-function Tag({ children }: { children: ReactNode }) {
+function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <small className="reveal text-xs font-semibold uppercase tracking-[0.2em] text-[#ff3b5c]">
+    <span className="gs-eyebrow">
+      <i aria-hidden />
       {children}
-    </small>
-  );
-}
-
-/* Headline isolada: o typewriter re-renderiza SÓ este componente,
-   não a página inteira (era isso que travava tudo). */
-const heroPhrases = [
-  "dinheiro no seu bolso.",
-  "ROAS de verdade.",
-  "escala sem achismo.",
-  "lucro previsível.",
-];
-
-const HeroHeadline = memo(function HeroHeadline() {
-  const [text, setText] = useState(heroPhrases[0]);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let phrase = 0;
-    let chars = heroPhrases[0].length;
-    let deleting = true;
-    let timer: ReturnType<typeof setTimeout>;
-    let cancelled = false;
-    const tick = () => {
-      if (cancelled) return;
-      if (deleting) {
-        chars -= 1;
-        setText(heroPhrases[phrase].slice(0, Math.max(0, chars)));
-        if (chars <= 0) {
-          deleting = false;
-          phrase = (phrase + 1) % heroPhrases.length;
-          timer = setTimeout(tick, 350);
-        } else {
-          timer = setTimeout(tick, 26);
-        }
-      } else {
-        const next = heroPhrases[phrase];
-        chars += 1;
-        setText(next.slice(0, chars));
-        if (chars >= next.length) {
-          deleting = true;
-          timer = setTimeout(tick, 2300);
-        } else {
-          timer = setTimeout(tick, 55);
-        }
-      }
-    };
-    timer = setTimeout(tick, 2300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, []);
-  return (
-    <span className="text-[#ff3b5c]">
-      {text}
-      <span className="type-caret" aria-hidden />
     </span>
   );
-});
+}
 
-/* Chuva de métricas — sem blur, sem scale gigante, sem overflow.
-   Só transform GPU barato. */
-const ctaMetrics = [
-  "ROAS 4,2x",
-  "+312 vendas hoje",
-  "CPA −18%",
-  "R$ 18,4k faturados",
-  "Atribuição 100%",
-  "Chargeback −32%",
-  "Ticket +24%",
-  "Pixel + CAPI ativos",
-];
-
-const MetricsRain = memo(function MetricsRain() {
-  const row = (items: string[], reverse: boolean, label: string) => (
-    <div className="flex overflow-hidden">
-      <div className={`flex w-max items-center gap-3 py-2 pr-3 ${reverse ? "marquee-reverse" : "marquee"}`}>
-        {items.concat(items).map((m, i) => (
-          <span
-            key={`${label}-${i}`}
-            aria-hidden={i >= items.length}
-            className="shrink-0 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide whitespace-nowrap text-white/85"
-          >
-            {m}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-  return (
-    <div className="pointer-events-none absolute inset-0 flex flex-col justify-center gap-2 overflow-hidden opacity-60" aria-hidden>
-      <div className="-rotate-2">{row(ctaMetrics, false, "a")}</div>
-      <div className="rotate-1">{row(ctaMetrics.slice().reverse(), true, "b")}</div>
-      <div className="-rotate-1">{row(ctaMetrics.slice(3).concat(ctaMetrics.slice(0, 3)), false, "c")}</div>
-    </div>
-  );
-});
-
-/* CTA sem efeito pesado na seta: seta estática, sem scale 1.35 / sem glow.
-   Só um translate leve no hover (GPU). */
-const ArrowCta = memo(function ArrowCta({
+const GhostButton = memo(function GhostButton({
   href,
   children,
+  icon,
   variant = "primary",
+  external = false,
 }: {
   href: string;
   children: ReactNode;
-  variant?: "primary" | "ghost" | "light";
+  icon?: ReactNode;
+  variant?: "primary" | "quiet";
+  external?: boolean;
 }) {
-  const styles =
-    variant === "primary"
-      ? "bg-[#ff0030] text-white hover:bg-[#d60029]"
-      : variant === "light"
-        ? "bg-white text-[#0b0e17] hover:bg-red-50"
-        : "border border-white/15 text-slate-200 hover:border-white/30 hover:bg-white/5";
   return (
     <a
       href={href}
-      className={`group inline-flex max-w-full items-center gap-3 rounded-2xl px-6 py-4 text-[15px] font-semibold transition-colors duration-200 active:scale-[.98] ${styles}`}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      className={`gs-btn max-w-full ${variant === "primary" ? "gs-btn-primary" : "gs-btn-quiet"}`}
     >
-      <span className="min-w-0">{children}</span>
-      <span
-        className={`grid size-9 shrink-0 place-items-center rounded-full ${
-          variant === "light"
-            ? "bg-[#ff0030]/10 text-[#ff0030]"
-            : "bg-white/20 text-white"
-        }`}
-      >
-        <ArrowRight className="size-4" strokeWidth={2.75} />
+      <span className="min-w-0 text-left">{children}</span>
+      <span className="gs-icon-box" aria-hidden>
+        {icon ?? <ArrowUpRight className="size-4" strokeWidth={2.5} />}
       </span>
     </a>
   );
 });
 
-/* Ticker — sem animate-ping, sem backdrop-blur (os 2 maiores vilões de FPS).
-   Pontinho estático verde, marquee só com transform. */
 const tickerSales = [
   ["R$ 297,00", "FortPay", "há 12s"],
   ["R$ 147,00", "Kiwify", "há 31s"],
@@ -229,14 +103,14 @@ const tickerWins = [
   "+312 vendas atribuídas hoje",
   "Clone bloqueado no checkout",
   "CPA caiu 18% esta semana",
-  "Pixel + CAPI 100% deduplicados",
+  "Pixel e CAPI 100% deduplicados",
   "Site monitorado 24/7 sem queda",
 ];
 
 const SalesTicker = memo(function SalesTicker() {
   return (
     <div className="relative mt-12 space-y-3 overflow-x-clip">
-      <p className="text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+      <p className="text-center text-[13px] font-medium text-[#A7B0C2]">
         Vendas sendo rastreadas agora
       </p>
       <div className="flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
@@ -245,12 +119,12 @@ const SalesTicker = memo(function SalesTicker() {
             <span
               key={`sales-${i}`}
               aria-hidden={i >= tickerSales.length}
-              className="inline-flex shrink-0 items-center gap-2.5 rounded-full border border-white/10 bg-[#0b0e17] py-2 pr-4 pl-3 text-xs whitespace-nowrap"
+              className="inline-flex shrink-0 items-center gap-2.5 rounded-full border border-white/10 bg-[#0D1017] py-2 pr-4 pl-3 text-xs whitespace-nowrap"
             >
-              <span className="size-2 shrink-0 rounded-full bg-emerald-400" />
-              <b className="text-emerald-300">{value}</b>
-              <span className="text-slate-400">{gateway}</span>
-              <span className="text-slate-600">{ago}</span>
+              <span className="size-2 shrink-0 rounded-full bg-[#34D399]" />
+              <b className="text-[#7DE8B8]">{value}</b>
+              <span className="text-[#A7B0C2]">{gateway}</span>
+              <span className="text-[#5B6478]">{ago}</span>
             </span>
           ))}
         </div>
@@ -261,9 +135,9 @@ const SalesTicker = memo(function SalesTicker() {
             <span
               key={`win-${i}`}
               aria-hidden={i >= tickerWins.length}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#ff0030]/20 bg-[#ff0030]/[.06] px-4 py-2 text-xs whitespace-nowrap text-slate-300"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[.03] px-4 py-2 text-xs whitespace-nowrap text-[#CFCBE8]"
             >
-              <TrendingUp className="size-3.5 shrink-0 text-[#ff3b5c]" />
+              <TrendingUp className="size-3.5 shrink-0 text-[#EFEDFD]" />
               {w}
             </span>
           ))}
@@ -273,7 +147,6 @@ const SalesTicker = memo(function SalesTicker() {
   );
 });
 
-/* Simulador — inputs com min-w-0 pra nunca estourar no mobile */
 const ScaleSimulator = memo(function ScaleSimulator() {
   const [invest, setInvest] = useState(5000);
   const [sales, setSales] = useState(120);
@@ -283,10 +156,10 @@ const ScaleSimulator = memo(function ScaleSimulator() {
   const cpa = sales > 0 ? invest / sales : 0;
   const extra = revenue * 0.12;
   const num = (v: number, setter: (n: number) => void, label: string, prefix = "") => (
-    <label className="block min-w-0 rounded-2xl border border-white/10 bg-black/40 p-4 transition-colors focus-within:border-[#ff0030]/50">
-      <small className="text-xs text-slate-500">{label}</small>
-      <span className="mt-1 flex min-w-0 items-center gap-1 text-2xl font-bold">
-        {prefix && <span className="shrink-0 text-sm text-slate-500">{prefix}</span>}
+    <label className="gs-input block min-w-0 p-4">
+      <small className="text-xs text-[#A7B0C2]">{label}</small>
+      <span className="mt-1 flex min-w-0 items-center gap-1 text-2xl font-bold text-[#F2F0FF]">
+        {prefix && <span className="shrink-0 text-sm font-medium text-[#6B7280]">{prefix}</span>}
         <input
           type="number"
           min={0}
@@ -299,18 +172,25 @@ const ScaleSimulator = memo(function ScaleSimulator() {
     </label>
   );
   return (
-    <div className="reveal cv-auto mt-8 grid min-w-0 gap-4 overflow-hidden rounded-3xl border border-white/10 bg-[#0b0e17] p-6 sm:p-8 lg:grid-cols-2">
+    <div className="gs-glass gs-top-hi cv-auto mt-8 grid min-w-0 gap-4 overflow-hidden rounded-[24px] p-6 sm:p-8 lg:grid-cols-2">
       <div className="min-w-0">
-        <b className="flex items-center gap-2 text-lg"><Calculator className="size-5 shrink-0 text-[#ff3b5c]" /> Preencha os dados da sua operação</b>
-        <p className="mt-1 text-sm text-slate-500">Arraste a realidade pra dentro e veja a projeção com atribuição correta.</p>
+        <b className="flex items-center gap-2.5 text-lg text-[#F2F0FF]">
+          <span className="gs-icon-box">
+            <Calculator className="size-4" />
+          </span>
+          Preencha os dados da sua operação
+        </b>
+        <p className="mt-2 text-sm leading-relaxed text-[#A7B0C2]">
+          Coloque os números dos últimos 7 dias e veja a projeção com atribuição correta.
+        </p>
         <div className="mt-5 space-y-3">
           {num(invest, setInvest, "Investimento (últimos 7 dias)", "R$")}
           {num(sales, setSales, "Número de vendas")}
           {num(ticket, setTicket, "Ticket médio (R$)", "R$")}
         </div>
       </div>
-      <div className="flex min-w-0 flex-col justify-center rounded-2xl border border-[#ff0030]/25 bg-gradient-to-b from-[#ff0030]/10 to-transparent p-6">
-        <small className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sua operação hoje</small>
+      <div className="flex min-w-0 flex-col justify-center rounded-[20px] border border-[#EFEDFD]/25 bg-gradient-to-b from-[#EFEDFD]/[.08] to-transparent p-6">
+        <small className="text-[13px] font-semibold text-[#A7B0C2]">Sua operação hoje</small>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center sm:gap-3">
           {[
             ["Faturamento", brl(revenue)],
@@ -318,23 +198,27 @@ const ScaleSimulator = memo(function ScaleSimulator() {
             ["CPA", brl(cpa)],
           ].map(([l, v]) => (
             <div key={l} className="min-w-0 rounded-xl bg-black/40 p-3">
-              <small className="block truncate text-[11px] text-slate-500">{l}</small>
-              <b className="block truncate text-base sm:text-lg">{v}</b>
+              <small className="block truncate text-[11px] text-[#A7B0C2]">{l}</small>
+              <b className="block truncate text-base text-[#F2F0FF] tabular-nums sm:text-lg">{v}</b>
             </div>
           ))}
         </div>
-        <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/[.07] p-4 text-center">
-          <small className="text-xs text-emerald-300/80">Receita extra estimada recuperando 12% em atribuição</small>
-          <b className="mt-1 block text-2xl break-words text-emerald-300 sm:text-3xl">+{brl(extra)}<span className="text-sm font-normal text-emerald-300/70">/semana</span></b>
+        <div className="mt-4 rounded-xl border border-[#34D399]/25 bg-[#34D399]/[.07] p-4 text-center">
+          <small className="text-xs text-[#7DE8B8]/80">Receita extra estimada recuperando 12% em atribuição</small>
+          <b className="mt-1 block text-2xl break-words text-[#7DE8B8] tabular-nums sm:text-3xl">
+            +{brl(extra)}
+            <span className="text-sm font-normal text-[#7DE8B8]/70">/semana</span>
+          </b>
         </div>
-        <small className="mt-3 text-center text-[11px] text-slate-600">Simulação educativa. Resultados variam por operação.</small>
-        <div className="mt-4 text-center"><ArrowCta href="/login?modo=register">Quero esse rastreio</ArrowCta></div>
+        <small className="mt-3 text-center text-[11px] text-[#6B7280]">Simulação educativa. Resultados variam por operação.</small>
+        <div className="mt-4 text-center">
+          <GhostButton href="/login?modo=register">Quero esse rastreio</GhostButton>
+        </div>
       </div>
     </div>
   );
 });
 
-/* Calculadora do preço — 4 planos + R$0,10 excedente */
 const PriceCalculator = memo(function PriceCalculator() {
   const [sales, setSales] = useState(1200);
   const plans = [
@@ -343,33 +227,50 @@ const PriceCalculator = memo(function PriceCalculator() {
     { name: "Scale", base: 89.9, included: 2000 },
     { name: "Black", base: 119.9, included: Infinity },
   ];
-  const calc = (p: typeof plans[number]) =>
+  const calc = (p: (typeof plans)[number]) =>
     !Number.isFinite(p.included) ? p.base : p.base + Math.max(0, sales - p.included) * 0.1;
   const best = plans.reduce((a, b) => (calc(a) <= calc(b) ? a : b));
   return (
-    <div className="reveal cv-auto mx-auto mt-8 w-full max-w-4xl min-w-0">
+    <div className="cv-auto mx-auto mt-8 w-full max-w-4xl min-w-0">
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((p) => {
           const total = calc(p);
           const isBest = p.name === best.name;
           return (
-            <div key={p.name} className={`min-w-0 rounded-3xl border p-6 text-left ${isBest ? "border-[#ff0030]/50 bg-gradient-to-b from-[#ff0030]/10 to-transparent" : "border-white/10 bg-black/40"}`}>
-              <small className="text-sm text-slate-400">{p.name}</small>
+            <div
+              key={p.name}
+              className={`min-w-0 rounded-[20px] border p-6 text-left ${
+                isBest
+                  ? "gs-top-hi border-[#EFEDFD]/40 bg-gradient-to-b from-[#EFEDFD]/[.08] to-transparent shadow-[0_0_44px_-12px_rgba(239,237,253,.25)]"
+                  : "border-white/10 bg-[#0D1017]"
+              }`}
+            >
+              <small className="text-sm text-[#A7B0C2]">{p.name}</small>
               <div className="mt-1 flex items-end gap-1">
-                <b className="text-2xl font-bold tracking-tight break-words sm:text-3xl">{brl(p.base)}</b>
-                <span className="pb-1 text-xs whitespace-nowrap text-slate-500">/mês</span>
+                <b className="text-2xl font-bold tracking-tight break-words text-[#F2F0FF] tabular-nums sm:text-3xl">
+                  {brl(p.base)}
+                </b>
+                <span className="pb-1 text-xs whitespace-nowrap text-[#6B7280]">/mês</span>
               </div>
-              <p className="mt-1 text-xs text-slate-400">{Number.isFinite(p.included) ? `até ${p.included.toLocaleString("pt-BR")} vendas inclusas` : "vendas ilimitadas"}</p>
-              <p className="mt-2 text-sm">Sua conta: <b className="text-emerald-300">{brl(total)}</b></p>
-              {isBest && <p className="mt-1 text-[11px] font-semibold text-[#ff3b5c]">Melhor pra você</p>}
+              <p className="mt-1 text-xs text-[#A7B0C2]">
+                {Number.isFinite(p.included) ? `até ${p.included.toLocaleString("pt-BR")} vendas inclusas` : "vendas ilimitadas"}
+              </p>
+              <p className="mt-2 text-sm text-[#A7B0C2]">
+                Sua conta: <b className="text-[#7DE8B8] tabular-nums">{brl(total)}</b>
+              </p>
+              {isBest && (
+                <p className="mt-2 inline-block rounded-full border border-[#EFEDFD]/30 bg-[#EFEDFD]/10 px-2.5 py-1 text-[11px] font-semibold text-[#EFEDFD]">
+                  Melhor pra você
+                </p>
+              )}
             </div>
           );
         })}
       </div>
-      <div className="mx-auto mt-4 w-full max-w-md min-w-0 rounded-2xl bg-black/40 p-5 text-left">
+      <div className="mx-auto mt-4 w-full max-w-md min-w-0 rounded-2xl border border-white/10 bg-black/40 p-5 text-left">
         <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="text-slate-400">Suas vendas/mês</span>
-          <b className="text-lg tabular-nums">{sales.toLocaleString("pt-BR")}</b>
+          <span className="text-[#A7B0C2]">Suas vendas/mês</span>
+          <b className="text-lg text-[#F2F0FF] tabular-nums">{sales.toLocaleString("pt-BR")}</b>
         </div>
         <input
           type="range"
@@ -378,80 +279,80 @@ const PriceCalculator = memo(function PriceCalculator() {
           step={50}
           value={sales}
           onChange={(e) => setSales(Number(e.target.value))}
-          className="mt-3 w-full accent-[#ff0030]"
+          className="mt-3 w-full accent-[#EFEDFD]"
           aria-label="Vendas por mês"
         />
-        <p className="mt-2 text-xs text-slate-500">Excedente: R$ 0,10 por venda aprovada além da franquia. Black sem excedente.</p>
+        <p className="mt-2 text-xs text-[#6B7280]">Excedente: R$ 0,10 por venda aprovada além da franquia. Black sem excedente.</p>
       </div>
       <ul className="mx-auto mt-6 w-full max-w-xs space-y-2.5 text-left text-sm">
-        {["Só venda aprovada conta", "Pendente/reembolso/chargeback = R$0", "CAPI + Pixel incluídos", "Gateways ilimitados", "Cancele quando quiser"].map((f) => (
-          <li key={f} className="flex items-center gap-2.5 text-slate-300">
-            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
+        {["Só venda aprovada conta", "Pendente, reembolso e chargeback custam R$0", "CAPI e Pixel incluídos", "Gateways ilimitados", "Cancele quando quiser"].map((f) => (
+          <li key={f} className="flex items-center gap-2.5 text-[#CFCBE8]">
+            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#34D399]/15 text-[#7DE8B8]">
               <Check className="size-3" />
             </span>
             <span className="min-w-0">{f}</span>
           </li>
         ))}
       </ul>
-      <div className="mt-7"><ArrowCta href="/login?modo=register">Criar conta agora</ArrowCta></div>
+      <div className="mt-7">
+        <GhostButton href="/login?modo=register">Criar conta agora</GhostButton>
+      </div>
     </div>
   );
 });
 
 const pains = [
   { icon: EyeOff, title: "Pixel cego", desc: "iOS, bloqueadores e restrições comem sua conversão. A venda acontece e o gerenciador nem fica sabendo." },
-  { icon: Unlink, title: "Venda sem origem", desc: "UTM quebrada, clique perdido. Campanha roda no escuro e o orçamento vai pra onde não vende." },
+  { icon: Unlink, title: "Venda sem origem", desc: "UTM quebrada, clique perdido. A campanha roda no escuro e o orçamento vai para onde não vende." },
   { icon: ShieldAlert, title: "Clone no seu checkout", desc: "Copiam sua página, desviam seu tráfego e você paga a conta enquanto outro leva a comissão." },
-  { icon: Moon, title: "Campanha ruim ligada de madrugada", desc: "Você dorme e o prejuízo trabalha: verba queimando em anúncio que já morreu." },
-  { icon: WifiOff, title: "Site caiu, anúncio ligado", desc: "Cada clique num site fora do ar é dinheiro jogado fora — e ninguém te avisa." },
+  { icon: Moon, title: "Campanha ruim ligada de madrugada", desc: "Você dorme e o prejuízo trabalha. Verba queimando em anúncio que já morreu." },
+  { icon: WifiOff, title: "Site caiu, anúncio ligado", desc: "Cada clique num site fora do ar é dinheiro jogado fora. E ninguém te avisa." },
   { icon: TrendingDown, title: "ROAS derretendo sem aviso", desc: "Quando você percebe a queda, o lucro de 3 dias já evaporou." },
 ];
 
 const solutions = [
-  { icon: MousePointerClick, title: "Tracking de verdade", desc: "Script leve + webhook + API com normalização automática. Nada se perde no caminho." },
-  { icon: Zap, title: "CAPI + Pixel deduplicados", desc: "Navegador e servidor enviam o mesmo event_id. A Meta recebe tudo, sem duplicar nada." },
+  { icon: MousePointerClick, title: "Tracking de verdade", desc: "Script leve, webhook e API com normalização automática. Nada se perde no caminho." },
+  { icon: Zap, title: "CAPI e Pixel deduplicados", desc: "Navegador e servidor enviam o mesmo event_id. A Meta recebe tudo, sem duplicar nada." },
   { icon: Webhook, title: "Webhook universal", desc: "FortPay, Hotmart, Kiwify, Braip, Stripe e qualquer outro no mesmo endpoint." },
   { icon: Crosshair, title: "Atribuição real por UTM", desc: "Cada venda carrega source, campaign, medium, content e term até o ROAS." },
-  { icon: ShieldCheck, title: "Anti-clone + blacklist real", desc: "Snippet anti-iframe com alerta no painel, IPs bloqueados no servidor e bots filtrados automaticamente." },
-  { icon: BarChart3, title: "Funil + heatmap de cliques", desc: "Mapa visual de onde clicam, profundidade de scroll e top elementos por página." },
-  { icon: Sparkles, title: "Insights + alertas", desc: "Projeção heurística e regras que pausam campanha ruim e avisam no push." },
+  { icon: ShieldCheck, title: "Anti-clone e blacklist real", desc: "Snippet anti-iframe com alerta no painel, IPs bloqueados no servidor e bots filtrados." },
+  { icon: BarChart3, title: "Funil e heatmap de cliques", desc: "Mapa visual de onde clicam, profundidade de scroll e top elementos por página." },
+  { icon: Sparkles, title: "Insights e alertas", desc: "Projeção heurística e regras que pausam campanha ruim e avisam no push." },
   { icon: BellRing, title: "Monitoramento do site", desc: "Checagem no servidor a cada 5 minutos com push quando cai ou volta." },
-  { icon: Trophy, title: "Rankings + comunidade", desc: "Badges, níveis e troca com quem vive de tráfego todos os dias." },
+  { icon: Trophy, title: "Rankings e comunidade", desc: "Badges, níveis e troca com quem vive de tráfego todos os dias." },
 ];
 
 const compareRows: [string, boolean, string][] = [
-  ["Anti-clone com alerta + blacklist no servidor", true, "Não tem"],
+  ["Anti-clone com alerta e blacklist no servidor", true, "Não tem"],
   ["CAPI com deduplicação automática", true, "Manual ou parcial"],
   ["Filtragem de bots no servidor", true, "Não tem"],
   ["Webhook universal multi-gateway", true, "Um plugin por checkout"],
-  ["Base fixa + R$0,10 só no excedente", true, "Mensalidade + excedentes caros"],
+  ["Base fixa e R$0,10 só no excedente", true, "Mensalidade e excedentes caros"],
   ["Monitoramento do site com alerta push", true, "Não tem"],
-  ["Insights + automação de campanhas", true, "Não tem"],
+  ["Insights e automação de campanhas", true, "Não tem"],
   ["Setup em 5 minutos, sem programar", true, "Precisa de dev"],
 ];
 
 const faqs = [
   { q: "Preciso saber programar?", a: "Não. Você cola um script na página e configura o webhook no checkout seguindo o passo a passo em /docs. Em minutos está rastreando." },
-  { q: "Funciona com o meu checkout?", a: "Se o seu gateway envia webhook, funciona. FortPay, Hotmart, Kiwify, Braip, Stripe, FlevoPay, Utmify e qualquer outro — o endpoint aceita qualquer formato e detecta os campos sozinho." },
-  { q: "E se o pixel for bloqueado?", a: "É exatamente pra isso que existe o CAPI: o servidor reenvia cada evento com o mesmo event_id, então a conversão chega na Meta mesmo com iOS restrito ou bloqueador ativo." },
-  { q: "Como funciona a taxa de R$ 0,10?", a: "Cada plano inclui uma franquia de vendas (500/1.000/2.000, Black ilimitado). Só o que passar paga R$ 0,10 por venda aprovada. Pendente, reembolso, cancelamento e chargeback não geram cobrança." },
+  { q: "Funciona com o meu checkout?", a: "Se o seu gateway envia webhook, funciona. FortPay, Hotmart, Kiwify, Braip, Stripe, FlevoPay, Utmify e qualquer outro. O endpoint aceita qualquer formato e detecta os campos sozinho." },
+  { q: "E se o pixel for bloqueado?", a: "É exatamente para isso que existe o CAPI. O servidor reenvia cada evento com o mesmo event_id, então a conversão chega na Meta mesmo com iOS restrito ou bloqueador ativo." },
+  { q: "Como funciona a taxa de R$ 0,10?", a: "Cada plano inclui uma franquia de vendas (500, 1.000, 2.000, Black ilimitado). Só o que passar paga R$ 0,10 por venda aprovada. Pendente, reembolso, cancelamento e chargeback não geram cobrança." },
   { q: "Posso cancelar quando quiser?", a: "Sim. Sem multa, sem burocracia. Seus dados de eventos e pedidos continuam auditáveis." },
-  { q: "Meus dados estão seguros?", a: "Tokens cifrados com AES-GCM, webhooks autenticados por Bearer e payload guardado pra auditoria. Nada de dado espalhado." },
-  { q: "Serve pra afiliado e agência?", a: "Sim. Projetos separados por operação, atribuição por campanha e rankings pra acompanhar performance de cada frente." },
-  { q: "Existe suporte?", a: "Sim. Documentação pública em /docs, FAQ e canal de suporte pra dúvidas de operação e integração." },
+  { q: "Meus dados estão seguros?", a: "Tokens cifrados com AES-GCM, webhooks autenticados por Bearer e payload guardado para auditoria." },
+  { q: "Serve para afiliado e agência?", a: "Sim. Projetos separados por operação, atribuição por campanha e rankings para acompanhar cada frente." },
+  { q: "Existe suporte?", a: "Sim. Documentação pública em /docs, FAQ e canal de suporte para dúvidas de operação e integração." },
 ];
 
 export function LandingPage() {
   const scrolled = useScrolled();
-  useReveal();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   return (
-    <main className="min-h-screen w-full max-w-full overflow-x-clip bg-[#080b12] text-slate-100">
-      {/* NAV */}
+    <main className="gs-landing gs-grain min-h-screen w-full max-w-full overflow-x-clip">
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${
-          scrolled ? "border-b border-white/10 bg-[#080b12]/90 backdrop-blur-md" : "bg-transparent"
+          scrolled ? "border-b border-white/10 bg-[#07080D]/90 backdrop-blur-md" : "bg-transparent"
         }`}
       >
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-5">
@@ -459,13 +360,11 @@ export function LandingPage() {
             <img
               src="/ghostscale-logo.png"
               alt="Logo GhostScale"
-              width={220}
-              height={44}
               decoding="async"
               className="h-9 w-auto max-w-[160px] object-contain sm:h-11 sm:max-w-[220px]"
             />
           </a>
-          <nav className="hidden items-center gap-7 text-sm text-slate-400 md:flex">
+          <nav className="hidden items-center gap-7 text-sm text-[#A7B0C2] md:flex" aria-label="Navegação principal">
             {[
               ["Dores", "#dores"],
               ["Solução", "#solucao"],
@@ -481,77 +380,71 @@ export function LandingPage() {
           <div className="flex shrink-0 items-center gap-2">
             <a
               href="/login"
-              className="rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white sm:px-4"
+              className="rounded-xl px-3 py-2.5 text-sm font-medium text-[#A7B0C2] transition-colors hover:bg-white/5 hover:text-white sm:px-4"
             >
               Entrar
             </a>
             <a
               href="/login?modo=register"
-              className="hidden items-center gap-2 rounded-xl bg-[#ff0030] px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#d60029] sm:inline-flex"
+              className="hidden items-center gap-2.5 rounded-xl border border-[#EFEDFD]/30 bg-[#EFEDFD]/[.06] px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-[#F2F0FF] transition hover:scale-[1.02] hover:border-[#EFEDFD]/50 sm:inline-flex"
             >
               Criar conta grátis
-              <ArrowRight className="size-4" strokeWidth={2.75} />
+              <span className="gs-icon-box !h-7 !w-7 !rounded-[8px]">
+                <ArrowUpRight className="size-3.5" strokeWidth={2.5} />
+              </span>
             </a>
           </div>
         </div>
       </header>
 
-      {/* HERO */}
       <section id="home" className="relative w-full max-w-full overflow-x-clip pt-32 pb-10 sm:pt-36">
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden
-          style={{
-            background:
-              "radial-gradient(900px 420px at 50% 0%, #ff003022, transparent 60%), radial-gradient(700px 500px at 85% 80%, #755cff1e, transparent 60%)",
-          }}
-        />
+        <div className="gs-hero-art pointer-events-none absolute inset-0" aria-hidden />
+        <div className="gs-grid-fade pointer-events-none absolute inset-0 opacity-70" aria-hidden />
         <div className="relative mx-auto w-full max-w-6xl min-w-0 px-4 text-center sm:px-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Quem fatura com tráfego já rastreia cada venda
-          </p>
-          <h1 className="mx-auto mt-4 w-full max-w-3xl min-h-[2.7em] text-4xl font-bold break-words leading-[1.08] tracking-tight sm:min-h-[2.2em] sm:text-6xl">
-            Saiba exatamente qual anúncio coloca <HeroHeadline />
-          </h1>
-          <p className="mx-auto mt-5 w-full max-w-2xl text-[15px] leading-relaxed text-slate-400 sm:text-lg">
-            O GhostScale une Pixel + Conversions API deduplicados, webhook universal de vendas e ROAS por campanha —
-            <b className="text-slate-200"> sem depender de pixel cego e sem medo de clone.</b>
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <ArrowCta href="/login?modo=register">Criar conta grátis</ArrowCta>
-            <ArrowCta href="#simulador" variant="ghost">
-              Simular minha operação
-            </ArrowCta>
+          <div className="gs-enter">
+            <Eyebrow>Para quem fatura com tráfego pago</Eyebrow>
           </div>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-slate-500">
-            {["Sem cartão de crédito", "Setup em 5 minutos", "100% seguro"].map((t) => (
+          <h1 className="gs-enter gs-enter-1 mx-auto mt-5 w-full max-w-3xl text-[40px] leading-[1.05] font-extrabold break-words tracking-[-0.03em] text-[#F2F0FF] sm:text-[64px]">
+            Saiba exatamente qual anúncio coloca{" "}
+            <span className="gs-display gs-gradient-text font-normal italic">dinheiro no seu bolso.</span>
+          </h1>
+          <p className="gs-enter gs-enter-2 mx-auto mt-5 w-full max-w-2xl text-[15px] leading-relaxed text-[#A7B0C2] sm:text-lg">
+            Pixel e Conversions API deduplicados, webhook universal de vendas e ROAS por campanha, com proteção contra pixel cego e clone.
+          </p>
+          <div className="gs-enter gs-enter-3 mt-8 flex flex-wrap items-center justify-center gap-3">
+            <GhostButton href="/login?modo=register">Criar conta grátis</GhostButton>
+            <GhostButton href={WHATSAPP_URL} variant="quiet" external icon={<MessageCircle className="size-4" strokeWidth={2.25} />}>
+              Falar com especialista
+            </GhostButton>
+          </div>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-[13px] text-[#A7B0C2]">
+            {["Sem cartão de crédito", "Setup em 5 minutos", "Suporte em português"].map((t) => (
               <span key={t} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                <Check className="size-3.5 shrink-0 text-emerald-400" /> {t}
+                <Check className="size-3.5 shrink-0 text-[#34D399]" /> {t}
               </span>
             ))}
           </div>
 
-          {/* mock do painel */}
-          <div className="reveal relative mx-auto mt-12 w-full max-w-4xl min-w-0 rounded-2xl border border-white/10 bg-[#0b0e17] p-4 text-left sm:p-5">
+          <div className="gs-glass gs-top-hi relative mx-auto mt-12 w-full max-w-4xl min-w-0 rounded-[20px] p-4 text-left sm:p-5">
             <div className="flex min-w-0 items-center gap-1.5 border-b border-white/10 pb-3">
-              <span className="size-2.5 shrink-0 rounded-full bg-red-500/70" />
-              <span className="size-2.5 shrink-0 rounded-full bg-amber-400/70" />
-              <span className="size-2.5 shrink-0 rounded-full bg-emerald-400/70" />
-              <span className="ml-3 truncate text-xs text-slate-500">painel.ghostscale — tempo real</span>
-              <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] whitespace-nowrap text-emerald-300 sm:inline-flex">
-                <span className="size-1.5 rounded-full bg-emerald-400" /> ao vivo
+              <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
+              <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
+              <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
+              <span className="ml-3 truncate text-xs text-[#6B7280]">painel.ghostscale · tempo real</span>
+              <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full border border-[#34D399]/25 bg-[#34D399]/10 px-2.5 py-1 text-[11px] whitespace-nowrap text-[#7DE8B8] sm:inline-flex">
+                <span className="size-1.5 rounded-full bg-[#34D399]" /> ao vivo
               </span>
             </div>
             <div className="grid min-w-0 gap-3 pt-4 sm:grid-cols-3">
               {[
-                ["Gasto Meta", "R$ 4.820", "12 campanhas ativas", "text-slate-100"],
-                ["Vendas aprovadas", "312", "+18% vs. ontem", "text-emerald-300"],
-                ["ROAS", "3,8x", "R$ 18,4k faturados", "text-[#ff3b5c]"],
-              ].map(([label, value, sub, color]) => (
+                ["Gasto Meta", "R$ 4.820", "12 campanhas ativas"],
+                ["Vendas aprovadas", "312", "+18% em relação a ontem"],
+                ["ROAS", "3,8x", "R$ 18,4k faturados"],
+              ].map(([label, value, sub]) => (
                 <div key={label} className="min-w-0 rounded-xl border border-white/10 bg-white/[.03] p-4">
-                  <small className="block truncate text-xs text-slate-500">{label}</small>
-                  <b className={`mt-1 block truncate text-2xl tabular-nums ${color}`}>{value}</b>
-                  <small className="block truncate text-[11px] text-slate-500">{sub}</small>
+                  <small className="block truncate text-xs text-[#A7B0C2]">{label}</small>
+                  <b className="mt-1 block truncate text-2xl text-[#F2F0FF] tabular-nums">{value}</b>
+                  <small className="block truncate text-[11px] text-[#6B7280]">{sub}</small>
                 </div>
               ))}
             </div>
@@ -562,11 +455,11 @@ export function LandingPage() {
                 ["teste-criativo-c|2384729555", "38%", "1,7x"],
               ].map(([name, w, roas]) => (
                 <div key={name} className="flex min-w-0 items-center gap-3 text-xs">
-                  <span className="w-24 shrink-0 truncate text-slate-400 sm:w-44">{name}</span>
+                  <span className="w-24 shrink-0 truncate text-[#A7B0C2] sm:w-44">{name}</span>
                   <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
-                    <div className="bar-anim h-full rounded-full bg-gradient-to-r from-[#ff0030] to-[#ff7a5c]" style={{ width: w }} />
+                    <div className="bar-anim h-full rounded-full bg-gradient-to-r from-[#EFEDFD]/70 to-[#8B85C9]" style={{ width: w }} />
                   </div>
-                  <b className="w-10 shrink-0 text-right tabular-nums text-slate-200">{roas}</b>
+                  <b className="w-10 shrink-0 text-right text-[#F2F0FF] tabular-nums">{roas}</b>
                 </div>
               ))}
             </div>
@@ -576,88 +469,83 @@ export function LandingPage() {
         <SalesTicker />
       </section>
 
-      {/* DORES */}
-      <section id="dores" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
-        <Tag>Dores reais</Tag>
-        <h2 className="reveal mt-3 max-w-2xl text-3xl font-bold tracking-tight break-words sm:text-4xl">
-          O lucro some no caminho entre o clique e a venda.
+      <section id="dores" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+        <Eyebrow>O que está travando sua operação</Eyebrow>
+        <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-4xl">
+          O lucro some entre o clique e a venda.
         </h2>
-        <p className="reveal mt-3 max-w-2xl text-[15px] text-slate-400">
-          Se você se reconhece em qualquer item abaixo, seu rastreio atual está te custando dinheiro todo dia.
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#A7B0C2]">
+          Se qualquer item abaixo parece familiar, o rastreio atual está custando dinheiro todo dia.
         </p>
         <div className="mt-8 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pains.map((p) => (
-            <div
-              key={p.title}
-              className="reveal group min-w-0 rounded-2xl border border-white/10 bg-[#0b0e17] p-6 transition-colors duration-200 hover:border-red-500/40"
-            >
-              <span className="grid size-11 place-items-center rounded-xl bg-red-500/10 text-red-400 transition-colors duration-200 group-hover:bg-[#ff0030] group-hover:text-white">
+            <div key={p.title} className="gs-card group min-w-0 p-6">
+              <span className="gs-icon-box !h-11 !w-11">
                 <p.icon className="size-5" />
               </span>
-              <b className="mt-4 block">{p.title}</b>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{p.desc}</p>
+              <b className="mt-4 block text-[#F2F0FF]">{p.title}</b>
+              <p className="mt-1.5 text-sm leading-relaxed text-[#A7B0C2]">{p.desc}</p>
             </div>
           ))}
         </div>
-        <div className="reveal mt-8">
-          <ArrowCta href="#solucao">Ver como o GhostScale resolve</ArrowCta>
+        <div className="mt-8">
+          <a href="#solucao" className="text-sm font-semibold text-[#EFEDFD] underline decoration-[#EFEDFD]/30 underline-offset-4 hover:decoration-[#EFEDFD]/60">
+            Ver como o GhostScale resolve
+          </a>
         </div>
       </section>
 
-      {/* SOLUÇÃO */}
-      <section id="solucao" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
+      <section id="solucao" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0D1017]/60 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-6xl min-w-0 px-4 sm:px-5">
-          <Tag>A solução</Tag>
-          <h2 className="reveal mt-3 max-w-2xl text-3xl font-bold tracking-tight break-words sm:text-4xl">
-            Um rastreio que fecha a conta do clique ao saque.
+          <Eyebrow>Como o GhostScale resolve</Eyebrow>
+          <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-4xl">
+            Do clique ao saque com atribuição fechada.
           </h2>
-          <p className="reveal mt-3 max-w-2xl text-[15px] text-slate-400">
-            Cada feature abaixo existe de verdade no painel — e funciona junta, não em 4 ferramentas separadas.
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#A7B0C2]">
+            Cada recurso abaixo existe no painel e funciona em conjunto, não em quatro ferramentas separadas.
           </p>
           <div className="mt-8 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {solutions.map((s) => (
-              <div
-                key={s.title}
-                className="reveal group min-w-0 rounded-2xl border border-white/10 bg-[#080b12] p-6 transition-colors duration-200 hover:border-[#ff0030]/40"
-              >
-                <span className="grid size-11 place-items-center rounded-xl bg-[#ff0030]/10 text-[#ff3b5c] transition-colors duration-200 group-hover:bg-[#ff0030] group-hover:text-white">
+              <div key={s.title} className="gs-card min-w-0 bg-[#07080D] p-6">
+                <span className="gs-icon-box !h-11 !w-11">
                   <s.icon className="size-5" />
                 </span>
-                <b className="mt-4 block">{s.title}</b>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{s.desc}</p>
+                <b className="mt-4 block text-[#F2F0FF]">{s.title}</b>
+                <p className="mt-1.5 text-sm leading-relaxed text-[#A7B0C2]">{s.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* COMPARATIVO */}
-      <section id="diferencial" className="cv-auto mx-auto w-full max-w-4xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
-        <Tag>O diferencial</Tag>
-        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">
-          Por que não é só mais um sistema de tracking
+      <section id="diferencial" className="cv-auto mx-auto w-full max-w-4xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+        <Eyebrow>GhostScale na prática</Eyebrow>
+        <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-4xl">
+          Por que não é só mais um tracker
         </h2>
-        <div className="reveal mt-8 overflow-x-auto rounded-2xl border border-white/10">
+        <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10 bg-[#0D1017]">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="bg-white/[.03]">
-                <th className="p-4 text-left font-medium normal-case tracking-normal">Funcionalidade</th>
-                <th className="p-4 text-center font-semibold whitespace-nowrap text-[#ff3b5c]">GhostScale</th>
-                <th className="p-4 text-center font-medium whitespace-nowrap text-slate-500">Trackers comuns</th>
+                <th scope="col" className="p-4 text-left font-medium text-[#A7B0C2]">Funcionalidade</th>
+                <th scope="col" className="p-4 text-center font-semibold whitespace-nowrap text-[#EFEDFD]">GhostScale</th>
+                <th scope="col" className="p-4 text-center font-medium whitespace-nowrap text-[#6B7280]">Trackers comuns</th>
               </tr>
             </thead>
             <tbody>
               {compareRows.map(([f, ok, other]) => (
                 <tr key={f} className="border-t border-white/10">
-                  <td className="p-4 text-slate-200">{f}</td>
+                  <td className="p-4 text-[#F2F0FF]">{f}</td>
                   <td className="p-4 text-center">
-                    <span className="inline-grid size-7 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
-                      <Check className="size-4" strokeWidth={3} />
-                    </span>
+                    {ok && (
+                      <span className="inline-grid size-7 place-items-center rounded-full border border-[#EFEDFD]/30 bg-[#EFEDFD]/10 text-[#EFEDFD]">
+                        <Check className="size-4" strokeWidth={3} />
+                      </span>
+                    )}
                   </td>
                   <td className="p-4 text-center">
-                    <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-slate-500">
-                      <X className="size-4 shrink-0 text-slate-600" /> {other}
+                    <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-[#6B7280]">
+                      <X className="size-4 shrink-0 opacity-60" /> {other}
                     </span>
                   </td>
                 </tr>
@@ -665,100 +553,99 @@ export function LandingPage() {
             </tbody>
           </table>
         </div>
-        <div className="reveal mt-8 text-center">
-          <ArrowCta href="/login?modo=register">Experimente a diferença</ArrowCta>
+        <div className="mt-8 text-center">
+          <a href="/login?modo=register" className="text-sm font-semibold text-[#EFEDFD] underline decoration-[#EFEDFD]/30 underline-offset-4 hover:decoration-[#EFEDFD]/60">
+            Experimentar na minha operação
+          </a>
         </div>
       </section>
 
-      {/* SIMULADOR */}
-      <section id="simulador" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
+      <section id="simulador" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0D1017]/60 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-4xl min-w-0 px-4 sm:px-5">
-          <Tag>Simulador de escala</Tag>
-          <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">
-            Veja quanto você pode recuperar com atribuição correta
+          <Eyebrow>Simulador de escala</Eyebrow>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-4xl">
+            Quanto você recupera com atribuição correta
           </h2>
-          <p className="reveal mt-3 max-w-2xl text-[15px] text-slate-400">
-            Venda sem origem vira otimização errada. Recupere a atribuição e o algoritmo volta a trabalhar pra você.
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#A7B0C2]">
+            Venda sem origem vira otimização errada. Recupere a atribuição e o algoritmo volta a trabalhar a seu favor.
           </p>
           <ScaleSimulator />
         </div>
       </section>
 
-      {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
-        <Tag>Como funciona</Tag>
-        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">Do clique ao ROAS em 3 passos</h2>
+      <section id="como-funciona" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+        <Eyebrow>Instalação em minutos</Eyebrow>
+        <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-4xl">Do clique ao ROAS em 3 passos</h2>
         <div className="mt-8 grid min-w-0 gap-4 lg:grid-cols-3">
           {[
             { n: "01", t: "Crie seu projeto", d: "Cadastre o domínio e cole o script de tracking. Leva menos de 5 minutos, sem programador.", code: '<script src="https://seu-app/tracker.js?key=SUA_KEY"></script>' },
-            { n: "02", t: "Conecte tudo", d: "Pixel + CAPI na Meta e webhook no checkout. Cada venda passa a chegar com origem completa.", code: "POST /api/webhooks/gateway  →  { received: true }" },
+            { n: "02", t: "Conecte tudo", d: "Pixel e CAPI na Meta e webhook no checkout. Cada venda passa a chegar com origem completa.", code: "POST /api/webhooks/gateway  ->  { received: true }" },
             { n: "03", t: "Ative e escale", d: "Acompanhe vendas em tempo real, receba alertas e escale a campanha que prova lucro.", code: "ROAS por campanha, todo dia, sem planilha" },
           ].map((s) => (
-            <div key={s.n} className="reveal group min-w-0 rounded-2xl border border-white/10 bg-[#0b0e17] p-6 transition-colors duration-200 hover:border-[#ff0030]/40">
-              <b className="bg-gradient-to-r from-[#ff0030] to-[#ff7a5c] bg-clip-text text-4xl font-bold text-transparent">{s.n}</b>
-              <b className="mt-3 block text-lg">{s.t}</b>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{s.d}</p>
-              <code className="mt-4 block w-full max-w-full overflow-x-auto rounded-xl border border-white/10 bg-black/50 p-3 text-[11px] leading-relaxed break-all text-emerald-300">
+            <div key={s.n} className="gs-card min-w-0 p-6">
+              <b className="gs-display text-[44px] leading-none text-[#EFEDFD]/80">{s.n}</b>
+              <b className="mt-3 block text-lg text-[#F2F0FF]">{s.t}</b>
+              <p className="mt-1.5 text-sm leading-relaxed text-[#A7B0C2]">{s.d}</p>
+              <code
+                className="mt-4 block w-full max-w-full overflow-x-auto rounded-xl border border-white/10 bg-black/50 p-3 text-[11px] leading-relaxed break-all text-[#7DE8B8]"
+                style={{ fontFamily: "'JetBrains Mono',monospace" }}
+              >
                 {s.code}
               </code>
             </div>
           ))}
         </div>
-        <div className="reveal mt-8 flex flex-wrap gap-3">
-          <ArrowCta href="/login?modo=register">Começar agora — é grátis</ArrowCta>
-          <ArrowCta href="/docs" variant="ghost">
-            <span className="inline-flex items-center gap-2"><BookOpen className="size-4 shrink-0" /> Ler documentação</span>
-          </ArrowCta>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <GhostButton href="/login?modo=register">Começar agora</GhostButton>
+          <GhostButton href="/docs" variant="quiet" icon={<BookOpen className="size-4" strokeWidth={2.25} />}>
+            Ler documentação
+          </GhostButton>
         </div>
       </section>
 
-      {/* PREÇOS */}
-      <section id="precos" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
+      <section id="precos" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0D1017]/60 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-6xl min-w-0 px-4 text-center sm:px-5">
-          <Tag>Preço transparente</Tag>
-          <h2 className="reveal mx-auto mt-3 max-w-xl text-3xl font-bold tracking-tight break-words sm:text-4xl">
+          <Eyebrow>Preço transparente</Eyebrow>
+          <h2 className="mx-auto mt-4 max-w-xl text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-4xl">
             4 planos. Sem letra miúda.
           </h2>
-          <p className="reveal mx-auto mt-3 max-w-xl text-[15px] text-slate-400">
-            Base fixa + R$ 0,10 só no excedente. Arraste e veja qual fecha mais barato pro seu volume.
+          <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-[#A7B0C2]">
+            Base fixa e R$ 0,10 só no excedente. Arraste e veja qual fecha mais barato para o seu volume.
           </p>
           <PriceCalculator />
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="cv-auto mx-auto w-full max-w-3xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
-        <Tag>Perguntas frequentes</Tag>
-        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">Tire suas dúvidas</h2>
+      <section id="faq" className="cv-auto mx-auto w-full max-w-3xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5 sm:py-24">
+        <Eyebrow>Dúvidas comuns</Eyebrow>
+        <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-4xl">Perguntas e respostas</h2>
         <div className="mt-8 min-w-0 space-y-3">
           {faqs.map((f, i) => {
             const open = openFaq === i;
             return (
               <div
                 key={f.q}
-                className={`reveal min-w-0 overflow-hidden rounded-2xl border transition-colors duration-200 ${
-                  open ? "border-[#ff0030]/35 bg-[#ff0030]/[.04]" : "border-white/10 bg-[#0b0e17] hover:border-white/25"
+                className={`min-w-0 overflow-hidden rounded-2xl border transition-colors duration-200 ${
+                  open ? "border-[#EFEDFD]/30 bg-[#EFEDFD]/[.04]" : "border-white/10 bg-[#0D1017] hover:border-white/25"
                 }`}
               >
                 <button
                   onClick={() => setOpenFaq(open ? null : i)}
                   aria-expanded={open}
-                  className="flex w-full min-w-0 items-center justify-between gap-4 p-5 text-left font-medium"
+                  className="flex w-full min-w-0 items-center justify-between gap-4 p-5 text-left font-medium text-[#F2F0FF]"
                 >
                   <span className="min-w-0 flex-1">{f.q}</span>
                   <span
-                    className={`grid size-8 shrink-0 place-items-center rounded-full transition-transform duration-200 ${
-                      open ? "rotate-180 bg-[#ff0030] text-white" : "bg-white/5 text-slate-400"
+                    className={`grid size-8 shrink-0 place-items-center rounded-[10px] border transition-transform duration-200 ${
+                      open ? "rotate-180 border-[#EFEDFD]/40 bg-[#EFEDFD] text-[#07080D]" : "border-white/10 bg-white/5 text-[#A7B0C2]"
                     }`}
                   >
                     <ChevronDown className="size-4" />
                   </span>
                 </button>
-                <div
-                  className={`grid transition-all duration-200 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-                >
+                <div className="gs-faq-grid" data-open={open}>
                   <div className="overflow-hidden">
-                    <p className="px-5 pb-5 text-sm leading-relaxed text-slate-400">{f.a}</p>
+                    <p className="px-5 pb-5 text-sm leading-relaxed text-[#A7B0C2]">{f.a}</p>
                   </div>
                 </div>
               </div>
@@ -767,60 +654,55 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* CTA FINAL */}
-      <section className="cv-auto mx-auto w-full max-w-6xl min-w-0 px-4 pb-16 sm:px-5">
-        <div className="reveal relative min-w-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#ff0030] via-[#c40026] to-[#5c0013] p-8 text-center sm:p-14">
-          <MetricsRain />
-          <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(600px_200px_at_50%_0%,#fff,transparent)]" aria-hidden />
-          <h2 className="relative mx-auto max-w-2xl text-3xl font-bold tracking-tight break-words text-white sm:text-5xl">
-            Pronto pra parar de perder venda e escalar no dado?
+      <section className="cv-auto mx-auto w-full max-w-6xl min-w-0 px-4 pb-16 sm:px-5 sm:pb-24">
+        <div className="gs-glass gs-top-hi relative min-w-0 overflow-hidden rounded-[24px] p-8 text-center sm:p-14">
+          <div className="gs-hero-art pointer-events-none absolute inset-0" aria-hidden />
+          <h2 className="relative mx-auto max-w-2xl text-3xl font-bold tracking-tight break-words text-[#F2F0FF] sm:text-5xl">
+            Pare de perder venda. <span className="gs-display gs-gradient-text font-normal italic">Escale no dado.</span>
           </h2>
-          <p className="relative mx-auto mt-3 max-w-xl text-[15px] text-white/80">
-            Teste sem compromisso. Só continua quem vê resultado — e resultado aqui aparece no primeiro dia.
+          <p className="relative mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-[#A7B0C2]">
+            Teste sem compromisso. Só continua quem vê resultado, e resultado aqui aparece no primeiro dia.
           </p>
           <div className="relative mt-8 flex flex-wrap justify-center gap-3">
-            <ArrowCta href="/login?modo=register" variant="light">
-              Criar conta grátis agora
-            </ArrowCta>
-            <a
-              href="/docs"
-              className="inline-flex max-w-full items-center gap-3 rounded-2xl border border-white/30 px-6 py-4 text-[15px] font-semibold whitespace-nowrap text-white transition-colors duration-200 hover:bg-white/10 active:scale-[.98]"
-            >
+            <GhostButton href="/login?modo=register">Criar conta grátis agora</GhostButton>
+            <GhostButton href={WHATSAPP_URL} variant="quiet" external icon={<MessageCircle className="size-4" strokeWidth={2.25} />}>
               Falar com especialista
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/20">
-                <ArrowRight className="size-4" strokeWidth={2.75} />
-              </span>
-            </a>
+            </GhostButton>
           </div>
-          <p className="relative mt-5 text-xs text-white/60">Sem cartão • Setup em 5 min • 100% seguro</p>
+          <p className="relative mt-5 text-xs text-[#6B7280]">Sem cartão · Setup em 5 min · Cancele quando quiser</p>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="w-full border-t border-white/10 py-10">
+      <footer className="w-full border-t border-white/10 bg-[#07080D] py-10">
         <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-8 px-4 sm:px-5 sm:grid-cols-2 md:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2.5">
               <img
                 src="/ghostscale-logo.png"
                 alt="Logo GhostScale"
-                width={220}
-                height={44}
                 loading="lazy"
                 decoding="async"
                 className="h-9 w-auto max-w-[160px] object-contain sm:h-11 sm:max-w-[220px]"
               />
             </div>
-            <p className="mt-3 max-w-xs text-sm text-slate-500">Mais que tracking: a arma secreta de quem vive de tráfego pago.</p>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#A7B0C2]">Mais que tracking. A operação de quem vive de tráfego pago.</p>
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#EFEDFD] underline decoration-[#EFEDFD]/30 underline-offset-4 hover:decoration-[#EFEDFD]/60"
+            >
+              <MessageCircle className="size-4" /> Falar com especialista
+            </a>
           </div>
           {[
             ["Produto", [["Dores", "#dores"], ["Solução", "#solucao"], ["Simulador", "#simulador"], ["Preços", "#precos"], ["FAQ", "#faq"]]],
-            ["Painel", [["Entrar", "/login"], ["Documentação", "/docs"], ["Guia gateways", "/docs/gateways"]]],
+            ["Painel", [["Entrar", "/login"], ["Criar conta", "/login?modo=register"], ["Documentação", "/docs"], ["Guia gateways", "/docs/gateways"]]],
             ["Integrações", [["FortPay", "/docs/gateways"], ["Hotmart", "/docs/gateways"], ["Kiwify", "/docs/gateways"], ["Braip", "/docs/gateways"]]],
           ].map(([title, links]) => (
             <div key={title as string} className="min-w-0">
-              <b className="text-sm">{title}</b>
-              <ul className="mt-3 space-y-2 text-sm text-slate-500">
+              <b className="text-sm text-[#F2F0FF]">{title}</b>
+              <ul className="mt-3 space-y-2 text-sm text-[#A7B0C2]">
                 {(links as string[][]).map(([label, href]) => (
                   <li key={label}>
                     <a href={href} className="transition-colors hover:text-white">
@@ -832,7 +714,7 @@ export function LandingPage() {
             </div>
           ))}
         </div>
-        <p className="mx-auto mt-8 w-full max-w-6xl px-4 text-xs text-slate-600 sm:px-5">© 2026 GhostScale. Todos os direitos reservados.</p>
+        <p className="mx-auto mt-8 w-full max-w-6xl px-4 text-xs text-[#6B7280] sm:px-5">© 2026 GhostScale. Todos os direitos reservados.</p>
       </footer>
     </main>
   );

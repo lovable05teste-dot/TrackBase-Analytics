@@ -73,6 +73,8 @@ export type CaktoPayment = {
   paymentMethod?: string;
   offer?: { id?: string; name?: string; price?: number };
   product?: { id?: string; name?: string };
+  pix?: { qrCode?: string; expirationDate?: string; user_journey?: string | null };
+  checkoutUrl?: string;
 };
 
 export async function createCardCharge(input: {
@@ -105,6 +107,33 @@ export async function createCardCharge(input: {
       installments,
       ...(input.metadata ? { metadata: input.metadata } : {}),
       antifraud_profiling_attempt_reference: input.antifraudReference,
+    },
+  });
+}
+
+export async function createPixAutoCharge(input: {
+  plan: PlanId;
+  customer: CaktoCustomer;
+  metadata?: Record<string, string>;
+}): Promise<CaktoPayment> {
+  if (!isPlanId(input.plan)) throw new Error("Plano inválido.");
+  const offerId = planOfferId(input.plan);
+  if (!offerId) throw new Error(`Oferta da Cakto para o plano ${input.plan} não configurada.`);
+  return caktoFetch<CaktoPayment>("/public_api/payments/", {
+    method: "POST",
+    idempotencyKey: crypto.randomUUID(),
+    body: {
+      paymentMethod: "pix_auto",
+      customer: {
+        name: input.customer.name,
+        email: input.customer.email,
+        phone: input.customer.phone,
+        fingerprint: input.customer.fingerprint,
+        ...(input.customer.docType ? { docType: input.customer.docType } : {}),
+        ...(input.customer.docNumber ? { docNumber: input.customer.docNumber } : {}),
+      },
+      items: [{ offerId, quantity: 1, offerType: "main" }],
+      ...(input.metadata ? { metadata: input.metadata } : {}),
     },
   });
 }
