@@ -13,7 +13,7 @@ function when(ts:number){
 export function EventsClient(){
   const [rows,setRows]=useState<Ev[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
   const [name,setName]=useState(""),[search,setSearch]=useState("");
-  useEffect(()=>{let alive=true;setLoading(true);fetch("/api/events",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.events)?v.events:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar eventos.")}).finally(()=>{if(alive)setLoading(false)}}return()=>{alive=false}},[]);
+  useEffect(()=>{let alive=true;setLoading(true);fetch("/api/events",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.events)?v.events:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar eventos.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
   const filtered=useMemo(()=>{const q=search.trim().toLocaleLowerCase();return rows.filter(r=>(!name||r.eventName===name)&&(!q||`${r.utmCampaign||""} ${r.projectName||""}`.toLocaleLowerCase().includes(q)))},[rows,name,search]);
   if(error)return <p role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-300">{error}</p>;
   return <div className="space-y-4">
