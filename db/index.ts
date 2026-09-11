@@ -49,6 +49,10 @@ const statements=[
  "CREATE TABLE IF NOT EXISTS community_messages(id text PRIMARY KEY,name text NOT NULL,text text NOT NULL,created_at integer NOT NULL)",
  "CREATE INDEX IF NOT EXISTS idx_community_time ON community_messages(created_at)",
  "CREATE TABLE IF NOT EXISTS offers(id text PRIMARY KEY,workspace_id text NOT NULL,name text NOT NULL,price real NOT NULL DEFAULT 0,hook text,status text NOT NULL DEFAULT 'em teste',created_at integer NOT NULL,updated_at integer NOT NULL)",
- "CREATE INDEX IF NOT EXISTS idx_offers_ws ON offers(workspace_id)"
+ "CREATE INDEX IF NOT EXISTS idx_offers_ws ON offers(workspace_id)",
+"CREATE TABLE IF NOT EXISTS plan_subscriptions(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,email text,plan text NOT NULL,status text NOT NULL,cakto_order_id text,cakto_subscription_id text,cakto_offer_id text,amount text,currency text,current_period_end integer,created_at integer NOT NULL,updated_at integer NOT NULL)",
+"CREATE INDEX IF NOT EXISTS idx_plan_subs_workspace ON plan_subscriptions(workspace_id)",
+"CREATE UNIQUE INDEX IF NOT EXISTS idx_plan_subs_cakto_sub ON plan_subscriptions(cakto_subscription_id)",
+"CREATE INDEX IF NOT EXISTS idx_plan_subs_email ON plan_subscriptions(email)"
 ];
 export async function ensureDb(){if(!initialized)initialized=(async()=>{const binding=d1();const addCols=["ALTER TABLE orders ADD COLUMN utm_campaign text","ALTER TABLE orders ADD COLUMN utm_source text","ALTER TABLE orders ADD COLUMN utm_medium text","ALTER TABLE orders ADD COLUMN utm_content text","ALTER TABLE orders ADD COLUMN utm_term text","ALTER TABLE notification_prefs ADD COLUMN user_id text","ALTER TABLE users ADD COLUMN name text","ALTER TABLE users ADD COLUMN cpf text"];if(binding){for(const statement of statements)await binding.prepare(statement).run();for(const add of addCols){try{await binding.prepare(add).run()}catch{}}}else{await getSql().unsafe(statements.map(s=>s+';').join('\n'));for(const add of addCols){try{await getSql().unsafe(add)}catch{}}}})().catch(error=>{initialized=undefined;throw error});return initialized}
