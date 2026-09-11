@@ -1,5 +1,5 @@
 "use client";
-import { memo, useEffect, useState, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
   BarChart3,
@@ -391,10 +391,50 @@ function useTypewriter(phrases: string[]) {
   return text;
 }
 
+function useLandingFx(heroRef: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let io: IntersectionObserver | null = null;
+    if (!reduce) {
+      const els = Array.from(document.querySelectorAll("main.gs-landing section[id]:not(#home)"));
+      els.forEach((el) => el.classList.add("reveal"));
+      io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("reveal-visible");
+              io?.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: "0px 0px -6% 0px" }
+      );
+      els.forEach((el) => io?.observe(el));
+    }
+    let off: (() => void) | null = null;
+    if (window.matchMedia("(pointer: fine)").matches && heroRef.current) {
+      const el = heroRef.current;
+      const move = (e: MouseEvent) => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+      };
+      el.addEventListener("mousemove", move);
+      off = () => el.removeEventListener("mousemove", move);
+    }
+    return () => {
+      io?.disconnect();
+      off?.();
+    };
+  }, [heroRef]);
+}
+
 export function LandingPage() {
   const scrolled = useScrolled();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const heroText = useTypewriter(heroPhrases);
+  const heroRef = useRef<HTMLElement | null>(null);
+  useLandingFx(heroRef);
 
   return (
     <main className="gs-landing gs-grain min-h-screen w-full max-w-full overflow-x-clip">
@@ -446,9 +486,10 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section id="home" className="relative w-full max-w-full overflow-x-clip pt-32 pb-10 sm:pt-36">
+      <section id="home" ref={heroRef} className="relative w-full max-w-full overflow-x-clip pt-32 pb-10 sm:pt-36">
         <div className="gs-hero-art pointer-events-none absolute inset-0" aria-hidden />
         <div className="gs-grid-fade pointer-events-none absolute inset-0 opacity-70" aria-hidden />
+        <div className="gs-mouse-glow pointer-events-none absolute inset-0" aria-hidden />
         <div className="relative mx-auto w-full max-w-6xl min-w-0 px-4 text-center sm:px-5">
           <div className="gs-enter">
             <Eyebrow>Para quem fatura com tráfego pago</Eyebrow>
@@ -656,7 +697,7 @@ export function LandingPage() {
               </div>
             </div>
             <div className="flex w-full shrink-0 flex-col items-center gap-4 lg:w-auto">
-              <div className="relative grid size-44 place-items-center rounded-full border border-[#FF4D67]/30 bg-[#FF0030]/10 shadow-[0_0_80px_-20px_rgba(255,0,48,.6)]">
+              <div className="float-anim relative grid size-44 place-items-center rounded-full border border-[#FF4D67]/30 bg-[#FF0030]/10 shadow-[0_0_80px_-20px_rgba(255,0,48,.6)]">
                 <ShieldCheck className="size-20 text-[#FF4D67]" />
                 <span className="absolute top-2 left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-[#34D399]" />
               </div>

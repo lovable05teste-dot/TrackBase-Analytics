@@ -123,4 +123,12 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 .gs-faq-grid{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .22s ease,opacity .22s ease}
 .gs-faq-grid[data-open="true"]{grid-template-rows:1fr;opacity:1}
 @media(max-width:640px){.gs-grid-fade{background-size:48px 48px}.gs-grain::after{opacity:.02}}
-@media (prefers-reduced-motion:reduce){.gs-enter{animation:none}}
+@media (prefers-reduced-motion:reduce){.gs-enter,.gs-gradient-text{animation:none}}
+.gs-gradient-text{background-size:220% auto;animation:gs-sheen 8s linear infinite}
+@keyframes gs-sheen{to{background-position:220% center}}
+.gs-btn{position:relative;overflow:hidden}
+.gs-btn-primary::after{content:"";position:absolute;top:0;left:-90%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent);transform:skewX(-20deg);transition:left .65s ease;pointer-events:none}
+.gs-btn-primary:hover::after{left:140%}
+.gs-card{transition:transform .2s ease,border-color .18s ease,box-shadow .2s ease}
+.gs-card:hover{transform:translateY(-3px);box-shadow:0 20px 44px -20px rgba(255,0,48,.4)}
+.gs-mouse-glow{background:radial-gradient(560px circle at var(--mx,50%) var(--my,28%),rgba(255,48,80,.13),transparent 65%)}
