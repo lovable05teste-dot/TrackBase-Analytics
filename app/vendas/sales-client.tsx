@@ -25,7 +25,7 @@ export function SalesClient(){
   const [rows,setRows]=useState<Sale[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
   const [search,setSearch]=useState(""),[status,setStatus]=useState("all"),[provider,setProvider]=useState("all"),[period,setPeriod]=useState("all");
   const [detail,setDetail]=useState<Sale|null>(null);
-  useEffect(()=>{let alive=true;setLoading(true);fetch("/api/orders",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.orders)?v.orders:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar vendas.")}).finally(()=>{if(alive)setLoading(false)}}return()=>{alive=false}},[]);
+  useEffect(()=>{let alive=true;setLoading(true);fetch("/api/orders",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.orders)?v.orders:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar vendas.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
   const providers=useMemo(()=>Array.from(new Set(rows.map(r=>r.provider).filter(Boolean))).sort(),[rows]);
   const filtered=useMemo(()=>{
     const q=search.trim().toLocaleLowerCase(),now=Math.floor(Date.now()/1000);
