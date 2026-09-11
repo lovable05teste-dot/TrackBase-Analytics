@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { memo, useEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -28,10 +28,21 @@ import {
 const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
 
+/* Sem cursor customizado: usa a seta padrão do sistema (preta).
+   Nenhum mousemove / rAF / trail branco aqui — era o que travava o PC. */
+
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 24);
+        ticking = false;
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -41,10 +52,22 @@ function useScrolled() {
 
 function useReveal() {
   useEffect(() => {
-    const els = document.querySelectorAll(".reveal");
+    const els = Array.from(document.querySelectorAll(".reveal"));
+    if (!els.length) return;
+    if (!("IntersectionObserver" in window)) {
+      els.forEach((el) => el.classList.add("reveal-visible"));
+      return;
+    }
     const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add("reveal-visible")),
-      { threshold: 0.1 }
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add("reveal-visible");
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
@@ -59,14 +82,16 @@ function Tag({ children }: { children: ReactNode }) {
   );
 }
 
-/* Headline viva: digita, apaga e gira copys fortes */
+/* Headline isolada: o typewriter re-renderiza SÓ este componente,
+   não a página inteira (era isso que travava tudo). */
 const heroPhrases = [
   "dinheiro no seu bolso.",
   "ROAS de verdade.",
   "escala sem achismo.",
   "lucro previsível.",
 ];
-function useTypewriter() {
+
+const HeroHeadline = memo(function HeroHeadline() {
   const [text, setText] = useState(heroPhrases[0]);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -74,7 +99,9 @@ function useTypewriter() {
     let chars = heroPhrases[0].length;
     let deleting = true;
     let timer: ReturnType<typeof setTimeout>;
+    let cancelled = false;
     const tick = () => {
+      if (cancelled) return;
       if (deleting) {
         chars -= 1;
         setText(heroPhrases[phrase].slice(0, Math.max(0, chars)));
@@ -98,12 +125,21 @@ function useTypewriter() {
       }
     };
     timer = setTimeout(tick, 2300);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
-  return text;
-}
+  return (
+    <span className="text-[#ff3b5c]">
+      {text}
+      <span className="type-caret" aria-hidden />
+    </span>
+  );
+});
 
-/* Chuva de métricas atrás do CTA vermelho */
+/* Chuva de métricas — sem blur, sem scale gigante, sem overflow.
+   Só transform GPU barato. */
 const ctaMetrics = [
   "ROAS 4,2x",
   "+312 vendas hoje",
@@ -114,14 +150,16 @@ const ctaMetrics = [
   "Ticket +24%",
   "Pixel + CAPI ativos",
 ];
-function MetricsRain() {
+
+const MetricsRain = memo(function MetricsRain() {
   const row = (items: string[], reverse: boolean, label: string) => (
     <div className="flex overflow-hidden">
       <div className={`flex w-max items-center gap-3 py-2 pr-3 ${reverse ? "marquee-reverse" : "marquee"}`}>
         {items.concat(items).map((m, i) => (
           <span
             key={`${label}-${i}`}
-            className="shrink-0 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/85 backdrop-blur-sm"
+            aria-hidden={i >= items.length}
+            className="shrink-0 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide whitespace-nowrap text-white/85"
           >
             {m}
           </span>
@@ -131,13 +169,16 @@ function MetricsRain() {
   );
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-center gap-2 overflow-hidden opacity-60" aria-hidden>
-      <div className="-rotate-3 scale-105">{row(ctaMetrics, false, "a")}</div>
-      <div className="rotate-2 scale-105">{row(ctaMetrics.slice().reverse(), true, "b")}</div>
-      <div className="-rotate-2 scale-105">{row(ctaMetrics.slice(3).concat(ctaMetrics.slice(0, 3)), false, "c")}</div>
+      <div className="-rotate-2">{row(ctaMetrics, false, "a")}</div>
+      <div className="rotate-1">{row(ctaMetrics.slice().reverse(), true, "b")}</div>
+      <div className="-rotate-1">{row(ctaMetrics.slice(3).concat(ctaMetrics.slice(0, 3)), false, "c")}</div>
     </div>
   );
-}
-function ArrowCta({
+});
+
+/* CTA sem efeito pesado na seta: seta estática, sem scale 1.35 / sem glow.
+   Só um translate leve no hover (GPU). */
+const ArrowCta = memo(function ArrowCta({
   href,
   children,
   variant = "primary",
@@ -148,30 +189,31 @@ function ArrowCta({
 }) {
   const styles =
     variant === "primary"
-      ? "bg-[#ff0030] text-white shadow-[0_10px_40px_-8px_#ff003080] hover:bg-[#d60029] hover:shadow-[0_18px_70px_-8px_#ff0030bb]"
+      ? "bg-[#ff0030] text-white hover:bg-[#d60029]"
       : variant === "light"
         ? "bg-white text-[#0b0e17] hover:bg-red-50"
         : "border border-white/15 text-slate-200 hover:border-white/30 hover:bg-white/5";
   return (
     <a
       href={href}
-      className={`group inline-flex items-center gap-3 rounded-2xl px-6 py-4 text-[15px] font-semibold transition-all duration-300 hover:-translate-y-1 active:translate-y-0 active:scale-[.98] ${styles}`}
+      className={`group inline-flex max-w-full items-center gap-3 rounded-2xl px-6 py-4 text-[15px] font-semibold transition-colors duration-200 active:scale-[.98] ${styles}`}
     >
-      {children}
+      <span className="min-w-0">{children}</span>
       <span
-        className={`grid size-9 shrink-0 place-items-center rounded-full transition-all duration-300 group-hover:scale-[1.35] group-hover:shadow-[0_0_26px_rgba(255,255,255,.5)] ${
+        className={`grid size-9 shrink-0 place-items-center rounded-full ${
           variant === "light"
-            ? "bg-[#ff0030]/10 text-[#ff0030] group-hover:bg-[#ff0030] group-hover:text-white group-hover:shadow-[0_0_26px_rgba(255,0,48,.65)]"
-            : "bg-white/20 text-white group-hover:bg-white group-hover:text-[#ff0030]"
+            ? "bg-[#ff0030]/10 text-[#ff0030]"
+            : "bg-white/20 text-white"
         }`}
       >
-        <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:scale-125" strokeWidth={2.75} />
+        <ArrowRight className="size-4" strokeWidth={2.75} />
       </span>
     </a>
   );
-}
+});
 
-/* Ticker de vendas passando — fita ao vivo em 2 trilhos */
+/* Ticker — sem animate-ping, sem backdrop-blur (os 2 maiores vilões de FPS).
+   Pontinho estático verde, marquee só com transform. */
 const tickerSales = [
   ["R$ 297,00", "FortPay", "há 12s"],
   ["R$ 147,00", "Kiwify", "há 31s"],
@@ -191,41 +233,37 @@ const tickerWins = [
   "Site monitorado 24/7 sem queda",
 ];
 
-function SalesTicker() {
-  const row = (items: string[][], key: string, reverse: boolean) => (
-    <div className="flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
-      <div className={`flex w-max items-center gap-3 py-1.5 pr-3 ${reverse ? "marquee-reverse" : "marquee"}`}>
-        {items.concat(items).map(([value, gateway, ago], i) => (
-          <span
-            key={`${key}-${i}`}
-            className="inline-flex shrink-0 items-center gap-2.5 rounded-full border border-white/10 bg-[#0b0e17]/90 py-2 pl-3 pr-4 text-xs transition-colors hover:border-emerald-400/40"
-          >
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-            </span>
-            <b className="text-emerald-300">{value}</b>
-            <span className="text-slate-400">{gateway}</span>
-            <span className="text-slate-600">{ago}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
+const SalesTicker = memo(function SalesTicker() {
   return (
-    <div className="relative mt-12 space-y-3">
+    <div className="relative mt-12 space-y-3 overflow-x-clip">
       <p className="text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
         Vendas sendo rastreadas agora
       </p>
-      {row(tickerSales, "sales", false)}
+      <div className="flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
+        <div className="marquee flex w-max items-center gap-3 py-1.5 pr-3">
+          {tickerSales.concat(tickerSales).map(([value, gateway, ago], i) => (
+            <span
+              key={`sales-${i}`}
+              aria-hidden={i >= tickerSales.length}
+              className="inline-flex shrink-0 items-center gap-2.5 rounded-full border border-white/10 bg-[#0b0e17] py-2 pr-4 pl-3 text-xs whitespace-nowrap"
+            >
+              <span className="size-2 shrink-0 rounded-full bg-emerald-400" />
+              <b className="text-emerald-300">{value}</b>
+              <span className="text-slate-400">{gateway}</span>
+              <span className="text-slate-600">{ago}</span>
+            </span>
+          ))}
+        </div>
+      </div>
       <div className="flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
         <div className="marquee-reverse flex w-max items-center gap-3 py-1.5 pr-3">
           {tickerWins.concat(tickerWins).map((w, i) => (
             <span
               key={`win-${i}`}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#ff0030]/20 bg-[#ff0030]/[.06] px-4 py-2 text-xs text-slate-300 transition-colors hover:border-[#ff0030]/50"
+              aria-hidden={i >= tickerWins.length}
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#ff0030]/20 bg-[#ff0030]/[.06] px-4 py-2 text-xs whitespace-nowrap text-slate-300"
             >
-              <TrendingUp className="size-3.5 text-[#ff3b5c]" />
+              <TrendingUp className="size-3.5 shrink-0 text-[#ff3b5c]" />
               {w}
             </span>
           ))}
@@ -233,10 +271,10 @@ function SalesTicker() {
       </div>
     </div>
   );
-}
+});
 
-/* Simulador de escala — o visitante brinca com os números */
-function ScaleSimulator() {
+/* Simulador — inputs com min-w-0 pra nunca estourar no mobile */
+const ScaleSimulator = memo(function ScaleSimulator() {
   const [invest, setInvest] = useState(5000);
   const [sales, setSales] = useState(120);
   const [ticket, setTicket] = useState(97);
@@ -245,24 +283,25 @@ function ScaleSimulator() {
   const cpa = sales > 0 ? invest / sales : 0;
   const extra = revenue * 0.12;
   const num = (v: number, setter: (n: number) => void, label: string, prefix = "") => (
-    <label className="block rounded-2xl border border-white/10 bg-black/40 p-4 transition-colors focus-within:border-[#ff0030]/50">
+    <label className="block min-w-0 rounded-2xl border border-white/10 bg-black/40 p-4 transition-colors focus-within:border-[#ff0030]/50">
       <small className="text-xs text-slate-500">{label}</small>
-      <span className="mt-1 flex items-center gap-1 text-2xl font-bold">
-        {prefix && <span className="text-sm text-slate-500">{prefix}</span>}
+      <span className="mt-1 flex min-w-0 items-center gap-1 text-2xl font-bold">
+        {prefix && <span className="shrink-0 text-sm text-slate-500">{prefix}</span>}
         <input
           type="number"
           min={0}
+          inputMode="numeric"
           value={v}
-          onChange={(e) => setter(Math.max(0, Number(e.target.value)))}
-          className="w-full bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          onChange={(e) => setter(Math.max(0, Number(e.target.value) || 0))}
+          className="w-full min-w-0 bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
       </span>
     </label>
   );
   return (
-    <div className="reveal mt-8 grid gap-4 overflow-hidden rounded-3xl border border-white/10 bg-[#0b0e17] p-6 sm:p-8 lg:grid-cols-[1fr_1fr]">
-      <div>
-        <b className="flex items-center gap-2 text-lg"><Calculator className="size-5 text-[#ff3b5c]" /> Preencha os dados da sua operação</b>
+    <div className="reveal cv-auto mt-8 grid min-w-0 gap-4 overflow-hidden rounded-3xl border border-white/10 bg-[#0b0e17] p-6 sm:p-8 lg:grid-cols-2">
+      <div className="min-w-0">
+        <b className="flex items-center gap-2 text-lg"><Calculator className="size-5 shrink-0 text-[#ff3b5c]" /> Preencha os dados da sua operação</b>
         <p className="mt-1 text-sm text-slate-500">Arraste a realidade pra dentro e veja a projeção com atribuição correta.</p>
         <div className="mt-5 space-y-3">
           {num(invest, setInvest, "Investimento (últimos 7 dias)", "R$")}
@@ -270,33 +309,33 @@ function ScaleSimulator() {
           {num(ticket, setTicket, "Ticket médio (R$)", "R$")}
         </div>
       </div>
-      <div className="flex flex-col justify-center rounded-2xl border border-[#ff0030]/25 bg-gradient-to-b from-[#ff0030]/10 to-transparent p-6">
+      <div className="flex min-w-0 flex-col justify-center rounded-2xl border border-[#ff0030]/25 bg-gradient-to-b from-[#ff0030]/10 to-transparent p-6">
         <small className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sua operação hoje</small>
-        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center sm:gap-3">
           {[
             ["Faturamento", brl(revenue)],
             ["ROAS", `${roas.toFixed(2)}x`],
             ["CPA", brl(cpa)],
           ].map(([l, v]) => (
-            <div key={l} className="rounded-xl bg-black/40 p-3">
-              <small className="block text-[11px] text-slate-500">{l}</small>
-              <b className="text-lg">{v}</b>
+            <div key={l} className="min-w-0 rounded-xl bg-black/40 p-3">
+              <small className="block truncate text-[11px] text-slate-500">{l}</small>
+              <b className="block truncate text-base sm:text-lg">{v}</b>
             </div>
           ))}
         </div>
         <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/[.07] p-4 text-center">
           <small className="text-xs text-emerald-300/80">Receita extra estimada recuperando 12% em atribuição</small>
-          <b className="mt-1 block text-3xl text-emerald-300">+{brl(extra)}<span className="text-sm font-normal text-emerald-300/70">/semana</span></b>
+          <b className="mt-1 block text-2xl break-words text-emerald-300 sm:text-3xl">+{brl(extra)}<span className="text-sm font-normal text-emerald-300/70">/semana</span></b>
         </div>
         <small className="mt-3 text-center text-[11px] text-slate-600">Simulação educativa. Resultados variam por operação.</small>
         <div className="mt-4 text-center"><ArrowCta href="/login?modo=register">Quero esse rastreio</ArrowCta></div>
       </div>
     </div>
   );
-}
+});
 
 /* Calculadora do preço — 4 planos + R$0,10 excedente */
-function PriceCalculator() {
+const PriceCalculator = memo(function PriceCalculator() {
   const [sales, setSales] = useState(1200);
   const plans = [
     { name: "Start", base: 39.9, included: 500 },
@@ -308,17 +347,17 @@ function PriceCalculator() {
     !Number.isFinite(p.included) ? p.base : p.base + Math.max(0, sales - p.included) * 0.1;
   const best = plans.reduce((a, b) => (calc(a) <= calc(b) ? a : b));
   return (
-    <div className="reveal mx-auto mt-8 max-w-4xl">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="reveal cv-auto mx-auto mt-8 w-full max-w-4xl min-w-0">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((p) => {
           const total = calc(p);
           const isBest = p.name === best.name;
           return (
-            <div key={p.name} className={`rounded-3xl border p-6 text-left transition-transform duration-300 hover:-translate-y-1.5 ${isBest ? "border-[#ff0030]/50 bg-gradient-to-b from-[#ff0030]/10 to-transparent shadow-[0_24px_80px_-24px_#ff003066]" : "border-white/10 bg-black/40"}`}>
+            <div key={p.name} className={`min-w-0 rounded-3xl border p-6 text-left ${isBest ? "border-[#ff0030]/50 bg-gradient-to-b from-[#ff0030]/10 to-transparent" : "border-white/10 bg-black/40"}`}>
               <small className="text-sm text-slate-400">{p.name}</small>
               <div className="mt-1 flex items-end gap-1">
-                <b className="text-3xl font-bold tracking-tight">{brl(p.base)}</b>
-                <span className="pb-1 text-xs text-slate-500">/mês</span>
+                <b className="text-2xl font-bold tracking-tight break-words sm:text-3xl">{brl(p.base)}</b>
+                <span className="pb-1 text-xs whitespace-nowrap text-slate-500">/mês</span>
               </div>
               <p className="mt-1 text-xs text-slate-400">{Number.isFinite(p.included) ? `até ${p.included.toLocaleString("pt-BR")} vendas inclusas` : "vendas ilimitadas"}</p>
               <p className="mt-2 text-sm">Sua conta: <b className="text-emerald-300">{brl(total)}</b></p>
@@ -327,10 +366,10 @@ function PriceCalculator() {
           );
         })}
       </div>
-      <div className="mx-auto mt-4 max-w-md rounded-2xl bg-black/40 p-5 text-left">
-        <div className="flex items-center justify-between text-sm">
+      <div className="mx-auto mt-4 w-full max-w-md min-w-0 rounded-2xl bg-black/40 p-5 text-left">
+        <div className="flex items-center justify-between gap-3 text-sm">
           <span className="text-slate-400">Suas vendas/mês</span>
-          <b className="text-lg">{sales.toLocaleString("pt-BR")}</b>
+          <b className="text-lg tabular-nums">{sales.toLocaleString("pt-BR")}</b>
         </div>
         <input
           type="range"
@@ -344,20 +383,20 @@ function PriceCalculator() {
         />
         <p className="mt-2 text-xs text-slate-500">Excedente: R$ 0,10 por venda aprovada além da franquia. Black sem excedente.</p>
       </div>
-      <ul className="mx-auto mt-6 max-w-xs space-y-2.5 text-left text-sm">
+      <ul className="mx-auto mt-6 w-full max-w-xs space-y-2.5 text-left text-sm">
         {["Só venda aprovada conta", "Pendente/reembolso/chargeback = R$0", "CAPI + Pixel incluídos", "Gateways ilimitados", "Cancele quando quiser"].map((f) => (
           <li key={f} className="flex items-center gap-2.5 text-slate-300">
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
               <Check className="size-3" />
             </span>
-            {f}
+            <span className="min-w-0">{f}</span>
           </li>
         ))}
       </ul>
       <div className="mt-7"><ArrowCta href="/login?modo=register">Criar conta agora</ArrowCta></div>
     </div>
   );
-}
+});
 
 const pains = [
   { icon: EyeOff, title: "Pixel cego", desc: "iOS, bloqueadores e restrições comem sua conversão. A venda acontece e o gerenciador nem fica sabendo." },
@@ -406,19 +445,25 @@ export function LandingPage() {
   const scrolled = useScrolled();
   useReveal();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const typed = useTypewriter();
 
   return (
-    <main className="min-h-screen bg-[#080b12] text-slate-100">
+    <main className="min-h-screen w-full max-w-full overflow-x-clip bg-[#080b12] text-slate-100">
       {/* NAV */}
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          scrolled ? "border-b border-white/10 bg-[#080b12]/85 backdrop-blur-xl" : "bg-transparent"
+        className={`fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${
+          scrolled ? "border-b border-white/10 bg-[#080b12]/90 backdrop-blur-md" : "bg-transparent"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <a href="#home" className="flex items-center gap-2.5">
-              <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[220px] object-contain" />
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-5">
+          <a href="#home" className="flex min-w-0 items-center gap-2.5" aria-label="GhostScale início">
+            <img
+              src="/ghostscale-logo.png"
+              alt="Logo GhostScale"
+              width={220}
+              height={44}
+              decoding="async"
+              className="h-9 w-auto max-w-[160px] object-contain sm:h-11 sm:max-w-[220px]"
+            />
           </a>
           <nav className="hidden items-center gap-7 text-sm text-slate-400 md:flex">
             {[
@@ -433,45 +478,42 @@ export function LandingPage() {
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <a
               href="/login"
-              className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white sm:px-4"
             >
               Entrar
             </a>
             <a
               href="/login?modo=register"
-              className="group hidden items-center gap-2 rounded-xl bg-[#ff0030] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#d60029] hover:shadow-[0_12px_36px_-8px_#ff0030aa] sm:inline-flex"
+              className="hidden items-center gap-2 rounded-xl bg-[#ff0030] px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#d60029] sm:inline-flex"
             >
               Criar conta grátis
-              <ArrowRight className="size-4 transition-all duration-300 group-hover:translate-x-1 group-hover:scale-150 group-hover:text-white" strokeWidth={2.75} />
+              <ArrowRight className="size-4" strokeWidth={2.75} />
             </a>
           </div>
         </div>
       </header>
 
       {/* HERO */}
-      <section id="home" className="relative overflow-hidden pb-10 pt-32 sm:pt-36">
+      <section id="home" className="relative w-full max-w-full overflow-x-clip pt-32 pb-10 sm:pt-36">
         <div
           className="pointer-events-none absolute inset-0"
+          aria-hidden
           style={{
             background:
               "radial-gradient(900px 420px at 50% 0%, #ff003022, transparent 60%), radial-gradient(700px 500px at 85% 80%, #755cff1e, transparent 60%)",
           }}
         />
-        <div className="relative mx-auto max-w-6xl px-5 text-center">
+        <div className="relative mx-auto w-full max-w-6xl min-w-0 px-4 text-center sm:px-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
             Quem fatura com tráfego já rastreia cada venda
           </p>
-          <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-bold leading-[1.08] tracking-tight sm:min-h-[2.2em] sm:text-6xl min-h-[3.3em]">
-            Saiba exatamente qual anúncio coloca{" "}
-            <span className="text-[#ff3b5c]">
-              {typed}
-              <span className="type-caret" aria-hidden />
-            </span>
+          <h1 className="mx-auto mt-4 w-full max-w-3xl min-h-[2.7em] text-4xl font-bold break-words leading-[1.08] tracking-tight sm:min-h-[2.2em] sm:text-6xl">
+            Saiba exatamente qual anúncio coloca <HeroHeadline />
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-400 sm:text-lg">
+          <p className="mx-auto mt-5 w-full max-w-2xl text-[15px] leading-relaxed text-slate-400 sm:text-lg">
             O GhostScale une Pixel + Conversions API deduplicados, webhook universal de vendas e ROAS por campanha —
             <b className="text-slate-200"> sem depender de pixel cego e sem medo de clone.</b>
           </p>
@@ -483,48 +525,48 @@ export function LandingPage() {
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-slate-500">
             {["Sem cartão de crédito", "Setup em 5 minutos", "100% seguro"].map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5">
-                <Check className="size-3.5 text-emerald-400" /> {t}
+              <span key={t} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <Check className="size-3.5 shrink-0 text-emerald-400" /> {t}
               </span>
             ))}
           </div>
 
           {/* mock do painel */}
-          <div className="reveal relative mx-auto mt-12 max-w-4xl rounded-2xl border border-white/10 bg-[#0b0e17]/90 p-4 text-left shadow-[0_30px_120px_-20px_#000] sm:p-5">
-            <div className="flex items-center gap-1.5 border-b border-white/10 pb-3">
-              <span className="size-2.5 rounded-full bg-red-500/70" />
-              <span className="size-2.5 rounded-full bg-amber-400/70" />
-              <span className="size-2.5 rounded-full bg-emerald-400/70" />
-              <span className="ml-3 text-xs text-slate-500">painel.ghostscale — tempo real</span>
-              <span className="ml-auto hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300 sm:inline-flex">
-                <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" /> ao vivo
+          <div className="reveal relative mx-auto mt-12 w-full max-w-4xl min-w-0 rounded-2xl border border-white/10 bg-[#0b0e17] p-4 text-left sm:p-5">
+            <div className="flex min-w-0 items-center gap-1.5 border-b border-white/10 pb-3">
+              <span className="size-2.5 shrink-0 rounded-full bg-red-500/70" />
+              <span className="size-2.5 shrink-0 rounded-full bg-amber-400/70" />
+              <span className="size-2.5 shrink-0 rounded-full bg-emerald-400/70" />
+              <span className="ml-3 truncate text-xs text-slate-500">painel.ghostscale — tempo real</span>
+              <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] whitespace-nowrap text-emerald-300 sm:inline-flex">
+                <span className="size-1.5 rounded-full bg-emerald-400" /> ao vivo
               </span>
             </div>
-            <div className="grid gap-3 pt-4 sm:grid-cols-3">
+            <div className="grid min-w-0 gap-3 pt-4 sm:grid-cols-3">
               {[
                 ["Gasto Meta", "R$ 4.820", "12 campanhas ativas", "text-slate-100"],
                 ["Vendas aprovadas", "312", "+18% vs. ontem", "text-emerald-300"],
                 ["ROAS", "3,8x", "R$ 18,4k faturados", "text-[#ff3b5c]"],
               ].map(([label, value, sub, color]) => (
-                <div key={label} className="rounded-xl border border-white/10 bg-white/[.03] p-4">
-                  <small className="text-xs text-slate-500">{label}</small>
-                  <b className={`mt-1 block text-2xl ${color}`}>{value}</b>
-                  <small className="text-[11px] text-slate-500">{sub}</small>
+                <div key={label} className="min-w-0 rounded-xl border border-white/10 bg-white/[.03] p-4">
+                  <small className="block truncate text-xs text-slate-500">{label}</small>
+                  <b className={`mt-1 block truncate text-2xl tabular-nums ${color}`}>{value}</b>
+                  <small className="block truncate text-[11px] text-slate-500">{sub}</small>
                 </div>
               ))}
             </div>
-            <div className="mt-3 space-y-2.5 rounded-xl border border-white/10 bg-white/[.02] p-4">
+            <div className="mt-3 min-w-0 space-y-2.5 rounded-xl border border-white/10 bg-white/[.02] p-4">
               {[
                 ["campanha-escala|2384729384", "92%", "3,8x"],
                 ["oferta-inverno|2384729102", "64%", "2,9x"],
                 ["teste-criativo-c|2384729555", "38%", "1,7x"],
               ].map(([name, w, roas]) => (
-                <div key={name} className="flex items-center gap-3 text-xs">
-                  <span className="w-44 truncate text-slate-400">{name}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div key={name} className="flex min-w-0 items-center gap-3 text-xs">
+                  <span className="w-24 shrink-0 truncate text-slate-400 sm:w-44">{name}</span>
+                  <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
                     <div className="bar-anim h-full rounded-full bg-gradient-to-r from-[#ff0030] to-[#ff7a5c]" style={{ width: w }} />
                   </div>
-                  <b className="w-10 text-right text-slate-200">{roas}</b>
+                  <b className="w-10 shrink-0 text-right tabular-nums text-slate-200">{roas}</b>
                 </div>
               ))}
             </div>
@@ -535,22 +577,21 @@ export function LandingPage() {
       </section>
 
       {/* DORES */}
-      <section id="dores" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16">
+      <section id="dores" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
         <Tag>Dores reais</Tag>
-        <h2 className="reveal mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
+        <h2 className="reveal mt-3 max-w-2xl text-3xl font-bold tracking-tight break-words sm:text-4xl">
           O lucro some no caminho entre o clique e a venda.
         </h2>
         <p className="reveal mt-3 max-w-2xl text-[15px] text-slate-400">
           Se você se reconhece em qualquer item abaixo, seu rastreio atual está te custando dinheiro todo dia.
         </p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {pains.map((p, i) => (
+        <div className="mt-8 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {pains.map((p) => (
             <div
               key={p.title}
-              className="reveal group rounded-2xl border border-white/10 bg-[#0b0e17] p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-red-500/40 hover:shadow-[0_20px_60px_-16px_#ff003055]"
-              style={{ transitionDelay: `${(i % 3) * 60}ms` }}
+              className="reveal group min-w-0 rounded-2xl border border-white/10 bg-[#0b0e17] p-6 transition-colors duration-200 hover:border-red-500/40"
             >
-              <span className="grid size-11 place-items-center rounded-xl bg-red-500/10 text-red-400 transition-all duration-300 group-hover:scale-110 group-hover:bg-[#ff0030] group-hover:text-white">
+              <span className="grid size-11 place-items-center rounded-xl bg-red-500/10 text-red-400 transition-colors duration-200 group-hover:bg-[#ff0030] group-hover:text-white">
                 <p.icon className="size-5" />
               </span>
               <b className="mt-4 block">{p.title}</b>
@@ -564,23 +605,22 @@ export function LandingPage() {
       </section>
 
       {/* SOLUÇÃO */}
-      <section id="solucao" className="scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
-        <div className="mx-auto max-w-6xl px-5">
+      <section id="solucao" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
+        <div className="mx-auto w-full max-w-6xl min-w-0 px-4 sm:px-5">
           <Tag>A solução</Tag>
-          <h2 className="reveal mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="reveal mt-3 max-w-2xl text-3xl font-bold tracking-tight break-words sm:text-4xl">
             Um rastreio que fecha a conta do clique ao saque.
           </h2>
           <p className="reveal mt-3 max-w-2xl text-[15px] text-slate-400">
             Cada feature abaixo existe de verdade no painel — e funciona junta, não em 4 ferramentas separadas.
           </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {solutions.map((s, i) => (
+          <div className="mt-8 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {solutions.map((s) => (
               <div
                 key={s.title}
-                className="reveal group rounded-2xl border border-white/10 bg-[#080b12] p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-[#ff0030]/40 hover:shadow-[0_20px_60px_-16px_#ff003055]"
-                style={{ transitionDelay: `${(i % 3) * 60}ms` }}
+                className="reveal group min-w-0 rounded-2xl border border-white/10 bg-[#080b12] p-6 transition-colors duration-200 hover:border-[#ff0030]/40"
               >
-                <span className="grid size-11 place-items-center rounded-xl bg-[#ff0030]/10 text-[#ff3b5c] transition-all duration-300 group-hover:scale-110 group-hover:bg-[#ff0030] group-hover:text-white">
+                <span className="grid size-11 place-items-center rounded-xl bg-[#ff0030]/10 text-[#ff3b5c] transition-colors duration-200 group-hover:bg-[#ff0030] group-hover:text-white">
                   <s.icon className="size-5" />
                 </span>
                 <b className="mt-4 block">{s.title}</b>
@@ -592,23 +632,23 @@ export function LandingPage() {
       </section>
 
       {/* COMPARATIVO */}
-      <section id="diferencial" className="mx-auto max-w-4xl scroll-mt-20 px-5 py-16">
+      <section id="diferencial" className="cv-auto mx-auto w-full max-w-4xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
         <Tag>O diferencial</Tag>
-        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">
           Por que não é só mais um sistema de tracking
         </h2>
-        <div className="reveal mt-8 overflow-hidden rounded-2xl border border-white/10">
-          <table className="w-full text-sm">
+        <div className="reveal mt-8 overflow-x-auto rounded-2xl border border-white/10">
+          <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="bg-white/[.03]">
                 <th className="p-4 text-left font-medium normal-case tracking-normal">Funcionalidade</th>
-                <th className="p-4 text-center font-semibold text-[#ff3b5c]">GhostScale</th>
-                <th className="p-4 text-center font-medium text-slate-500">Trackers comuns</th>
+                <th className="p-4 text-center font-semibold whitespace-nowrap text-[#ff3b5c]">GhostScale</th>
+                <th className="p-4 text-center font-medium whitespace-nowrap text-slate-500">Trackers comuns</th>
               </tr>
             </thead>
             <tbody>
               {compareRows.map(([f, ok, other]) => (
-                <tr key={f} className="border-t border-white/10 transition-colors hover:bg-white/[.02]">
+                <tr key={f} className="border-t border-white/10">
                   <td className="p-4 text-slate-200">{f}</td>
                   <td className="p-4 text-center">
                     <span className="inline-grid size-7 place-items-center rounded-full bg-emerald-500/15 text-emerald-300">
@@ -616,8 +656,8 @@ export function LandingPage() {
                     </span>
                   </td>
                   <td className="p-4 text-center">
-                    <span className="inline-flex items-center justify-center gap-1.5 text-slate-500">
-                      <X className="size-4 text-slate-600" /> {other}
+                    <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-slate-500">
+                      <X className="size-4 shrink-0 text-slate-600" /> {other}
                     </span>
                   </td>
                 </tr>
@@ -626,15 +666,15 @@ export function LandingPage() {
           </table>
         </div>
         <div className="reveal mt-8 text-center">
-                      <ArrowCta href="/login?modo=register">Experimente a diferença</ArrowCta>
+          <ArrowCta href="/login?modo=register">Experimente a diferença</ArrowCta>
         </div>
       </section>
 
       {/* SIMULADOR */}
-      <section id="simulador" className="scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
-        <div className="mx-auto max-w-4xl px-5">
+      <section id="simulador" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
+        <div className="mx-auto w-full max-w-4xl min-w-0 px-4 sm:px-5">
           <Tag>Simulador de escala</Tag>
-          <h2 className="reveal mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">
             Veja quanto você pode recuperar com atribuição correta
           </h2>
           <p className="reveal mt-3 max-w-2xl text-[15px] text-slate-400">
@@ -645,38 +685,38 @@ export function LandingPage() {
       </section>
 
       {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16">
+      <section id="como-funciona" className="cv-auto mx-auto w-full max-w-6xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
         <Tag>Como funciona</Tag>
-        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Do clique ao ROAS em 3 passos</h2>
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">Do clique ao ROAS em 3 passos</h2>
+        <div className="mt-8 grid min-w-0 gap-4 lg:grid-cols-3">
           {[
             { n: "01", t: "Crie seu projeto", d: "Cadastre o domínio e cole o script de tracking. Leva menos de 5 minutos, sem programador.", code: '<script src="https://seu-app/tracker.js?key=SUA_KEY"></script>' },
             { n: "02", t: "Conecte tudo", d: "Pixel + CAPI na Meta e webhook no checkout. Cada venda passa a chegar com origem completa.", code: "POST /api/webhooks/gateway  →  { received: true }" },
             { n: "03", t: "Ative e escale", d: "Acompanhe vendas em tempo real, receba alertas e escale a campanha que prova lucro.", code: "ROAS por campanha, todo dia, sem planilha" },
           ].map((s) => (
-            <div key={s.n} className="reveal group rounded-2xl border border-white/10 bg-[#0b0e17] p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-[#ff0030]/40">
+            <div key={s.n} className="reveal group min-w-0 rounded-2xl border border-white/10 bg-[#0b0e17] p-6 transition-colors duration-200 hover:border-[#ff0030]/40">
               <b className="bg-gradient-to-r from-[#ff0030] to-[#ff7a5c] bg-clip-text text-4xl font-bold text-transparent">{s.n}</b>
               <b className="mt-3 block text-lg">{s.t}</b>
               <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{s.d}</p>
-              <code className="mt-4 block overflow-x-auto rounded-xl border border-white/10 bg-black/50 p-3 text-[11px] leading-relaxed text-emerald-300 transition-colors group-hover:border-emerald-400/20">
+              <code className="mt-4 block w-full max-w-full overflow-x-auto rounded-xl border border-white/10 bg-black/50 p-3 text-[11px] leading-relaxed break-all text-emerald-300">
                 {s.code}
               </code>
             </div>
           ))}
         </div>
         <div className="reveal mt-8 flex flex-wrap gap-3">
-                      <ArrowCta href="/login?modo=register">Começar agora — é grátis</ArrowCta>
+          <ArrowCta href="/login?modo=register">Começar agora — é grátis</ArrowCta>
           <ArrowCta href="/docs" variant="ghost">
-            <BookOpen className="size-4" /> Ler documentação
+            <span className="inline-flex items-center gap-2"><BookOpen className="size-4 shrink-0" /> Ler documentação</span>
           </ArrowCta>
         </div>
       </section>
 
       {/* PREÇOS */}
-      <section id="precos" className="scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
-        <div className="mx-auto max-w-6xl px-5 text-center">
+      <section id="precos" className="cv-auto w-full scroll-mt-20 border-y border-white/10 bg-[#0b0e17]/60 py-16">
+        <div className="mx-auto w-full max-w-6xl min-w-0 px-4 text-center sm:px-5">
           <Tag>Preço transparente</Tag>
-          <h2 className="reveal mx-auto mt-3 max-w-xl text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="reveal mx-auto mt-3 max-w-xl text-3xl font-bold tracking-tight break-words sm:text-4xl">
             4 planos. Sem letra miúda.
           </h2>
           <p className="reveal mx-auto mt-3 max-w-xl text-[15px] text-slate-400">
@@ -687,26 +727,27 @@ export function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-5 py-16">
+      <section id="faq" className="cv-auto mx-auto w-full max-w-3xl min-w-0 scroll-mt-20 px-4 py-16 sm:px-5">
         <Tag>Perguntas frequentes</Tag>
-        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Tire suas dúvidas</h2>
-        <div className="mt-8 space-y-3">
+        <h2 className="reveal mt-3 text-3xl font-bold tracking-tight break-words sm:text-4xl">Tire suas dúvidas</h2>
+        <div className="mt-8 min-w-0 space-y-3">
           {faqs.map((f, i) => {
             const open = openFaq === i;
             return (
               <div
                 key={f.q}
-                className={`reveal overflow-hidden rounded-2xl border transition-colors duration-300 ${
+                className={`reveal min-w-0 overflow-hidden rounded-2xl border transition-colors duration-200 ${
                   open ? "border-[#ff0030]/35 bg-[#ff0030]/[.04]" : "border-white/10 bg-[#0b0e17] hover:border-white/25"
                 }`}
               >
                 <button
                   onClick={() => setOpenFaq(open ? null : i)}
-                  className="flex w-full items-center justify-between gap-4 p-5 text-left font-medium"
+                  aria-expanded={open}
+                  className="flex w-full min-w-0 items-center justify-between gap-4 p-5 text-left font-medium"
                 >
-                  {f.q}
+                  <span className="min-w-0 flex-1">{f.q}</span>
                   <span
-                    className={`grid size-8 shrink-0 place-items-center rounded-full transition-all duration-300 ${
+                    className={`grid size-8 shrink-0 place-items-center rounded-full transition-transform duration-200 ${
                       open ? "rotate-180 bg-[#ff0030] text-white" : "bg-white/5 text-slate-400"
                     }`}
                   >
@@ -714,7 +755,7 @@ export function LandingPage() {
                   </span>
                 </button>
                 <div
-                  className={`grid transition-all duration-300 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+                  className={`grid transition-all duration-200 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
                 >
                   <div className="overflow-hidden">
                     <p className="px-5 pb-5 text-sm leading-relaxed text-slate-400">{f.a}</p>
@@ -727,11 +768,11 @@ export function LandingPage() {
       </section>
 
       {/* CTA FINAL */}
-      <section className="mx-auto max-w-6xl px-5 pb-16">
-        <div className="reveal relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#ff0030] via-[#c40026] to-[#5c0013] p-10 text-center sm:p-14">
+      <section className="cv-auto mx-auto w-full max-w-6xl min-w-0 px-4 pb-16 sm:px-5">
+        <div className="reveal relative min-w-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#ff0030] via-[#c40026] to-[#5c0013] p-8 text-center sm:p-14">
           <MetricsRain />
-          <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(600px_200px_at_50%_0%,#fff,transparent)]" />
-          <h2 className="relative mx-auto max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
+          <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(600px_200px_at_50%_0%,#fff,transparent)]" aria-hidden />
+          <h2 className="relative mx-auto max-w-2xl text-3xl font-bold tracking-tight break-words text-white sm:text-5xl">
             Pronto pra parar de perder venda e escalar no dado?
           </h2>
           <p className="relative mx-auto mt-3 max-w-xl text-[15px] text-white/80">
@@ -743,11 +784,11 @@ export function LandingPage() {
             </ArrowCta>
             <a
               href="/docs"
-              className="group inline-flex items-center gap-3 rounded-2xl border border-white/30 px-6 py-4 text-[15px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 active:scale-[.98]"
+              className="inline-flex max-w-full items-center gap-3 rounded-2xl border border-white/30 px-6 py-4 text-[15px] font-semibold whitespace-nowrap text-white transition-colors duration-200 hover:bg-white/10 active:scale-[.98]"
             >
               Falar com especialista
-              <span className="grid size-9 place-items-center rounded-full bg-white/20 transition-all duration-300 group-hover:scale-[1.35] group-hover:bg-white group-hover:text-[#ff0030] group-hover:shadow-[0_0_26px_rgba(255,255,255,.5)]">
-                <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:scale-125" strokeWidth={2.75} />
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/20">
+                <ArrowRight className="size-4" strokeWidth={2.75} />
               </span>
             </a>
           </div>
@@ -756,11 +797,19 @@ export function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/10 py-10">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 md:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
-          <div>
-            <div className="flex items-center gap-2.5">
-<img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[220px] object-contain" />
+      <footer className="w-full border-t border-white/10 py-10">
+        <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-8 px-4 sm:px-5 sm:grid-cols-2 md:grid-cols-[1.2fr_.8fr_.8fr_.8fr]">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <img
+                src="/ghostscale-logo.png"
+                alt="Logo GhostScale"
+                width={220}
+                height={44}
+                loading="lazy"
+                decoding="async"
+                className="h-9 w-auto max-w-[160px] object-contain sm:h-11 sm:max-w-[220px]"
+              />
             </div>
             <p className="mt-3 max-w-xs text-sm text-slate-500">Mais que tracking: a arma secreta de quem vive de tráfego pago.</p>
           </div>
@@ -769,7 +818,7 @@ export function LandingPage() {
             ["Painel", [["Entrar", "/login"], ["Documentação", "/docs"], ["Guia gateways", "/docs/gateways"]]],
             ["Integrações", [["FortPay", "/docs/gateways"], ["Hotmart", "/docs/gateways"], ["Kiwify", "/docs/gateways"], ["Braip", "/docs/gateways"]]],
           ].map(([title, links]) => (
-            <div key={title as string}>
+            <div key={title as string} className="min-w-0">
               <b className="text-sm">{title}</b>
               <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 {(links as string[][]).map(([label, href]) => (
@@ -783,7 +832,7 @@ export function LandingPage() {
             </div>
           ))}
         </div>
-        <p className="mx-auto mt-8 max-w-6xl px-5 text-xs text-slate-600">© 2026 GhostScale. Todos os direitos reservados.</p>
+        <p className="mx-auto mt-8 w-full max-w-6xl px-4 text-xs text-slate-600 sm:px-5">© 2026 GhostScale. Todos os direitos reservados.</p>
       </footer>
     </main>
   );

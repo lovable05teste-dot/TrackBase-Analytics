@@ -36,7 +36,6 @@ export async function decryptSecret(cipher: string, iv: string) {
 
 export async function getUserIdFromSessionCookie(session: string|undefined|null){
   if(!session)return null;
-  if(process.env.ADMIN_PASSWORD&&session===await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`))return "trackbase-owner";
   try{
     const { ensureDb, getDb }=await import("@/db");
     const { users }=await import("@/db/schema");

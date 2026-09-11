@@ -29,17 +29,21 @@
 *{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
 html{background:var(--background);scroll-behavior:smooth}
 body{margin:0;background:var(--background);color:var(--foreground);font-family:Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-/* landing effects */
-@keyframes tb-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.marquee{animation:tb-marquee 28s linear infinite}.marquee:hover{animation-play-state:paused}
-.marquee-reverse{animation:tb-marquee 36s linear infinite reverse}.marquee-reverse:hover{animation-play-state:paused}
+/* landing effects — 100% otimizado: só transform GPU, sem blur, sem cursor custom */
+html,body{max-width:100%;overflow-x:clip}
+@keyframes tb-marquee{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+.marquee,.marquee-reverse{will-change:transform;transform:translateZ(0);backface-visibility:hidden;contain:layout style}
+.marquee{animation:tb-marquee 32s linear infinite}
+.marquee-reverse{animation:tb-marquee 40s linear infinite reverse}
+@media(hover:hover){.marquee:hover,.marquee-reverse:hover{animation-play-state:paused}}
 @keyframes tb-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .float-anim{animation:tb-float 4s ease-in-out infinite}
 @keyframes tb-bar{from{width:0}}
 .bar-anim{animation:tb-bar 1.2s ease-out both}
-.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
-.reveal-visible{opacity:1;transform:none}
-@media (prefers-reduced-motion:reduce){.marquee,.marquee-reverse,.float-anim,.bar-anim{animation:none}.reveal{opacity:1;transform:none}}
+.reveal{opacity:0;transform:translate3d(0,24px,0);transition:opacity .6s ease,transform .6s ease;will-change:opacity,transform}
+.reveal-visible{opacity:1;transform:none;will-change:auto}
+.cv-auto{content-visibility:auto;contain-intrinsic-size:auto 600px}
+@media (prefers-reduced-motion:reduce){.marquee,.marquee-reverse,.float-anim,.bar-anim{animation:none}.reveal{opacity:1;transform:none}.cv-auto{content-visibility:visible}}
 /* caret da headline viva */
 .type-caret{display:inline-block;width:3px;height:1em;margin-left:5px;vertical-align:-0.12em;background:#ff3b5c;animation:tb-blink 1s steps(1) infinite}
 @keyframes tb-blink{50%{opacity:0}}

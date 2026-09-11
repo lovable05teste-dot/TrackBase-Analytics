@@ -61,8 +61,8 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
       <div className="rounded-xl border border-border bg-card p-3 transition-colors">
-        <b className="text-sm">Kit Bíblico</b>
-        <small className="block text-muted-foreground">Administrador</small>
+        <b className="text-sm">Minha conta</b>
+        <small className="block text-muted-foreground">Perfil e assinatura</small>
         <a href="/conta/assinatura" className="mt-2 block rounded-lg bg-violet-600 px-3 py-2 text-center text-xs font-medium text-white hover:bg-violet-500">
           Ver assinatura
         </a>
