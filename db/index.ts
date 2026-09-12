@@ -36,6 +36,7 @@ const statements=[
 "CREATE TABLE IF NOT EXISTS push_subscriptions(workspace_id text NOT NULL,endpoint text NOT NULL,p256dh text NOT NULL,auth text NOT NULL,created_at integer NOT NULL)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_push_sub_endpoint ON push_subscriptions(workspace_id,endpoint)",
 "CREATE TABLE IF NOT EXISTS notification_prefs(workspace_id text PRIMARY KEY,prefs text NOT NULL,updated_at integer NOT NULL)",
+"CREATE TABLE IF NOT EXISTS sound_prefs(workspace_id text PRIMARY KEY,user_id text,prefs text NOT NULL,updated_at integer NOT NULL)",
 "CREATE TABLE IF NOT EXISTS automation_rules(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,name text NOT NULL,level text NOT NULL,metric text NOT NULL,operator text NOT NULL,value real NOT NULL,window_days integer NOT NULL,min_spend real NOT NULL,action text NOT NULL,active integer NOT NULL DEFAULT 1,cooldown_hours integer NOT NULL DEFAULT 24,last_triggered_at integer,created_at integer NOT NULL,updated_at integer NOT NULL)",
 "CREATE TABLE IF NOT EXISTS action_history(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,rule_id text,actor text NOT NULL,action text NOT NULL,target_level text,target_id text,target_name text,detail text,created_at integer NOT NULL)",
 "CREATE INDEX IF NOT EXISTS idx_action_history_ws ON action_history(workspace_id,created_at)",

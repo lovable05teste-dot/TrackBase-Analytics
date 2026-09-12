@@ -4,7 +4,8 @@ import {Bell,BellRing,Smartphone} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
-import {playSound,sounds,DEFAULT_SOUND_ID} from "@/lib/sounds";
+import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
+import {getSoundPrefs,notifyApprovedSales,playFromWorker,previewSound,refreshSoundPrefs,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -13,34 +14,13 @@ function ago(ts:number){const s=Math.max(1,Math.floor(Date.now()/1000)-ts);if(s<
 function bufToB64(buf:ArrayBuffer|null){if(!buf)return "";const b=new Uint8Array(buf);let s="";for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
 function vapidKey(){const k=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY||"";const pad="=".repeat((4-k.length%4)%4);return Uint8Array.from(atob((k+pad).replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))}
 
-let audioCtx:AudioContext|null=null;
-function unlockAudio(){try{if(!audioCtx)audioCtx=new (window.AudioContext||(window as unknown as {webkitAudioContext:typeof AudioContext}).webkitAudioContext)();if(audioCtx.state==="suspended")void audioCtx.resume();}catch{}}
-function chime(high:boolean){
- try{
-  unlockAudio();if(!audioCtx)return;
-  const t=audioCtx.currentTime;
-  [[high?880:660,0],[high?1318:880,.14]].forEach(([f,dt])=>{
-   const o=audioCtx!.createOscillator(),g=audioCtx!.createGain();
-   o.type="sine";o.frequency.value=f;
-   g.gain.setValueAtTime(0.0001,t+dt);g.gain.exponentialRampToValueAtTime(.25,t+dt+.02);g.gain.exponentialRampToValueAtTime(.0001,t+dt+.22);
-   o.connect(g);g.connect(audioCtx!.destination);o.start(t+dt);o.stop(t+dt+.25);
-  });
- }catch{}
-}
-const SOUND_KEY="trackbase:notification";
-type SoundPref={selected:string;enabled:boolean};
-const DEFAULT_SOUND:SoundPref={selected:DEFAULT_SOUND_ID,enabled:true};
-function readSoundPref():SoundPref{try{const raw=localStorage.getItem(SOUND_KEY);if(raw){const p=JSON.parse(raw);return {selected:sounds.some(s=>s.id===p.selected)?p.selected:DEFAULT_SOUND.selected,enabled:typeof p.enabled==="boolean"?p.enabled:DEFAULT_SOUND.enabled}}}catch{}return DEFAULT_SOUND}
-function saveSoundPref(p:SoundPref){try{localStorage.setItem(SOUND_KEY,JSON.stringify(p))}catch{};window.dispatchEvent(new CustomEvent("tb-sound-change",{detail:{sound:p}}));}
-
 export function NotificationsBell(){
  const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
  const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
- const[sound,setSound]=useState<SoundPref>(readSoundPref);
+ const[sound,setSound]=useState<SoundPrefs>(getSoundPrefs());
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
  const known=useRef<Set<string>>(new Set());
  const prefsRef=useRef(prefs);prefsRef.current=prefs;
- const soundRef=useRef(sound);soundRef.current=sound;
  const interesting=(o:Order)=>o.status==="approved"?prefs.approved:o.status==="pending"?prefs.pending:false;
  const unread=orders.filter(o=>interesting(o)&&(o.updatedAt*1000>(seen||0))).length;
 
@@ -51,7 +31,11 @@ export function NotificationsBell(){
    const list:Array<Order>=(b.orders||[]).filter((o:Order)=>o.status==="approved"?p.approved:o.status==="pending"?p.pending:false);
    if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return;}
    const fresh=list.filter(o=>!known.current.has(o.id));
-   if(fresh.length){if(soundRef.current.enabled)playSound(soundRef.current.selected);known.current=new Set(list.map(o=>o.id));}
+   if(fresh.length){
+    const ids=fresh.map(o=>o.id);
+    notifyApprovedSales(ids);
+    known.current=new Set(list.map(o=>o.id));
+   }
    setOrders(list);
   }catch{}
  },[]);
@@ -64,31 +48,20 @@ export function NotificationsBell(){
 
  useEffect(()=>{
   try{setSeen(Number(localStorage.getItem(SEEN_KEY)||0));}catch{}
-  unlockAudio();
-const unlock=()=>unlockAudio();
-   window.addEventListener("pointerdown",unlock,{once:true});
-   const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){if(m.enabled!==false)playSound(sounds.some(s=>s.id===m.soundId)?m.soundId:DEFAULT_SOUND_ID);}};
-   try{if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",onSwMessage);}catch{}
-   void load(true);
+  void load(true);
   fetch("/api/notifications/prefs",{cache:"no-store"}).then(r=>r.json()).then(b=>{if(b.prefs)setPrefs(b.prefs);}).catch(()=>{});
   const timer=setInterval(()=>{if(!document.hidden)void load(false);},30000);
-  (async()=>{
-   try{
-    if(!("serviceWorker" in navigator)||!("PushManager" in window)||!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY){setPush("unsupported");return;}
-    const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
-    setPush(sub?"on":"off");
-   }catch{setPush("unsupported");}
-  })();
-return ()=>{window.removeEventListener("pointerdown",unlock);clearInterval(timer);try{if(navigator.serviceWorker)navigator.serviceWorker.removeEventListener("message",onSwMessage);}catch{}};
-  },[load]);
+  return ()=>clearInterval(timer);
+ },[load]);
 
-  useEffect(()=>{(async()=>{try{if(!("serviceWorker" in navigator))return;const reg=await navigator.serviceWorker.ready;if(reg.active)reg.active.postMessage({type:"set-sound",soundId:sound.selected,enabled:sound.enabled});}catch{}})();},[sound]);
+ useEffect(()=>{const off=subscribeSoundPrefs(setSound);return off;},[]);
 
-  useEffect(()=>{
-   const onSound=(e:Event)=>{const d=(e as CustomEvent).detail;if(d&&d.sound)setSound(s=>({selected:d.sound.selected||s.selected,enabled:typeof d.sound.enabled==="boolean"?d.sound.enabled:s.enabled}));};
-   window.addEventListener("tb-sound-change",onSound);
-   return()=>window.removeEventListener("tb-sound-change",onSound);
-  },[]);
+ useEffect(()=>{
+  try{if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",onSwMessage);}catch{}
+  return()=>{try{if("serviceWorker" in navigator)navigator.serviceWorker.removeEventListener("message",onSwMessage);}catch{}};
+ },[]);
+
+ const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){playFromWorker(m.soundId,m.enabled);}};
 
  const markSeen=()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}};
  const toggle=()=>{if(!open)markSeen();setOpen(v=>!v);};
@@ -133,9 +106,9 @@ return ()=>{window.removeEventListener("pointerdown",unlock);clearInterval(timer
     </div>
     <div className="space-y-2.5 border-t border-slate-200 p-3">
      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Som da notificação</p>
-     <label className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>Som ligado</span><Switch checked={sound.enabled} onCheckedChange={v=>setSound(s=>{const n={...s,enabled:v};saveSoundPref(n);return n})}/></label>
-     {sound.enabled&&<div className="flex items-center gap-2"><select value={sound.selected} onChange={e=>setSound(s=>{const n={...s,selected:e.target.value};saveSoundPref(n);return n})} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-card px-2 py-1.5 text-sm">{sounds.map(s=><option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select><Button variant="outline" size="sm" onClick={()=>playSound(sound.selected)}>Testar</Button></div>}
-     <a href="/configuracoes#som" className="block text-xs font-medium text-blue-600 hover:underline">Ver os 4 sons com demo →</a>
+     <label className="flex cursor-pointer items-center justify-between gap-3 text-sm"><span>Som ligado</span><Switch checked={sound.enabled} onCheckedChange={v=>setSoundPrefs({enabled:v})}/></label>
+     {sound.enabled&&sound.selected!=="none"&&<div className="flex items-center gap-2"><select value={sound.selected} onChange={e=>setSoundPrefs({selected:e.target.value as SoundPrefs["selected"]})} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-card px-2 py-1.5 text-sm">{SALE_SOUNDS.map(s=><option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select><Button variant="outline" size="sm" onClick={()=>previewSound(sound.selected)}>Testar</Button></div>}
+     <a href="/configuracoes#som" className="block text-xs font-medium text-blue-600 hover:underline">Ver todos os sons com demo →</a>
     </div>
    </div>
   </>}</div>;

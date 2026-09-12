@@ -1,37 +1,29 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { playSound } from "@/lib/sounds";
+import { SALE_SOUNDS } from "@/lib/sound-prefs";
+import { getSoundPrefs, notifyApprovedSales, previewSound, subscribeSoundPrefs } from "@/lib/sale-sounds";
+import type { SoundPrefs } from "@/lib/sound-prefs";
 
 type Purchase = { id: string; eventId: string; value: number | null; currency: string | null; occurredAt: number; utmCampaign: string | null };
-type Prefs = { selected: string; enabled: boolean };
-
-const STORAGE = "trackbase:notification";
-const DEFAULTS: Prefs = { selected: "ka-ching", enabled: true };
-
-function readPrefs(): Prefs {
-  try {
-    const raw = localStorage.getItem(STORAGE);
-    if (raw) {
-      const p = JSON.parse(raw);
-      return { selected: p.selected || DEFAULTS.selected, enabled: typeof p.enabled === "boolean" ? p.enabled : DEFAULTS.enabled };
-    }
-  } catch {}
-  return DEFAULTS;
-}
 
 const brl = (v: number | null, c: string | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: c || "BRL" }).format(v || 0);
 
 export function SoundNotifications() {
   const [lastPurchase, setLastPurchase] = useState<Purchase | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [pref, setPref] = useState<SoundPrefs>(getSoundPrefs());
   const seen = useRef<Record<string, boolean>>({});
   const initialized = useRef(false);
   const pollMs = 5000;
 
+  useEffect(() => {
+    const off = subscribeSoundPrefs(setPref);
+    return off;
+  }, []);
+
   const poll = useCallback(async () => {
+    if (!pref.enabled || pref.selected === "none") return;
     try {
-      const pref = readPrefs();
-      if (!pref.enabled) return;
       const r = await fetch("/api/purchases/latest");
       const data = await r.json();
       const purchases: Purchase[] = data.purchases || [];
@@ -40,16 +32,18 @@ export function SoundNotifications() {
         for (const p of purchases) seen.current[p.id] = true;
         return;
       }
+      const fresh: string[] = [];
       for (const p of purchases) {
         if (seen.current[p.id]) continue;
         seen.current[p.id] = true;
-        playSound(pref.selected);
+        fresh.push(p.id);
         setLastPurchase(p);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 6000);
       }
+      if (fresh.length) notifyApprovedSales(fresh);
     } catch {}
-  }, []);
+  }, [pref.enabled, pref.selected]);
 
   useEffect(() => {
     const t = setTimeout(poll, 3500);

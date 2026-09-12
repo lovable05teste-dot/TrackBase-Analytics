@@ -1,26 +1,24 @@
 ﻿"use client";
 import {useEffect,useState} from "react";
 import {ChevronDown,ChevronRight,Loader2,Volume2} from "lucide-react";
-import {playSound,sounds,DEFAULT_SOUND_ID} from "@/lib/sounds";
+import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
+import {getSoundPrefs,previewSound,refreshSoundPrefs,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
 import {Switch} from "@/components/ui/switch";
 
 const STORAGE="trackbase:notification";
-type Pref={selected:string;enabled:boolean};
-
-function readPref():Pref{try{const raw=localStorage.getItem(STORAGE);if(raw){const p=JSON.parse(raw);return{selected:p.selected&&sounds.some(s=>s.id===p.selected)?p.selected:DEFAULT_SOUND_ID,enabled:typeof p.enabled==="boolean"?p.enabled:true}}}catch{}return{selected:DEFAULT_SOUND_ID,enabled:true}}
 
 function useSoundPref(){
- const[pref,setPref]=useState<Pref>(readPref);
- useEffect(()=>{try{localStorage.setItem(STORAGE,JSON.stringify(pref));}catch{}window.dispatchEvent(new CustomEvent("tb-sound-change",{detail:{sound:pref}}));(async()=>{try{if("serviceWorker" in navigator){const reg=await navigator.serviceWorker.ready;if(reg.active)reg.active.postMessage({type:"set-sound",soundId:pref.selected,enabled:pref.enabled});}}catch{}})();},[pref]);
- const pick=(id:string)=>{setPref(p=>({...p,selected:id}));playSound(id);};
- const toggle=()=>{const next={...pref,enabled:!pref.enabled};setPref(next);if(next.enabled)playSound(pref.selected);};
+ const[pref,setPref]=useState<SoundPrefs>(getSoundPrefs);
+ useEffect(()=>{const off=subscribeSoundPrefs(setPref);return off;},[]);
+ const pick=(id:string)=>{const sid=id as SoundPrefs["selected"];setSoundPrefs({selected:sid,enabled:sid==="none"?false:true});if(sid!=="none")previewSound(sid);};
+ const toggle=()=>{const next={...pref,enabled:!pref.enabled};setSoundPrefs(next);if(next.enabled&&pref.selected!=="none")previewSound(pref.selected);};
  return{pref,pick,toggle};
 }
 
-function SoundList({pref,onPick}:{pref:Pref;onPick:(id:string)=>void}){
+function SoundList({pref,onPick}:{pref:SoundPrefs;onPick:(id:string)=>void}){
  const[playing,setPlaying]=useState("");
  const pick=(id:string)=>{onPick(id);setPlaying(id);setTimeout(()=>setPlaying(""),1500);};
- return <div className="space-y-1">{sounds.map(s=>{const active=pref.selected===s.id&&pref.enabled;return <button key={s.id} type="button" onClick={()=>pick(s.id)} className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${active?"border-blue-400/40 bg-blue-50 text-blue-700":"border-transparent text-slate-600 hover:bg-slate-50"}`}><span className="text-sm leading-none">{s.icon}</span><span className="flex-1 truncate">{s.name}</span>{playing===s.id?<Loader2 className="size-3 shrink-0 animate-spin text-blue-500"/>:active?<span className="size-1.5 shrink-0 rounded-full bg-blue-600"/>:null}</button>})}</div>;
+ return <div className="space-y-1">{SALE_SOUNDS.map(s=>{const active=pref.selected===s.id&&pref.enabled;return <button key={s.id} type="button" onClick={()=>pick(s.id)} className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${active?"border-blue-400/40 bg-blue-50 text-blue-700":"border-transparent text-slate-600 hover:bg-slate-50"}`}><span className="text-sm leading-none">{s.icon}</span><span className="flex-1 truncate">{s.name}</span>{playing===s.id?<Loader2 className="size-3 shrink-0 animate-spin text-blue-500"/>:active?<span className="size-1.5 shrink-0 rounded-full bg-blue-600"/>:null}</button>})}</div>;
 }
 
 export function SoundSidebar(){
