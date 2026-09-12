@@ -424,6 +424,79 @@ export function AssinaturaClient() {
                 </button>
               </div>
             ) : payMethod === "pix" ? (
+              pixData ? (
+                <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-[#FF0030]/[.12] to-transparent p-4">
+                    <img
+                      src="https://i.imgur.com/yExNdU0.png"
+                      alt="Pix"
+                      className="h-8 w-auto object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400">
+                        {modalPlan.name} · Pix Automático
+                      </p>
+                      <b className="text-lg text-white">{brl(modalPlan.price)}</b>
+                    </div>
+                  </div>
+                  <div className="p-5 text-center">
+                    <b className="text-emerald-200">Escaneie o QR Code no app do banco</b>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Isso autoriza a recorrência mensal — as próximas cobranças debitam sozinhas.
+                    </p>
+                    <div className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3 shadow-[0_0_50px_-12px_rgba(52,211,153,.45)]">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(pixData.qrCode)}`}
+                        alt="QR Code Pix"
+                        width={220}
+                        height={220}
+                        className="size-[220px] rounded-lg"
+                      />
+                    </div>
+                    <p className="mt-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Chave Pix (copia e cola)
+                    </p>
+                    <p className="mt-1 max-h-24 overflow-y-auto break-all rounded-xl bg-black/50 p-3 text-left text-xs text-slate-300">
+                      {pixData.qrCode}
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(pixData.qrCode)}
+                        className="h-11 flex-1 rounded-xl bg-[#ff0030] text-sm font-semibold text-white transition hover:bg-[#d60029]"
+                      >
+                        Copiar chave Pix
+                      </button>
+                      {pixData.checkoutUrl ? (
+                        <a href={pixData.checkoutUrl} target="_blank" rel="noreferrer" className="grid h-11 flex-1 place-items-center rounded-xl border border-white/15 text-sm font-semibold hover:bg-white/5">
+                          Abrir checkout
+                        </a>
+                      ) : null}
+                    </div>
+                    {pixData.expirationDate ? (
+                      <p className="mt-2 text-xs text-slate-400">Expira em {new Date(pixData.expirationDate).toLocaleString("pt-BR")}</p>
+                    ) : null}
+                    <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-400">
+                      <Loader2 className="size-3.5 animate-spin" /> Aguardando autorização no app do banco...
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPixData(null)}
+                      className="mt-3 text-xs text-slate-500 underline underline-offset-4 hover:text-slate-300"
+                    >
+                      Voltar e corrigir dados
+                    </button>
+                    {payError ? (
+                      <p role="alert" className="mt-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
+                        {payError}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
               <form onSubmit={payPix} className="mt-6 space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block text-sm">
@@ -443,62 +516,29 @@ export function AssinaturaClient() {
                     <input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 13))} inputMode="tel" placeholder="11999999999" autoComplete="tel" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 outline-none placeholder:text-slate-600 focus:border-red-500/60" />
                   </label>
                 </div>
-                {!pixData ? (
-                  <>
-                    {payError ? (
-                      <p role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
-                        {payError}
-                      </p>
-                    ) : null}
-                    <button
-                      type="submit"
-                      disabled={paying}
-                      className="group flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#ff0030] text-[15px] font-semibold text-white transition hover:bg-[#d60029] disabled:opacity-60"
-                    >
-                      {paying ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Loader2 className="size-4 animate-spin" /> Gerando Pix...
-                        </span>
-                      ) : (
-                        <>Gerar Pix {brl(modalPlan.price)}</>
-                      )}
-                    </button>
-                    <p className="text-center text-[11px] text-slate-500">
-                      Pix Automático: você autoriza uma vez no app do banco e as próximas mensalidades debitam sozinhas.
-                    </p>
-                  </>
-                ) : (
-                  <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[.06] p-5 text-center">
-                    <b className="text-emerald-200">Escaneie para autorizar a recorrência</b>
-                    <p className="mt-1 break-all rounded-xl bg-black/50 p-3 text-left text-xs text-slate-300">{pixData.qrCode}</p>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => navigator.clipboard?.writeText(pixData.qrCode)}
-                        className="h-11 flex-1 rounded-xl border border-white/15 text-sm font-semibold hover:bg-white/5"
-                      >
-                        Copiar código
-                      </button>
-                      {pixData.checkoutUrl ? (
-                        <a href={pixData.checkoutUrl} target="_blank" rel="noreferrer" className="grid h-11 flex-1 place-items-center rounded-xl bg-white text-sm font-semibold text-black">
-                          Abrir checkout
-                        </a>
-                      ) : null}
-                    </div>
-                    {pixData.expirationDate ? (
-                      <p className="mt-2 text-xs text-slate-400">Expira em {new Date(pixData.expirationDate).toLocaleString("pt-BR")}</p>
-                    ) : null}
-                    <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-400">
-                      <Loader2 className="size-3.5 animate-spin" /> Aguardando autorização no app do banco...
-                    </p>
-                    {payError ? (
-                      <p role="alert" className="mt-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
-                        {payError}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
+                {payError ? (
+                  <p role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
+                    {payError}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={paying}
+                  className="group flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#ff0030] text-[15px] font-semibold text-white transition hover:bg-[#d60029] disabled:opacity-60"
+                >
+                  {paying ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="size-4 animate-spin" /> Gerando Pix...
+                    </span>
+                  ) : (
+                    <>Gerar Pix {brl(modalPlan.price)}</>
+                  )}
+                </button>
+                <p className="text-center text-[11px] text-slate-500">
+                  Pix Automático: você autoriza uma vez no app do banco e as próximas mensalidades debitam sozinhas.
+                </p>
               </form>
+              )
             ) : (
               <form onSubmit={pay} className="mt-6 space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
