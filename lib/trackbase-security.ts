@@ -505,3 +505,31 @@ export function logAdminAccess(event: string, detail: Record<string, unknown> = 
     }).catch(() => {});
   }
 }
+
+// ---------------------------------------------------------------------------
+// Subscription gate — true quando o usuário tem plano vigente (active ou
+// past_due, mesmo critério da tela de assinatura). Admin e identidades sem
+// sessão (ex.: header SIWC) passam direto para não travar o acesso.
+// Em falha de banco, libera (fail-open) para não trancar todo mundo.
+// ---------------------------------------------------------------------------
+export async function hasActivePlan(userId: string | null | undefined): Promise<boolean> {
+  if (!userId || userId === "trackbase-owner") return true;
+  try {
+    const { ensureDb, getDb } = await import("@/db");
+    const { planSubscriptions } = await import("@/db/schema");
+    const { desc, eq } = await import("drizzle-orm");
+    await ensureDb();
+    const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
+    const rows = await getDb()
+      .select({ status: planSubscriptions.status })
+      .from(planSubscriptions)
+      .where(eq(planSubscriptions.workspaceId, workspaceId))
+      .orderBy(desc(planSubscriptions.createdAt))
+      .limit(1);
+    const status = rows[0]?.status;
+    return status === "active" || status === "past_due";
+  } catch (error) {
+    console.error("plan gate lookup", error);
+    return true;
+  }
+}

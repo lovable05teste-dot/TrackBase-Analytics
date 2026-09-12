@@ -26,7 +26,7 @@ export default function Termos() {
           </section>
           <section>
             <h2 className="text-lg font-semibold text-white">2. Conta e acesso</h2>
-            <p className="mt-2">2.1. Para usar a plataforma você cria uma conta com e-mail, CPF e senha, ou entra com Google. 2.2. Você é responsável por manter sua senha em sigilo e por toda atividade feita na sua conta. 2.3. Contas com dados falsos ou uso fraudulento podem ser suspensas.</p>
+            <p className="mt-2">2.1. Para usar a plataforma você cria uma conta com e-mail, CPF e senha. 2.2. Você é responsável por manter sua senha em sigilo e por toda atividade feita na sua conta. 2.3. Contas com dados falsos ou uso fraudulento podem ser suspensas.</p>
           </section>
           <section>
             <h2 className="text-lg font-semibold text-white">3. Preço e cobrança</h2>

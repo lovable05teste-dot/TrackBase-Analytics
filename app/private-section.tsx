@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireChatGPTUser } from "./chatgpt-auth";
+import { getUserIdFromSessionCookie, hasActivePlan } from "@/lib/trackbase-security";
 import {ThemeToggle} from "./theme-toggle";
 import {NotificationsBell} from "./notifications-bell";
 import {SoundSidebar,SoundMobile} from "./sound-sidebar";
@@ -10,6 +13,9 @@ import {LayoutDashboard,PlugZap,BarChart3,ShoppingBag,BookOpen,Settings,FlaskCon
 const links=[[LayoutDashboard,"Dashboard","/"],[ShoppingBag,"Vendas","/vendas"],[BarChart3,"Campanhas","/campanhas"],[FlaskConical,"Meta Lab","/meta-lab"],[PlugZap,"Integrações","/integracoes"],[BookOpen,"Documentação","/docs"],[Settings,"Configurações","/configuracoes"]];
 export async function PrivateSection({title,description,children}:{title:string;description:string;children?:React.ReactNode}){
  await requireChatGPTUser("/");
+ const session=(await cookies()).get("tb_session")?.value;
+ const userId=await getUserIdFromSessionCookie(session);
+ if(userId&&!(await hasActivePlan(userId)))redirect("/planos");
  return <main className="min-h-screen bg-slate-50 text-slate-900 lg:pl-64">
   <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-card p-5 lg:block">
    <a href="/" className="flex items-center gap-3 border-b border-slate-200 pb-6"><img src="/ghostscale-logo.png" alt="GhostScale" className="h-11 w-auto max-w-[200px] object-contain"/></a>
