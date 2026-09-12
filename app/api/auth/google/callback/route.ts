@@ -1,12 +1,7 @@
 import { and, eq, gte } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { googleOauthStates, users } from "@/db/schema";
-import { sha256 } from "@/lib/trackbase-security";
-
-function sessionCookie(token: string){
-  const secure=process.env.SECURE_COOKIES==="true"||(!process.env.SECURE_COOKIES&&process.env.NODE_ENV==="production")?" Secure;":"";
-  return `tb_session=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=2592000`;
-}
+import { clientIpFromRequest, createSession, hashPassword, sessionCookie, sha256 } from "@/lib/trackbase-security";
 
 export async function GET(request:Request){
   const fail=(code:string)=>Response.redirect(new URL(`/login?erro=${code}`,request.url),302);
@@ -34,13 +29,17 @@ export async function GET(request:Request){
     const email=String(profile.email||"").trim().toLowerCase();
     if(!email)return fail("email");
     const [existing]=await db.select().from(users).where(eq(users.email,email)).limit(1);
-    let passwordHash:string;
-    if(existing){passwordHash=existing.passwordHash}
-    else{
-      passwordHash=await sha256(`google:${email}:${crypto.randomUUID()}`);
-      await db.insert(users).values({id:crypto.randomUUID(),email,passwordHash,createdAt:now});
+    let userId:string;
+    if(existing){
+      userId=existing.id;
+      // Conta Google = e-mail já verificado pelo Google.
+      if(!existing.emailVerifiedAt)await db.update(users).set({emailVerifiedAt:now}).where(eq(users.id,existing.id));
     }
-    const token=await sha256(`trackbase:${passwordHash}`);
+    else{
+      userId=crypto.randomUUID();
+      await db.insert(users).values({id:userId,email,passwordHash:await hashPassword(`google:${email}:${crypto.randomUUID()}`),createdAt:now,emailVerifiedAt:now});
+    }
+    const token=await createSession({userId,ip:clientIpFromRequest(request),userAgent:request.headers.get("user-agent")});
     return new Response(null,{status:302,headers:{location:new URL("/",request.url).toString(),"set-cookie":sessionCookie(token)}});
   }catch(error){
     console.error("Google OAuth callback",error);

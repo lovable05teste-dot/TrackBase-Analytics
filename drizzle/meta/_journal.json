@@ -29,6 +29,20 @@
       "when": 1788671968700,
       "tag": "0003_amazing_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789185824796,
+      "tag": "0004_goofy_stick",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789191866414,
+      "tag": "0005_mysterious_madame_hydra",
+      "breakpoints": true
     }
   ]
 }
