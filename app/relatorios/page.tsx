@@ -1,6 +1,5 @@
 import { AppShell } from "@/components/AppShell";
 import { brl, getEventTotals, getOrdersSummary, getProjectIds, getWorkspace, pct } from "@/lib/analytics";
-import { SoundNotifications } from "@/components/SoundNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +19,6 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
 
   return (
     <AppShell title="Relatórios" subtitle="Consolidado de eventos do tracker + pedidos dos gateways no período.">
-      <SoundNotifications />
       <div className="mb-4 flex gap-2">
         {[["last_7d", "7 dias"], ["last_30d", "30 dias"], ["all", "Tudo"]].map(([p, l]) => (
           <a key={p} href={`/relatorios?period=${p}`} className={`rounded-lg border px-3 py-2 text-sm ${period === p ? "border-violet-400/40 bg-violet-500/15 text-violet-200" : "border-white/10 text-slate-400 hover:bg-white/5"}`}>{l}</a>

@@ -5,7 +5,7 @@ import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
 import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
-import {getSoundPrefs,notifyApprovedSales,playFromWorker,previewSound,refreshSoundPrefs,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
+import {getSoundPrefs,playFromWorker,previewSound,refreshSoundPrefs,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -30,12 +30,11 @@ export function NotificationsBell(){
    const b=await r.json();const p=prefsRef.current;
    const list:Array<Order>=(b.orders||[]).filter((o:Order)=>o.status==="approved"?p.approved:o.status==="pending"?p.pending:false);
    if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return;}
-   const fresh=list.filter(o=>!known.current.has(o.id));
-   if(fresh.length){
-    const ids=fresh.map(o=>o.id);
-    notifyApprovedSales(ids);
-    known.current=new Set(list.map(o=>o.id));
-   }
+const fresh=list.filter(o=>!known.current.has(o.id));
+    if(fresh.length){
+     // Som + toast de venda aprovada são tratados pelo SoundNotifications (global, 5s).
+     known.current=new Set(list.map(o=>o.id));
+    }
    setOrders(list);
   }catch{}
  },[]);

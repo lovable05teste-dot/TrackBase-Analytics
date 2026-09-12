@@ -1,6 +1,8 @@
 import type { Metadata,Viewport } from "next";
 import "./globals.css";
 import {PwaRegister} from "./pwa-register";
+import {Toaster} from "@/components/ui/sonner";
+import {SoundNotifications} from "@/components/SoundNotifications";
 
 export const metadata: Metadata = {
   title: "GhostScale",
@@ -36,7 +38,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased"><PwaRegister/>{children}</body>
+      <body className="antialiased"><PwaRegister/><SoundNotifications/><Toaster position="bottom-right" richColors/>{children}</body>
     </html>
   );
 }

@@ -1,11 +1,12 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { BellOff, Play, Volume2, VolumeX } from "lucide-react";
+import { BellOff, BellRing, Play, Volume2, VolumeX } from "lucide-react";
 import { SALE_SOUNDS, type SoundPrefs } from "@/lib/sound-prefs";
 import {
   getSoundPrefs, isAudioBlocked, previewSound, refreshSoundPrefs,
   setSoundPrefs, subscribeAudioBlocked, subscribeSoundPrefs,
 } from "@/lib/sale-sounds";
+import { showSaleToast } from "@/lib/sales-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -31,20 +32,27 @@ export function SoundSettings() {
   return (
     <Card className="metric-card" id="som">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Volume2 className="size-5" />
-          Som de venda <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-normal text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">{SALE_SOUNDS.length} sons</span>
-        </CardTitle>
+<CardTitle className="flex items-center gap-2">
+        <Volume2 className="size-5" />
+        Notificações de venda <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-normal text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">{SALE_SOUNDS.length} sons</span>
+      </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm leading-6 text-slate-600">
-          O som escolhido toca quando uma venda aprovada chegar com o painel aberto. A escolha vale em qualquer dispositivo que você entrar.
+          Quando uma venda aprovada chegar com o painel aberto, o app avisa na tela e pode tocar um som. Som e aviso visual são independentes — escolha os dois aqui. A configuração vale em qualquer dispositivo que você entrar.
         </p>
         {blocked && pref.enabled && pref.selected !== "none" && (
           <p role="alert" className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3.5 py-2.5 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
             O navegador bloqueou o áudio antes do primeiro clique. Clique em Testar em qualquer som abaixo para ativar — depois disso as vendas tocam normalmente.
           </p>
         )}
+        <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+          <span className="inline-flex items-center gap-2">{pref.toast ? <BellRing className="size-4" /> : <BellOff className="size-4" />} Mostrar aviso na tela</span>
+          <Switch checked={pref.toast} onCheckedChange={(v) => setSoundPrefs({ toast: v })} />
+        </label>
+        <Button type="button" variant="outline" size="sm" onClick={() => showSaleToast({ value: 197.9, currency: "BRL", product: "Oferta GhostScale (exemplo)", campaign: "TESTE_TOAST", project: "Projeto demo" })}>
+          <Play className="size-3.5" /> Testar aviso
+        </Button>
         <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
           <span className="inline-flex items-center gap-2">{pref.enabled ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />} Som ligado</span>
           <Switch checked={pref.enabled} onCheckedChange={(v) => setSoundPrefs({ enabled: v })} />
@@ -81,7 +89,7 @@ export function SoundSettings() {
             className="w-full accent-blue-600" aria-label="Volume do som de venda"
           />
         </div>
-        <p className="text-xs text-slate-500">Arquivos leves em /sounds, pré-carregados após a página abrir. Contas novas começam no mudo — ative aqui quando quiser.</p>
+        <p className="text-xs text-slate-500">Arquivos de som leves em /sounds, pré-carregados após a página abrir. O aviso visual (toast) dura 5s e empilha quando várias vendas chegam juntas. Contas novas começam com toast ligado e som mudo — ative quando quiser.</p>
       </CardContent>
     </Card>
   );

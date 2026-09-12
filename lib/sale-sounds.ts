@@ -166,6 +166,8 @@ export function setSoundPrefs(patch:Partial<SoundPrefs>){
   selected:patch.selected!==undefined?patch.selected:prefs.selected,
   enabled:patch.enabled!==undefined?patch.enabled:prefs.enabled,
   volume:patch.volume!==undefined?Math.min(1,Math.max(0,patch.volume)):prefs.volume,
+  toast:patch.toast!==undefined?patch.toast:prefs.toast,
+  projects:patch.projects!==undefined?patch.projects:prefs.projects,
  };
  const muted=!next.enabled||next.selected==="none";
  prefs=next;persist();
