@@ -44,13 +44,23 @@ export function appBaseUrl(request?: Request) {
   return "https://app.local";
 }
 
+// Em falha, registra status + trecho da resposta do provedor (sem segredos)
+// para diagnosticar 4xx (ex.: domínio não verificado) direto no log.
+async function failureDetail(res: Response) {
+  try {
+    return `status ${res.status} ${(await res.text()).slice(0, 300)}`;
+  } catch {
+    return `status ${res.status}`;
+  }
+}
+
 async function sendViaResend(key: string, to: string, subject: string, text: string, html?: string) {
   const res = await fetch(RESEND_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
     body: JSON.stringify({ from: emailFrom(), to: [to], subject, text, ...(html ? { html } : {}) }),
   });
-  return res.ok ? null : `status ${res.status}`;
+  return res.ok ? null : await failureDetail(res);
 }
 
 async function sendViaMailerSend(key: string, to: string, subject: string, text: string, html?: string) {
@@ -66,7 +76,7 @@ async function sendViaMailerSend(key: string, to: string, subject: string, text:
       ...(html ? { html } : {}),
     }),
   });
-  return res.ok ? null : `status ${res.status}`;
+  return res.ok ? null : await failureDetail(res);
 }
 
 // Mensagem amigável para falhas de rede/timeout do provedor — nunca vazar
