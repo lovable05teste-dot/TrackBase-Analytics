@@ -1,8 +1,21 @@
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { apiCredentials, events, orders, projects } from "@/db/schema";
-import { decryptSecret } from "@/lib/trackbase-security";
+import { apiCredentials, projects } from "@/db/schema";
+import { decryptSecret, sha256 } from "@/lib/trackbase-security";
 import { parseTrackingConfig } from "@/lib/tracking-config";
+import {
+  alertUnknownStatus,
+  clientIpFromHeaders,
+  dispatchCapi,
+  drainCapiOutbox,
+  enqueueCapiOutbox,
+  eventIdFor,
+  eventNameFor,
+  insertEventOnce,
+  pick,
+  resolveStatus,
+  upsertOrder,
+} from "@/lib/sale-ingest";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -14,56 +27,20 @@ export function OPTIONS() {
   return new Response(null, { status: 204, headers: cors });
 }
 
-function pick(source: Record<string, unknown>, paths: string[]) {
-  for (const path of paths) {
-    let value: unknown = source;
-    for (const key of path.split(".")) {
-      value = value && typeof value === "object" ? (value as Record<string, unknown>)[key] : undefined;
-    }
-    if (value !== undefined && value !== null && value !== "") return value;
-  }
-}
-
-function statusOf(value: unknown) {
-  const s = String(value || "pending").toLowerCase();
-  if (/approved|paid|completed|succeeded|success|aprovad|pago/.test(s)) return "approved";
-  if (/refund|reembols|estorn/.test(s)) return "refunded";
-  if (/chargeback|contestad/.test(s)) return "chargeback";
-  if (/cancel|failed|recusad|expired/.test(s)) return "cancelled";
-  return "pending";
-}
-
-async function hash(value: unknown, phone = false) {
+async function hashContact(value: unknown, phone = false) {
   const raw = String(value || "").trim().toLocaleLowerCase();
   const normalized = phone ? raw.replace(/\D/g, "") : raw.replace(/\s+/g, "");
   if (!normalized) return undefined;
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
-  return Array.from(new Uint8Array(bytes)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return sha256(normalized);
 }
 
-function clientIp(request: Request, mode: "auto" | "ipv4" | "disabled") {
-  if (mode === "disabled") return undefined;
-  const values = (request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "")
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-  return mode === "ipv4" ? values.find((v) => /^\d{1,3}(\.\d{1,3}){3}$/.test(v)) : values[0];
-}
-
-async function verifyUtmifySignature(request: Request, secret: string): Promise<boolean> {
+async function verifyUtmifySignature(request: Request, rawBody: string, secret: string): Promise<boolean> {
   const signature = request.headers.get("x-utmify-signature") || "";
   if (!signature) return false;
-  const body = await request.text();
   const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sigBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-  const expected = Array.from(new Uint8Array(sigBytes)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sigBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
+  const expected = Array.from(new Uint8Array(sigBytes)).map(b => b.toString(16).padStart(2, "0")).join("");
   return signature === expected;
 }
 
@@ -78,27 +55,33 @@ export async function POST(request: Request) {
     const [credential] = await getDb()
       .select()
       .from(apiCredentials)
-      .where(eq(apiCredentials.tokenHash, (await hash(token)) ?? ""))
+      .where(eq(apiCredentials.tokenHash, (await hashContact(token)) ?? ""))
       .limit(1);
 
     if (!credential || !credential.active) {
       return Response.json({ error: "Credencial inválida" }, { status: 401, headers: cors });
     }
 
-    const body = (await request.json()) as Record<string, unknown>;
+    // Lê o corpo UMA vez: o HMAC precisa do raw e o parse do objeto.
+    const rawBody = await request.text();
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(rawBody) as Record<string, unknown>;
+    } catch {
+      return Response.json({ error: "JSON inválido" }, { status: 400, headers: cors });
+    }
 
+    // HMAC só quando configurado (nunca rejeita legítimo sem secret).
     const utmifySecret = process.env.UTMIFY_WEBHOOK_SECRET;
-    if (utmifySecret && !(await verifyUtmifySignature(request, utmifySecret))) {
+    if (utmifySecret && !(await verifyUtmifySignature(request, rawBody, utmifySecret))) {
       return Response.json({ error: "Assinatura inválida" }, { status: 401, headers: cors });
     }
 
-    const externalId = String(
-      pick(body, ["id", "transaction_id", "sale_id", "data.id", "data.transaction.id", "order_id"]) ||
-        crypto.randomUUID()
-    );
-
+    const externalId = String(pick(body, ["id", "transaction_id", "sale_id", "data.id", "data.transaction.id", "order_id"]) || crypto.randomUUID());
     const rawStatus = pick(body, ["status", "event", "type", "data.status", "data.transaction.status", "order.status"]);
-    const status = statusOf(rawStatus);
+    // Status inédito vira pendente + alerta (nunca descarta a venda).
+    const { status, known } = resolveStatus(rawStatus);
+    if (!known) await alertUnknownStatus(credential.workspaceId, "utmify", externalId, rawStatus);
 
     const centsValue = pick(body, ["amount_cents", "amountCents", "data.amount_cents", "data.transaction.amount_cents", "order.total_cents"]);
     const rawValue = pick(body, ["value", "amount", "total", "price", "data.value", "data.amount", "data.transaction.amount", "order.total"]);
@@ -109,59 +92,71 @@ export async function POST(request: Request) {
     }
 
     const currency = String(pick(body, ["currency", "data.currency", "data.transaction.currency"]) || "BRL").toUpperCase();
-
-    const eventId = String(
-      pick(body, ["event_id", "eventId", "tracking.event_id", "metadata.event_id", "data.event_id"]) ||
-        (status === "approved" ? `purchase_${externalId}` : `utmify_${credential.provider}_${externalId}_${status}`)
+    const eventId = eventIdFor(
+      pick(body, ["event_id", "eventId", "tracking.event_id", "metadata.event_id", "data.event_id"]),
+      "utmify",
+      externalId,
+      status,
     );
 
     const now = Math.floor(Date.now() / 1000);
     const db = getDb();
+    const utmOf = (k: string) => {
+      const v = String(pick(body, [k, `tracking.${k}`, `metadata.${k}`, `data.tracking.${k}`]) || "").trim();
+      return v || null;
+    };
 
-    await db.insert(orders).values({
-      id: crypto.randomUUID(),
+    // Dedup: redelivery do mesmo status = 200 sem reinserir nem re-disparar.
+    const { dedup, prevStatus } = await upsertOrder(db, {
       projectId: credential.projectId,
       externalId,
       provider: "utmify",
       status,
       value,
       currency,
+      utmCampaign: utmOf("utm_campaign"),
+      utmSource: utmOf("utm_source"),
+      utmMedium: utmOf("utm_medium"),
+      utmContent: utmOf("utm_content"),
+      utmTerm: utmOf("utm_term"),
       eventId,
-      createdAt: now,
-      updatedAt: now,
-    }).onConflictDoUpdate({
-      target: [orders.provider, orders.externalId],
-      set: { status, value, currency, eventId, updatedAt: now },
     });
-
-    const eventName = status === "approved" ? "Purchase" : status === "pending" ? "PaymentPending" : status === "refunded" ? "Refund" : status === "chargeback" ? "Chargeback" : "PaymentCancelled";
+    const eventName = eventNameFor(status);
+    if (dedup) {
+      await drainCapiOutbox(db, { workspaceId: credential.workspaceId, limit: 3 });
+      return Response.json({ received: true, orderId: externalId, status, event: eventName, dedup: true }, { headers: cors });
+    }
 
     const fbc = String(pick(body, ["fbc", "tracking.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
     const fbp = String(pick(body, ["fbp", "tracking.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
     const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
 
-    await db.insert(events).values({
-      id: crypto.randomUUID(),
-      projectId: credential.projectId,
-      eventId,
-      eventName,
-      source: "utmify",
-      occurredAt: now,
-      value,
-      currency,
-      payload: JSON.stringify(body),
-      visitorId: String(pick(body, ["tb_vid", "tracking.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || ""),
-      fbclid,
-      fbc,
-      fbp,
-      utmSource: String(pick(body, ["utm_source", "tracking.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || ""),
-      utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
-      utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
-      utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),
-      utmTerm: String(pick(body, ["utm_term", "tracking.utm_term", "metadata.utm_term", "data.tracking.utm_term"]) || ""),
-    }).onConflictDoNothing();
+    const eventCreated = await insertEventOnce(
+      db,
+      {
+        projectId: credential.projectId,
+        eventId,
+        eventName,
+        occurredAt: now,
+        value,
+        currency,
+        visitorId: String(pick(body, ["tb_vid", "tracking.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || ""),
+        fbclid,
+        fbc,
+        fbp,
+        utmSource: String(pick(body, ["utm_source", "tracking.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || ""),
+        utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
+        utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
+        utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),
+        utmTerm: String(pick(body, ["utm_term", "tracking.utm_term", "metadata.utm_term", "data.tracking.utm_term"]) || ""),
+        payload: JSON.stringify(body),
+      },
+      "utmify",
+    );
 
-    if (status === "approved") {
+    // CAPI só em criação ou transição PARA approved, e só se ESTA chamada
+    // criou o evento. Falha → outbox (nunca perde p/ a Meta).
+    if (status === "approved" && prevStatus !== "approved" && eventCreated) {
       const [project] = await db.select().from(projects).where(eq(projects.id, credential.projectId)).limit(1);
       if (project?.pixelId && project.metaTokenCipher && project.metaTokenIv) {
         try {
@@ -170,7 +165,7 @@ export async function POST(request: Request) {
           const email = pick(body, ["email", "customer.email", "data.customer.email", "buyer.email", "customer_email"]);
           const phone = pick(body, ["phone", "customer.phone", "data.customer.phone", "buyer.phone", "customer_phone"]);
           const sourceUrl = String(pick(body, ["url", "checkout_url", "tracking.url", "metadata.url"]) || "");
-          const capi:{data:unknown[];test_event_code?:string} = {
+          const capi: { data: unknown[]; test_event_code?: string } = {
             data: [
               {
                 event_name: "Purchase",
@@ -179,10 +174,10 @@ export async function POST(request: Request) {
                 action_source: "website",
                 event_source_url: sourceUrl || undefined,
                 user_data: {
-                  client_ip_address: clientIp(request, config.ipMode),
+                  client_ip_address: clientIpFromHeaders(request.headers, config.ipMode),
                   client_user_agent: request.headers.get("user-agent") || undefined,
-                  em: await hash(email),
-                  ph: await hash(phone, true),
+                  em: await hashContact(email),
+                  ph: await hashContact(phone, true),
                   fbc: fbc || undefined,
                   fbp: fbp || undefined,
                 },
@@ -195,11 +190,9 @@ export async function POST(request: Request) {
             ],
           };
           if (project.metaTestCode) capi.test_event_code = project.metaTestCode;
-          await fetch(`https://graph.facebook.com/v25.0/${project.pixelId}/events?access_token=${encodeURIComponent(accessToken)}`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(capi),
-          });
+          const sent = await dispatchCapi(project.pixelId, accessToken, capi);
+          if (!sent.ok)
+            await enqueueCapiOutbox(db, { workspaceId: credential.workspaceId, projectId: credential.projectId, pixelId: project.pixelId, eventName, eventId, payload: capi });
         } catch (error) {
           console.error("Utmify CAPI", error);
         }
@@ -207,7 +200,7 @@ export async function POST(request: Request) {
     }
 
     await db.update(apiCredentials).set({ lastUsedAt: new Date().toISOString() }).where(eq(apiCredentials.id, credential.id));
-
+    await drainCapiOutbox(db, { workspaceId: credential.workspaceId, limit: 3 });
     return Response.json({ received: true, orderId: externalId, status, event: eventName }, { headers: cors });
   } catch (error) {
     console.error("Utmify webhook error", error);

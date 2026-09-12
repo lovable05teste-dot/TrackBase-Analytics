@@ -57,11 +57,20 @@ async function runDigest(){
  return {digests:out.length,results:out};
 }
 
+async function runCapiDrain(){
+ await ensureDb();
+ const db=getDb();
+ const {resetStaleOutbox,drainCapiOutbox}=await import("@/lib/sale-ingest");
+ await resetStaleOutbox(db);
+ return drainCapiOutbox(db,{limit:50});
+}
+
 export async function GET(request:Request){
  if(!authorized(request))return Response.json({error:"Não autorizado."},{status:401});
  const task=new URL(request.url).searchParams.get("task")||"rules";
  try{
   if(task==="digest")return Response.json({ok:true,...await runDigest()});
+  if(task==="capi")return Response.json({ok:true,...await runCapiDrain()});
   return Response.json({ok:true,...await runRules()});
  }catch(e){console.error("cron meta",e);return Response.json({error:e instanceof Error?e.message:"Falha no cron."},{status:500})}
 }

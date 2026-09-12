@@ -50,6 +50,13 @@
       "when": 1789194570608,
       "tag": "0006_nice_justin_hammer",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789238001643,
+      "tag": "0007_charming_jack_power",
+      "breakpoints": true
     }
   ]
 }

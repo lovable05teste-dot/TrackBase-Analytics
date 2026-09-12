@@ -25,7 +25,27 @@ interface ExecutionContext {
 // dangerouslyAllowSVG: true in next.config.js and uncomment below:
 // const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
+// Dreno rápido do outbox de CAPI (~1min). Ativação OPCIONAL: configure
+// `[triggers] crons = ["* * * * *"]` + secrets APP_URL/CRON_SECRET no Worker.
+// Sem isso é no-op — o piggyback dos webhooks + cron diário já cobrem.
+// Docs: https://developers.cloudflare.com/workers/configuration/cron-triggers/
+async function drainCapiOutboxScheduled(env: Env) {
+  try {
+    const runtime = env as unknown as Record<string, string | undefined>;
+    const base = (runtime.APP_URL || "").replace(/\/+$/, "");
+    const secret = runtime.CRON_SECRET || "";
+    if (!base || !secret) return;
+    const res = await fetch(`${base}/api/cron/meta?task=capi`, { headers: { authorization: `Bearer ${secret}` } });
+    if (!res.ok) console.error("capi drain scheduled", res.status);
+  } catch (error) {
+    console.error("capi drain scheduled", error);
+  }
+}
+
 const worker = {
+  async scheduled(_event: unknown, env: Env, _ctx: ExecutionContext): Promise<void> {
+    await drainCapiOutboxScheduled(env);
+  },
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
