@@ -33,6 +33,13 @@ export function randomToken(bytes = 32) {
   return bytesToB64Url(crypto.getRandomValues(new Uint8Array(bytes)));
 }
 
+/** Código numérico de 6 dígitos ("042817") — WebCrypto, zero à esquerda ok. */
+export function generateNumericCode() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return String(buf[0] % 1000000).padStart(6, "0");
+}
+
 // ---------------------------------------------------------------------------
 // Password hashing (PBKDF2-SHA256 via WebCrypto — portable to Workers/Node).
 // Legacy unsalted SHA-256 hashes are still *verified* for migration, then
@@ -88,6 +95,7 @@ export function passwordPolicyError(password: string) {
   if (password.length > 128) return "A senha precisa de no máximo 128 caracteres.";
   if (COMMON_PASSWORDS.has(password.toLowerCase())) return "Essa senha é muito comum. Escolha outra mais forte.";
   if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return "Use letras e números na senha.";
+  if (!/[A-Z]/.test(password)) return "Use ao menos uma letra maiúscula.";
   return null;
 }
 

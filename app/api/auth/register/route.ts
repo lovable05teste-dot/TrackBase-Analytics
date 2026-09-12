@@ -1,6 +1,6 @@
 import { eq, or } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { emailVerifications, users } from "@/db/schema";
+import { users } from "@/db/schema";
 import {
   clientIpFromRequest,
   createSession,
@@ -10,8 +10,6 @@ import {
   logLoginAttempt,
   passwordPolicyError,
   sessionCookie,
-  sha256,
-  randomToken,
 } from "@/lib/trackbase-security";
 import { stripCpf, validateCpf } from "@/lib/cpf";
 
@@ -46,22 +44,8 @@ export async function POST(request: Request) {
     const id = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
     await db.insert(users).values({ id, email, name, cpf, passwordHash, createdAt: now });
-    // Token de verificação de e-mail (24h, uso único) + envio imediato.
-    try {
-      const verifyToken = randomToken();
-      await db.insert(emailVerifications).values({
-        id: crypto.randomUUID(),
-        userId: id,
-        tokenHash: await sha256(verifyToken),
-        expiresAt: now + 24 * 3600,
-        createdAt: now,
-      });
-      const { appBaseUrl, sendEmail, verifyEmailMessage } = await import("@/lib/email");
-      const msg = verifyEmailMessage(`${appBaseUrl(request)}/verificar-email?token=${encodeURIComponent(verifyToken)}`);
-      await sendEmail(email, msg.subject, msg.text);
-    } catch (error) {
-      console.error("email verification seed", error);
-    }
+    // A confirmação de e-mail usa código de 6 dígitos (tela /verificar-codigo),
+    // solicitado pelo frontend logo após este retorno.
     await logLoginAttempt(email, ip, true);
     const token = await createSession({ userId: id, ip, userAgent: request.headers.get("user-agent") });
     return Response.json({ ok: true }, { headers: { "set-cookie": sessionCookie(token) } });
