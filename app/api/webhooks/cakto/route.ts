@@ -74,8 +74,23 @@ async function handleOrderEvent(event: string, data: OrderData) {
     const workspaceId = "ws_" + (await sha256(user.id)).slice(0, 24);
     const orderId = typeof data.id === "string" ? data.id : crypto.randomUUID();
     const existing = await db.select().from(planSubscriptions).where(eq(planSubscriptions.workspaceId, workspaceId));
-    const already = existing.some((r) => r.caktoOrderId === orderId || r.status === "active");
-    if (already) return;
+    const pendingSameOrder = existing.find((r) => r.caktoOrderId === orderId);
+    if (pendingSameOrder) {
+      // Pix Automático aprovado: pendente (past_due) vira ativa
+      await db
+        .update(planSubscriptions)
+        .set({
+          status: "active",
+          plan,
+          caktoOfferId: offerId,
+          ...(subId ? { caktoSubscriptionId: subId } : {}),
+          updatedAt: now,
+        })
+        .where(eq(planSubscriptions.id, pendingSameOrder.id));
+      return;
+    }
+    const alreadyActive = existing.some((r) => r.status === "active");
+    if (alreadyActive) return;
     for (const p of existing) {
       if (p.status === "active" || p.status === "past_due")
         await db.update(planSubscriptions).set({ status: "replaced", updatedAt: now }).where(eq(planSubscriptions.id, p.id));
