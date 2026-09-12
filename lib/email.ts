@@ -22,6 +22,9 @@ export function emailConfigured() {
 }
 
 export function emailFrom() {
+  const name = (process.env.MAIL_FROM_NAME || "").trim();
+  const address = (process.env.MAIL_FROM_ADDRESS || "").trim();
+  if (address) return name ? `${name} <${address}>` : address;
   return (process.env.EMAIL_FROM || "GhostScale <no-reply@ghostscale.app>").trim();
 }
 

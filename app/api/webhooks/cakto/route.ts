@@ -59,12 +59,16 @@ async function handleOrderEvent(event: string, data: OrderData) {
       await db.update(planSubscriptions).set({ status: "past_due", updatedAt: now }).where(eq(planSubscriptions.id, row.id));
     } else if (event === "subscription_paused") {
       await db.update(planSubscriptions).set({ status: "paused", updatedAt: now }).where(eq(planSubscriptions.id, row.id));
-    } else if (event === "refund" || event === "chargeback") {
+    } else if (event === "refund" || event === "chargeback" || event === "purchase_refused") {
       await db.update(planSubscriptions).set({ status: "canceled", updatedAt: now }).where(eq(planSubscriptions.id, row.id));
     }
     return;
   }
 
+  // Acesso SÓ com pagamento confirmado: evento purchase_approved + status paid.
+  // pix_gerado/boleto_gerado (waiting_payment) e qualquer outro status caem aqui e não liberam nada.
+  const paidStatus = typeof data.status === "string" ? data.status.trim().toLowerCase() : "";
+  if (event === "purchase_approved" && paidStatus !== "paid") return;
   if (event === "purchase_approved" && offerId && ourOfferIds().has(offerId)) {
     const email = typeof data.customer?.email === "string" ? data.customer.email.trim().toLowerCase() : "";
     const plan = planOfOffer(offerId);

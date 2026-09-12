@@ -128,13 +128,13 @@ export const PENDING_2FA_TTL_SECONDS = 600;
 
 export function sessionCookie(token: string, maxAge = SESSION_TTL_SECONDS) {
   const secure = process.env.SECURE_COOKIES === "true" || (!process.env.SECURE_COOKIES && process.env.NODE_ENV === "production") ? " Secure;" : "";
-  // SameSite=Lax (not Strict): OAuth callbacks are top-level GET navigations
-  // and would lose the session under Strict.
-  return `tb_session=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
+  // SameSite=Strict: sem OAuth social, não há mais navegação GET cross-site
+  // que precise carregar a sessão; Strict bloqueia CSRF por construção.
+  return `tb_session=${token}; Path=/; HttpOnly;${secure} SameSite=Strict; Max-Age=${maxAge}`;
 }
 
 export function clearSessionCookie() {
-  return "tb_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
+  return "tb_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0";
 }
 
 type SessionRow = {
@@ -507,9 +507,9 @@ export function logAdminAccess(event: string, detail: Record<string, unknown> = 
 }
 
 // ---------------------------------------------------------------------------
-// Subscription gate — true quando o usuário tem plano vigente (active ou
-// past_due, mesmo critério da tela de assinatura). Admin e identidades sem
-// sessão (ex.: header SIWC) passam direto para não travar o acesso.
+// Subscription gate — true SOMENTE com plano "active" (past_due, pausado ou
+// cancelado não contam: sem pagamento confirmado, sem acesso).
+// Admin e identidades sem sessão passam direto para não travar o acesso.
 // Em falha de banco, libera (fail-open) para não trancar todo mundo.
 // ---------------------------------------------------------------------------
 export async function hasActivePlan(userId: string | null | undefined): Promise<boolean> {
@@ -526,8 +526,7 @@ export async function hasActivePlan(userId: string | null | undefined): Promise<
       .where(eq(planSubscriptions.workspaceId, workspaceId))
       .orderBy(desc(planSubscriptions.createdAt))
       .limit(1);
-    const status = rows[0]?.status;
-    return status === "active" || status === "past_due";
+    return rows[0]?.status === "active";
   } catch (error) {
     console.error("plan gate lookup", error);
     return true;

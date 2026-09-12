@@ -1,5 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { formatCpf, stripCpf, validateCpf } from "@/lib/cpf";
@@ -63,6 +64,16 @@ const statusLabel: Record<string, string> = {
 };
 
 export function AssinaturaClient() {
+  const pathname = usePathname();
+  const isPlanoRoute = pathname === "/planos";
+  function enterVitrine() {
+    try {
+      document.cookie = "gs_vitrine=1; Path=/; Max-Age=2592000; SameSite=Lax";
+    } catch {
+      /* sem cookie, só navega */
+    }
+    location.href = "/";
+  }
   const [plans, setPlans] = useState<Plan[]>([]);
   const [sub, setSub] = useState<Subscription>(null);
   const [sdkOk, setSdkOk] = useState(false);
@@ -276,6 +287,17 @@ export function AssinaturaClient() {
 
   return (
     <AppShell title="Assinatura" subtitle="Base mensal + R$ 0,10 por venda aprovada excedente. Black é ilimitado.">
+      {isPlanoRoute ? (
+        <button
+          type="button"
+          onClick={enterVitrine}
+          aria-label="Fechar e ver o painel"
+          title="Ver o painel"
+          className="fixed right-4 top-4 z-50 grid size-10 place-items-center rounded-full border border-white/15 bg-black/60 text-slate-300 backdrop-blur transition hover:bg-white/10 hover:text-white"
+        >
+          <X className="size-5" />
+        </button>
+      ) : null}
       {loadError ? (
         <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-300">
           {loadError}{" "}
