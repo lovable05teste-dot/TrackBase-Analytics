@@ -19,7 +19,7 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <main className="min-h-screen bg-background text-foreground transition-colors">
-      <aside className="fixed inset-y-0 hidden w-72 border-r border-border bg-card p-5 transition-colors lg:block">
+      <aside className="fixed inset-y-0 hidden w-72 flex-col border-r border-border bg-card p-5 transition-colors lg:flex">
         <AppSidebar />
       </aside>
 

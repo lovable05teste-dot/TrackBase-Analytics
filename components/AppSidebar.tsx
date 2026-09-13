@@ -20,11 +20,11 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   });
   const { plan, loaded: planLoaded } = usePlan();
   return (
-    <div className="flex h-full flex-col w-64 lg:w-auto border-r lg:w-full lg:border-0 bg-card lg:bg-transparent">
+    <div className="flex min-h-0 flex-1 flex-col">
       <a href="/" className="flex items-center gap-3 px-2 py-2 mb-6">
         <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[160px] shrink-0 object-contain" />
       </a>
-      <nav className="mt-6 flex-1 space-y-5 overflow-y-auto pb-4 flex-1">
+      <nav className="mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pb-4 pr-1">
         {NAV_GROUPS.map((g) => {
           const expanded = open[g.title] ?? true;
           return (
@@ -70,7 +70,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="mt-4 w-full">
+      <div className="mt-4 w-full shrink-0">
         <a href="/planos" className="w-full rounded-lg bg-violet-600 px-3 py-2 text-center text-xs font-medium text-white hover:bg-violet-500">
           Ver planos
         </a>
