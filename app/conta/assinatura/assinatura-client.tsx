@@ -1,13 +1,11 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { ArrowRight, Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { formatCpf, stripCpf, validateCpf } from "@/lib/cpf";
 
-type Plan = { id: string; name: string; price: number; priceLabel: string; limits: { projects: number; sales: number; members: number; workspaces: number }; highlights: string[]; badge?: string; configured: boolean };
-type Subscription = { plan: string; planVersion?: number | null; status: string; amount: string | null; currentPeriodStart: number | null; currentPeriodEnd: number | null; cancelAtPeriodEnd?: boolean; excessEnabled?: boolean; excessCap?: number | null; scheduledPlan?: string | null } | null;
-type Usage = { count: number; limit: number; pct: number; remaining: number } | null;
+type Plan = { id: string; name: string; price: number; priceLabel: string; sales: number | null; feats: string[]; hot?: boolean; configured: boolean };
+type Subscription = { plan: string; status: string; amount: string | null; currentPeriodEnd: number | null } | null;
 
 declare global {
   interface Window {
@@ -65,26 +63,14 @@ const statusLabel: Record<string, string> = {
 };
 
 export function AssinaturaClient() {
-  const pathname = usePathname();
-  const isPlanoRoute = pathname === "/planos";
-  function enterVitrine() {
-    try {
-      document.cookie = "gs_vitrine=1; Path=/; Max-Age=2592000; SameSite=Lax";
-    } catch {
-      /* sem cookie, só navega */
-    }
-    location.href = "/";
-  }
   const [plans, setPlans] = useState<Plan[]>([]);
   const [sub, setSub] = useState<Subscription>(null);
-  const [usage, setUsage] = useState<Usage>(null);
   const [sdkOk, setSdkOk] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalPlan, setModalPlan] = useState<Plan | null>(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
   const [payOk, setPayOk] = useState(false);
-  const [canceling, setCanceling] = useState(false);
   const [sdk, setSdk] = useState<CaktoSdk | null>(null);
 
   const [name, setName] = useState("");
@@ -108,7 +94,6 @@ export function AssinaturaClient() {
       if (!r.ok) throw new Error(b.error || "Falha ao carregar assinatura.");
       setPlans(b.plans || []);
       setSub(b.subscription || null);
-      setUsage(b.usage || null);
       setSdkOk(!!b.sdkClientId);
       setLoadError("");
     } catch (e) {
@@ -119,7 +104,9 @@ export function AssinaturaClient() {
   }
 
   useEffect(() => {
-    load();
+    // Busca inicial ao montar (load também é reusado em botões/retry).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
   }, []);
 
   useEffect(() => {
@@ -259,24 +246,6 @@ export function AssinaturaClient() {
     }
   }
 
-  const [confirmCancel, setConfirmCancel] = useState(false);
-
-  async function cancel() {
-    if (!confirmCancel) { setConfirmCancel(true); return; }
-    setCanceling(true);
-    try {
-      const r = await fetch("/api/billing/cakto/cancel", { method: "POST" });
-      const b = await r.json();
-      if (!r.ok) throw new Error(b.error || "Não foi possível cancelar.");
-      setConfirmCancel(false);
-      await load();
-    } catch (err) {
-      setPayError(err instanceof Error ? err.message : "Não foi possível cancelar.");
-    } finally {
-      setCanceling(false);
-    }
-  }
-
   if (loading) {
     return (
       <AppShell title="Assinatura" subtitle="Carregando planos...">
@@ -289,18 +258,7 @@ export function AssinaturaClient() {
   const activePlanName = plans.find((p) => p.id === activePlan?.plan)?.name || activePlan?.plan || "";
 
   return (
-    <AppShell title="Assinatura" subtitle="Escolha o plano que acompanha seu volume. Excedente R$ 0,10/venda só com aceite explícito (desativado por padrão).">
-      {isPlanoRoute ? (
-        <button
-          type="button"
-          onClick={enterVitrine}
-          aria-label="Fechar e ver o painel"
-          title="Ver o painel"
-          className="fixed right-4 top-4 z-50 grid size-10 place-items-center rounded-full border border-white/15 bg-black/60 text-slate-300 backdrop-blur transition hover:bg-white/10 hover:text-white"
-        >
-          <X className="size-5" />
-        </button>
-      ) : null}
+    <AppShell title="Assinatura" subtitle="Base mensal + R$ 0,10 por venda aprovada excedente. Black é ilimitado.">
       {loadError ? (
         <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-300">
           {loadError}{" "}
@@ -310,36 +268,17 @@ export function AssinaturaClient() {
         </p>
       ) : null}
       {activePlan ? (
-        <div className="mb-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[.06] p-4">
-            <div>
-              <b className="text-emerald-700 dark:text-emerald-300">
-                Plano {activePlanName} {sub?.planVersion ? `· v${sub.planVersion}` : ""} · {statusLabel[activePlan.status] || activePlan.status}
-                {sub?.cancelAtPeriodEnd ? " · cancela no fim do ciclo" : ""}
-                {sub?.scheduledPlan ? ` · downgrade para ${sub.scheduledPlan} no próximo ciclo` : ""}
-              </b>
-              <p className="mt-1 text-sm text-slate-500">
-                {activePlan.currentPeriodEnd
-                  ? `Período atual até ${new Date(activePlan.currentPeriodEnd * 1000).toLocaleDateString("pt-BR")}`
-                  : "Assinatura ativa"}
-                {sub?.excessEnabled ? ` · excedente até R$ ${((sub.excessCap ?? 0) / 100).toFixed(2)}` : " · excedente desativado"}
-              </p>
-            </div>
-            <button
-              onClick={cancel}
-              disabled={canceling}
-              className={`rounded-lg border px-4 py-2 text-sm transition disabled:opacity-60 ${confirmCancel ? "border-red-500 bg-red-500 text-white hover:bg-red-600" : "border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"}`}
-            >
-              {canceling ? "Cancelando..." : confirmCancel ? "Clique de novo para confirmar" : "Cancelar ao fim do ciclo"}
-            </button>
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[.06] p-4">
+          <div>
+            <b className="text-emerald-700 dark:text-emerald-300">
+              Plano {activePlanName} · {statusLabel[activePlan.status] || activePlan.status}
+            </b>
+            <p className="mt-1 text-sm text-slate-500">
+              {activePlan.currentPeriodEnd
+                ? `Próxima cobrança em ${new Date(activePlan.currentPeriodEnd * 1000).toLocaleDateString("pt-BR")}`
+                : "Assinatura ativa"}
+            </p>
           </div>
-          {usage ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[.03]">
-              <div className="flex items-center justify-between text-sm"><b>Vendas no ciclo</b><span className="tabular-nums text-slate-500">{usage.count} / {usage.limit} · {usage.pct}%</span></div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"><div className={`h-full ${usage.pct >= 100 ? "bg-red-500" : usage.pct >= 90 ? "bg-amber-500" : usage.pct >= 80 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, usage.pct)}%` }} /></div>
-              {usage.pct >= 80 ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{usage.pct >= 100 ? "Franquia atingida — novas vendas ficam aguardando regularização (sem perda). Faça upgrade." : usage.pct >= 90 ? "90% da franquia — considere upgrade." : "80% da franquia — acompanhe seu consumo."}</p> : null}
-            </div>
-          ) : null}
         </div>
       ) : (
         <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-200">
@@ -351,20 +290,17 @@ export function AssinaturaClient() {
         {plans.map((p) => {
           const isCurrent = activePlan?.plan === p.id;
           const canPay = p.configured && sdkOk;
-          const isRecommended = p.badge?.toLowerCase().includes("recomendado");
           return (
-            <div key={p.id} className={`metric-card rounded-xl p-6 ${isRecommended ? "border-violet-400/40" : ""}`}>
-              {p.badge ? (
-                <span className={`mb-3 inline-block rounded-full px-3 py-1 text-xs ${isRecommended ? "bg-violet-600 text-white" : "bg-violet-500/20 text-violet-700 dark:text-violet-200"}`}>
-                  {p.badge}
+            <div key={p.id} className={`metric-card rounded-xl p-6 ${p.hot ? "border-violet-400/40" : ""}`}>
+              {p.hot ? (
+                <span className="mb-3 inline-block rounded-full bg-violet-500/20 px-3 py-1 text-xs text-violet-700 dark:text-violet-200">
+                  Mais popular
                 </span>
               ) : null}
-              <h3 className="text-lg font-semibold">{p.name}{p.id === "scale" ? " · mais completo" : ""}</h3>
+              <h3 className="text-lg font-semibold">{p.name}</h3>
               <p className="mt-1 text-2xl font-bold text-violet-700 dark:text-violet-200">{p.priceLabel}</p>
-              <p className="mt-1 text-xs text-slate-500">{p.limits.projects} projetos · {p.limits.sales} vendas/ciclo · {p.limits.members} membro(s){p.limits.members > 1 ? "" : ""}</p>
-              <p className="mt-1 text-[11px] text-slate-400">Anti-Clone incluso{p.id !== "start" ? " · franquias maiores" : ""} · excedente só com aceite</p>
               <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                {p.highlights.map((f) => (
+                {p.feats.map((f) => (
                   <li key={f} className="flex items-start gap-2">
                     <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" /> {f}
                   </li>
@@ -396,10 +332,7 @@ export function AssinaturaClient() {
         <Lock className="size-3.5" /> Pagamento processado pela Cakto. O número do cartão nunca passa pelo nosso servidor.
       </p>
       <p className="mt-2 text-xs text-slate-500">
-        Excedente R$ 0,10/venda excedente apenas com seu aceite explícito e teto definido. Desativado por padrão — oferecemos upgrade quando for mais vantajoso.
-      </p>
-      <p className="mt-2 text-xs text-slate-500">
-        TikTok + Meta juntos? Veja a{" "}
+        Precisa de TikTok + Meta juntos? Veja a{" "}
         <a href="/conta/assinatura-avancada" className="text-violet-600 underline dark:text-violet-300">
           Assinatura Avançado
         </a>
@@ -439,14 +372,14 @@ export function AssinaturaClient() {
               <button
                 type="button"
                 onClick={() => { setPayMethod("card"); setPayError(""); }}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "card" ? "bg-white text-black" : "text-slate-400 hover:text-white"}`}
+                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "card" ? "bg-white text-black dark:bg-white dark:text-black" : "text-slate-400 hover:text-white"}`}
               >
                 Cartão de crédito
               </button>
               <button
                 type="button"
                 onClick={() => { setPayMethod("pix"); setPayError(""); }}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "pix" ? "bg-white text-black" : "text-slate-400 hover:text-white"}`}
+                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "pix" ? "bg-white text-black dark:bg-white dark:text-black" : "text-slate-400 hover:text-white"}`}
               >
                 Pix Automático
               </button>
@@ -490,7 +423,7 @@ export function AssinaturaClient() {
                     <p className="mt-1 text-xs text-slate-400">
                       Isso autoriza a recorrência mensal — as próximas cobranças debitam sozinhas.
                     </p>
-                    <div className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3 shadow-[0_0_50px_-12px_rgba(52,211,153,.45)]">
+                    <div className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3 shadow-[0_0_50px_-12px_rgba(52,211,153,.45)] dark:bg-white">
                       <img
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(pixData.qrCode)}`}
                         alt="QR Code Pix"
