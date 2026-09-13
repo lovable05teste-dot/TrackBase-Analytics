@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { isPlanId, type PlanId } from "@/lib/cakto-plans";
+import { isPlanId, type PlanId } from "@/lib/plans";
 
 export type PlanState = { plan: PlanId | null; hasActive: boolean; loaded: boolean };
 

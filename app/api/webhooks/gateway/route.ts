@@ -13,6 +13,7 @@ import {
   enqueueCapiOutbox,
   eventIdFor,
   eventNameFor,
+  handleSalesQuota,
   insertEventOnce,
   pick,
   resolveStatus,
@@ -203,6 +204,8 @@ export async function POST(request: Request) {
   }
 
   await db.update(apiCredentials).set({ lastUsedAt: new Date().toISOString() }).where(eq(apiCredentials.id, credential.id));
+  // contagem idempotente por ciclo (só primeira aprovação consome franquia)
+  try { await handleSalesQuota(db, credential.workspaceId, credential.provider, externalId, prevStatus, status); } catch {}
   if (status === "approved" || status === "pending") {
     const [prefRow] = await db.select().from(notificationPrefs).where(eq(notificationPrefs.workspaceId, credential.workspaceId)).limit(1);
     const prefs = parsePrefs(prefRow?.prefs);

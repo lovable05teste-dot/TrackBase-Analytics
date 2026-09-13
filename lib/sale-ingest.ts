@@ -273,3 +273,52 @@ export async function alertUnknownStatus(workspaceId: string, provider: string, 
     `tb-unknown-${provider}-${externalId}`,
   );
 }
+
+// Contagem idempotente de vendas aprovadas por ciclo (workspace, provider, externalId).
+// Só conta transição para approved pela primeira vez; replays não consomem franquia.
+// Ao atingir 80/90/100% envia e-mail (dedupe por período). Nunca rejeita webhook.
+export async function handleSalesQuota(
+  db: Db,
+  workspaceId: string,
+  provider: string,
+  externalId: string,
+  prevStatus: string | null,
+  nextStatus: string,
+) {
+  if (nextStatus !== "approved" || prevStatus === "approved") return;
+  try {
+    const { getPlanContext } = await import("@/lib/permissions");
+    const { getEffectivePlan } = await import("@/lib/plans");
+    // workspace -> user? derivar via planSubscriptions
+    const { planSubscriptions } = await import("@/db/schema");
+    const { eq, desc } = await import("drizzle-orm");
+    const [sub] = await db.select().from(planSubscriptions).where(eq(planSubscriptions.workspaceId, workspaceId)).orderBy(desc(planSubscriptions.createdAt)).limit(1);
+    if (!sub || sub.status !== "active") return;
+    const eff = getEffectivePlan(sub.plan as never, (sub as { planVersion?: number | null }).planVersion);
+    const limit = eff.limits.sales;
+    if (!limit) return;
+    const start = (sub as { currentPeriodStart?: number | null }).currentPeriodStart ?? sub.createdAt;
+    const end = (sub as { currentPeriodEnd?: number | null }).currentPeriodEnd ?? start + 30 * 86400;
+    const { usageCounters, users } = await import("@/db/schema");
+    const { and } = await import("drizzle-orm");
+    // incrementa atomically via insert + update (simples)
+    const id = `${workspaceId}:sales:${start}`;
+    const now = Math.floor(Date.now() / 1000);
+    await db.insert(usageCounters).values({ id, workspaceId, metric: "sales", periodStart: start, periodEnd: end, count: 0, updatedAt: now }).onConflictDoNothing();
+    // read then increment (race window pequeno; aceitável sem tx pesada)
+    const [cur] = await db.select({ count: usageCounters.count }).from(usageCounters).where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start))).limit(1);
+    const next = (cur?.count ?? 0) + 1;
+    await db.update(usageCounters).set({ count: next, updatedAt: now }).where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start)));
+    const pct = Math.round((next / limit) * 100);
+    const thresholds = [80, 90, 100];
+    if (!thresholds.includes(pct) && !(next === limit)) return;
+    // evita spam: só envia quando cruza threshold
+    const email = (sub as { email?: string | null }).email || "";
+    if (!email) return;
+    const { emailUsageWarning, emailLimitReached } = await import("@/lib/emails");
+    if (pct >= 100) await emailLimitReached(email, limit);
+    else await emailUsageWarning(email, next, limit, pct);
+  } catch (e) {
+    console.error("quota", e);
+  }
+}

@@ -3,7 +3,9 @@ import { ensureDb, getDb } from "@/db";
 import { planSubscriptions } from "@/db/schema";
 import { requestUserId, sha256 } from "@/lib/trackbase-security";
 import { CaktoError, createCardCharge, createPixAutoCharge, createSubscription } from "@/lib/cakto";
-import { isPlanId, planOfferId, PLANS } from "@/lib/cakto-plans";
+import { isPlanId, planOfferId, PLAN_VERSION_CURRENT, PLANS } from "@/lib/plans";
+import { audit } from "@/lib/permissions";
+import { emailPaymentPending } from "@/lib/emails";
 
 function friendlyCakto(e: CaktoError): string {
   const body = e.body as Record<string, unknown>;
@@ -70,16 +72,25 @@ export async function POST(request: Request) {
         userId,
         email,
         plan: body.plan,
+        planVersion: PLAN_VERSION_CURRENT,
         status: "past_due",
         caktoOrderId: pix.id,
         caktoSubscriptionId: null,
         caktoOfferId: offerId,
         amount: pix.amount || String(PLANS[body.plan].price),
         currency: "BRL",
+        currentPeriodStart: now,
         currentPeriodEnd: null,
+        cancelAtPeriodEnd: 0,
+        excessEnabled: 0,
+        excessCap: null,
+        scheduledPlan: null,
+        scheduledAt: null,
         createdAt: now,
         updatedAt: now,
-      });
+      } as never);
+      try { await emailPaymentPending(email, PLANS[body.plan].name); } catch {}
+      await audit(workspaceId, userId, "checkout:pix_pending", "plan", body.plan, `pix ${pix.id}`, request.headers.get("x-forwarded-for"));
       return Response.json({
         ok: true,
         method: "pix_auto",
@@ -135,16 +146,23 @@ export async function POST(request: Request) {
       userId,
       email,
       plan: body.plan,
+      planVersion: PLAN_VERSION_CURRENT,
       status: "active",
       caktoOrderId: charge.id,
       caktoSubscriptionId: sub.id,
       caktoOfferId: offerId,
       amount: charge.amount || String(PLANS[body.plan].price),
       currency: "BRL",
+      currentPeriodStart: now,
       currentPeriodEnd: Number.isFinite(nextTs) ? nextTs : null,
+      cancelAtPeriodEnd: 0,
+      excessEnabled: 0,
+      excessCap: null,
+      scheduledPlan: null,
+      scheduledAt: null,
       createdAt: now,
       updatedAt: now,
-    });
+    } as never);
     return Response.json({ ok: true, plan: body.plan, status: "active" });
   } catch (e) {
     if (e instanceof CaktoError) return Response.json({ error: friendlyCakto(e) }, { status: e.status >= 500 ? 502 : 400 });

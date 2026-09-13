@@ -1,57 +1,61 @@
-import type { PlanId } from "./cakto-plans";
+import type { PlanId } from "./plans";
+import { PLAN_ORDER, hrefFeature, featureMinPlan } from "./plans";
 
-// Matriz central ferramenta → plano mínimo (itens 4+6: vitrine/paywall).
-// Planos em ordem crescente: start < pro < scale < black.
-// Rotas fora da matriz (assinatura, planos, docs, login...) nunca bloqueiam.
-export const PLAN_RANK: Record<PlanId, number> = { start: 0, pro: 1, scale: 2, black: 3 };
+// Compat: matriz legada mantida mas agora delega à config central.
+// Planos em ordem: start < pro < black < scale.
+export const PLAN_RANK = PLAN_ORDER;
 
-export const TOOL_MIN_PLAN: Record<string, PlanId> = {
-  "/": "start",
-  "/projetos/novo": "start",
-  "/campanhas": "start",
-  "/vendas": "start",
-  "/eventos": "start",
-  "/relatorios": "start",
-  "/relatorios/utms": "start",
-  "/pixel-capi": "start",
-  "/integracoes": "start",
-  "/integracoes/gateways": "start",
-  "/conta/perfil": "start",
-  "/configuracoes": "start",
-  "/equipe": "scale",
-  "/ferramentas/utm-builder": "start",
-  "/ferramentas/calculadora-roas": "start",
-  "/ferramentas/cpa-maximo": "start",
-  "/ferramentas/nomes-campanha": "start",
-  "/ferramentas/mapa-links": "start",
-  "/ferramentas/checklist": "start",
-  "/ferramentas/ativador-tiktok": "start",
-  "/webhooks": "start",
-  "/docs/api-vendas": "start",
-  "/feedback": "start",
-  "/meta-lab": "pro",
-  "/campanhas/nova": "start",
-  "/funil": "pro",
-  "/heatmaps": "pro",
-  "/atribuicao": "pro",
-  "/seguranca/anti-clone": "pro",
-  "/seguranca/blacklist": "pro",
-  "/seguranca/trafego-invalido": "pro",
-  "/seguranca/monitoramento": "pro",
-  "/contas-meta": "pro",
-  "/offer-lab": "pro",
-  "/predict": "scale",
-  "/agent-hub": "scale",
-  "/comunidade/rankings": "scale",
-  "/conta/assinatura-avancada": "scale",
-  "/comunidade/chat": "black",
-};
+export const TOOL_MIN_PLAN: Record<string, PlanId> = Object.fromEntries(
+  Object.entries({
+    "/": "dashboard",
+    "/projetos/novo": "projects",
+    "/campanhas": "campanhas",
+    "/vendas": "vendas",
+    "/eventos": "eventos",
+    "/relatorios": "relatorios",
+    "/relatorios/utms": "relatorios_utms",
+    "/pixel-capi": "pixel_capi",
+    "/integracoes": "integracoes",
+    "/integracoes/gateways": "gateways",
+    "/conta/perfil": "dashboard",
+    "/configuracoes": "dashboard",
+    "/equipe": "equipe",
+    "/ferramentas/utm-builder": "utm_builder",
+    "/ferramentas/calculadora-roas": "calc_roas",
+    "/ferramentas/cpa-maximo": "cpa_max",
+    "/ferramentas/nomes-campanha": "nomes_campanha",
+    "/ferramentas/mapa-links": "mapa_links",
+    "/ferramentas/checklist": "checklist",
+    "/ferramentas/ativador-tiktok": "ativador_tiktok",
+    "/webhooks": "webhook_entrada",
+    "/docs/api-vendas": "api_entrada",
+    "/feedback": "dashboard",
+    "/meta-lab": "meta_lab",
+    "/campanhas/nova": "campanhas",
+    "/funil": "funil",
+    "/heatmaps": "heatmaps",
+    "/atribuicao": "atribuicao",
+    "/seguranca/anti-clone": "anti_clone",
+    "/seguranca/blacklist": "blacklist",
+    "/seguranca/trafego-invalido": "trafego_invalido",
+    "/seguranca/monitoramento": "monitoramento",
+    "/contas-meta": "contas_meta",
+    "/offer-lab": "offer_lab",
+    "/predict": "predict",
+    "/agent-hub": "agent_hub",
+    "/comunidade/rankings": "comunidade",
+    "/conta/assinatura-avancada": "dashboard",
+    "/comunidade/chat": "comunidade",
+  } as Record<string, string>).map(([href, feat]) => [href, featureMinPlan(feat as never)])
+) as Record<string, PlanId>;
 
 const ALWAYS_OPEN = new Set(["/planos", "/conta/assinatura", "/docs", "/login", "/recuperar", "/verificar-codigo", "/termos", "/privacidade"]);
 
 export function toolMinPlan(href: string): PlanId | null {
   if (ALWAYS_OPEN.has(href) || href.startsWith("/docs/")) return null;
-  return TOOL_MIN_PLAN[href] ?? null;
+  const feat = hrefFeature(href as never);
+  if (feat) return featureMinPlan(feat);
+  return (TOOL_MIN_PLAN as Record<string, PlanId>)[href] ?? null;
 }
 
 /** true quando o plano do usuário alcança o mínimo da ferramenta. Sem plano = só rotas abertas. */

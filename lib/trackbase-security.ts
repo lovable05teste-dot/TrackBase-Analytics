@@ -137,6 +137,20 @@ export function clearSessionCookie() {
   return "tb_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0";
 }
 
+// Compat: delega para lib/permissions (evita ciclo de import estático)
+export type PlanContext = { plan: string | null; status: string | null; hasActive: boolean; version?: number | null; sub?: unknown };
+export async function getPlanContext(userId: string | null | undefined): Promise<PlanContext> {
+  const { getPlanContext: impl } = await import("./permissions");
+  return impl(userId);
+}
+export async function hasActivePlan(userId: string | null | undefined): Promise<boolean> {
+  const { hasActivePlan: impl } = await import("./permissions");
+  return impl(userId);
+}
+export function planRequiredResponse() {
+  return Response.json({ error: "Assine um plano para criar ou alterar. Ver planos.", upgrade: "/planos" }, { status: 402 });
+}
+
 type SessionRow = {
   userId: string;
   isAdmin: number | boolean | null;
@@ -507,66 +521,6 @@ export function logAdminAccess(event: string, detail: Record<string, unknown> = 
 }
 
 // ---------------------------------------------------------------------------
-// Subscription gate — true SOMENTE com plano "active" (past_due, pausado ou
-// cancelado não contam: sem pagamento confirmado, sem acesso).
-// Admin e identidades sem sessão passam direto para não travar o acesso.
-// Em falha de banco, libera (fail-open) para não trancar todo mundo.
+// Subscription gate — mantido para compat; lógica real em lib/permissions.ts
 // ---------------------------------------------------------------------------
-export async function hasActivePlan(userId: string | null | undefined): Promise<boolean> {
-  if (!userId || userId === "trackbase-owner") return true;
-  try {
-    const { ensureDb, getDb } = await import("@/db");
-    const { planSubscriptions } = await import("@/db/schema");
-    const { desc, eq } = await import("drizzle-orm");
-    await ensureDb();
-    const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
-    const rows = await getDb()
-      .select({ status: planSubscriptions.status })
-      .from(planSubscriptions)
-      .where(eq(planSubscriptions.workspaceId, workspaceId))
-      .orderBy(desc(planSubscriptions.createdAt))
-      .limit(1);
-    return rows[0]?.status === "active";
-  } catch (error) {
-    console.error("plan gate lookup", error);
-    return true;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Contexto do plano p/ modo visualização: ver tudo, criar/editar só com active.
-// Retorna o plano e o status da assinatura mais recente (null = nunca assinou).
-// ---------------------------------------------------------------------------
-export type PlanContext = { plan: string | null; status: string | null; hasActive: boolean };
-
-export async function getPlanContext(userId: string | null | undefined): Promise<PlanContext> {
-  if (!userId || userId === "trackbase-owner") return { plan: "black", status: "active", hasActive: true };
-  try {
-    const { ensureDb, getDb } = await import("@/db");
-    const { planSubscriptions } = await import("@/db/schema");
-    const { desc, eq } = await import("drizzle-orm");
-    await ensureDb();
-    const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
-    const rows = await getDb()
-      .select({ plan: planSubscriptions.plan, status: planSubscriptions.status })
-      .from(planSubscriptions)
-      .where(eq(planSubscriptions.workspaceId, workspaceId))
-      .orderBy(desc(planSubscriptions.createdAt))
-      .limit(1);
-    const row = rows[0];
-    if (!row) return { plan: null, status: null, hasActive: false };
-    return { plan: row.plan, status: row.status, hasActive: row.status === "active" };
-  } catch (error) {
-    console.error("plan context lookup", error);
-    return { plan: null, status: null, hasActive: true };
-  }
-}
-
-// Resposta padrão p/ mutations sem plano: 402 + caminho de upgrade.
-// Leitura (GET) e ingestão externa (webhooks/eventos) NUNCA usam este gate.
-export function planRequiredResponse() {
-  return Response.json(
-    { error: "Assine um plano para criar ou alterar. Ver planos.", upgrade: "/planos" },
-    { status: 402 },
-  );
-}
+// (hasActivePlan / getPlanContext / planRequiredResponse re-exportados acima)

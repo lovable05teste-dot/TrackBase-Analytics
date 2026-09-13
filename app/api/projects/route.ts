@@ -39,6 +39,14 @@ export async function POST(request: Request) {
     return Response.json({ project: updated });
   }
   if (!body.name?.trim()) return Response.json({ error: "Informe o nome do projeto" }, { status: 400 });
+  // limite de projetos por plano (compartilhado no workspace)
+  const { getPlanContext } = await import("../../../lib/permissions");
+  const { getEffectivePlan } = await import("../../../lib/plans");
+  const ctx = await getPlanContext(userId);
+  const eff = ctx.plan ? getEffectivePlan(ctx.plan as never, ctx.version) : null;
+  const limit = eff?.limits.projects ?? 0;
+  const existingCount = await db.select({ id: projects.id }).from(projects).where(eq(projects.workspaceId, workspaceId));
+  if (existingCount.length >= limit) return Response.json({ error: `Limite de ${limit} projetos do plano ${eff?.name ?? ""} atingido. Faça upgrade em /planos.`, upgrade: "/planos" }, { status: 402 });
   const projectName=body.name.trim();
   const projectId = crypto.randomUUID();
   const publicKey = crypto.randomUUID().replaceAll("-", "");

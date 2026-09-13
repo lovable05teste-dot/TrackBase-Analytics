@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { isPlanId, planOfferId, type PlanId } from "./cakto-plans";
+import { isPlanId, planOfferId, type PlanId } from "./plans";
 
 const BASE = "https://api.cakto.com.br";
 
