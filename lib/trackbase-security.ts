@@ -128,13 +128,12 @@ export const PENDING_2FA_TTL_SECONDS = 600;
 
 export function sessionCookie(token: string, maxAge = SESSION_TTL_SECONDS) {
   const secure = process.env.SECURE_COOKIES === "true" || (!process.env.SECURE_COOKIES && process.env.NODE_ENV === "production") ? " Secure;" : "";
-  // SameSite=Strict: sem OAuth social, não há mais navegação GET cross-site
-  // que precise carregar a sessão; Strict bloqueia CSRF por construção.
-  return `tb_session=${token}; Path=/; HttpOnly;${secure} SameSite=Strict; Max-Age=${maxAge}`;
+  // OAuth returns through a cross-site top-level GET. Mutations retain Origin/CSRF checks.
+  return `tb_session=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
 }
 
 export function clearSessionCookie() {
-  return "tb_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0";
+  return "tb_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
 }
 
 // Compat: delega para lib/permissions (evita ciclo de import estático)
