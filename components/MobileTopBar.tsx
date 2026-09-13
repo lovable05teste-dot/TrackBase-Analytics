@@ -1,7 +1,18 @@
 "use client";
 import { AccountMenu } from "./AccountMenu";
 
-export function MobileTopBar() {
+interface MobileTopBarProps {
+  accountData: {
+    userName: string;
+    userEmail: string;
+    workspaceName: string;
+    planName: string;
+    planStatus: string;
+    avatarInitial: string;
+  };
+}
+
+export function MobileTopBar({ accountData }: MobileTopBarProps) {
   return (
     <div className="flex items-center gap-3">
       <a href="/" className="flex min-w-0 items-center" aria-label="GhostScale - início">
@@ -12,7 +23,7 @@ export function MobileTopBar() {
         />
       </a>
       <div className="ml-auto shrink-0">
-        <AccountMenu />
+        <AccountMenu data={accountData} />
       </div>
     </div>
   );

@@ -16,46 +16,57 @@ function isActive(pathname: string, href: string) {
 // Com plano abaixo do mínimo da ferramenta: cadeado → /planos (upsell).
 export function FullMenu() {
   const pathname = usePathname() || "/";
-  const [open, setOpen] = useState<Record<string, boolean>>({
-    Principal: true,
-    "Análise & Otimização": true,
-  });
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   const { plan, loaded } = usePlan();
+  
+  // Initialize open state - only first group open by default
+  const firstGroupTitle = NAV_GROUPS[0]?.title;
+  
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {NAV_GROUPS.map((g) => {
-        const expanded = open[g.title] ?? true;
+        const expanded = open[g.title] ?? g.title === firstGroupTitle;
+        const IconComponent = g.items[0]?.icon || ChevronDown;
         return (
           <div key={g.title}>
             <button
               type="button"
               onClick={() => setOpen((s) => ({ ...s, [g.title]: !expanded }))}
-              className="mb-1 flex w-full items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700"
+              className="mb-1 flex w-full items-center justify-between px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium uppercase tracking-wider text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
             >
-              {g.title}
+              <span className="flex items-center gap-2">
+                <IconComponent className="size-4 shrink-0" />
+                {g.title}
+              </span>
               <ChevronDown className={`size-3.5 transition ${expanded ? "" : "-rotate-90"}`} />
             </button>
             {expanded ? (
-              <div className="space-y-1">
+              <div className="space-y-1 pl-2">
                 {g.items.map((item) => {
                   const active = isActive(pathname, item.href);
                   const locked = loaded && plan !== null && !toolAllowed(item.href, plan);
                   const minLabel = toolPlanLabel(item.href);
+                  const ItemIcon = item.icon;
                   return (
                     <a
                       key={item.href}
                       href={locked ? "/planos" : item.href}
                       title={locked ? `Incluso no plano ${minLabel} — ver planos` : undefined}
-                      className={active && !locked ? "nav-active justify-between" : "nav-item justify-between"}
+                      className={`
+                        flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        ${active && !locked 
+                          ? "bg-violet-50 text-violet-700 font-medium" 
+                          : locked 
+                            ? "text-slate-400 hover:text-slate-500 border-l-2 border-[#FF4D67] pl-2" 
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}
+                      `}
                     >
-                      <span className="flex items-center gap-1.5 truncate">
-                        {locked ? <Lock className="size-3.5 shrink-0 text-[#FF4D67]" /> : null}
-                        <span className="truncate">{item.label}</span>
-                      </span>
+                      <ItemIcon className={`size-4 shrink-0 ${locked ? "text-[#FF4D67]" : active ? "text-violet-600" : "text-slate-400"}`} />
+                      <span className="truncate">{item.label}</span>
                       {locked && minLabel ? (
-                        <span className="ml-2 shrink-0 rounded-md bg-[#FF0030]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FF4D67]">{minLabel}</span>
+                        <span className="ml-auto shrink-0 rounded-md bg-[#FF0030]/10 px-2 py-0.5 text-[10px] font-semibold text-[#FF4D67]">{minLabel}</span>
                       ) : item.badge ? (
-                        <span className="ml-2 shrink-0 rounded-md bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">{item.badge}</span>
+                        <span className="ml-auto shrink-0 rounded-md bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-700">{item.badge}</span>
                       ) : null}
                     </a>
                   );

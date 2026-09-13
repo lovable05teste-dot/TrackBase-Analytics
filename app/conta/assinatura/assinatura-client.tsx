@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowRight, Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, Check, Loader2, Lock, ShieldCheck, X, AlertCircle, Ban } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { formatCpf, stripCpf, validateCpf } from "@/lib/cpf";
 
@@ -60,6 +60,8 @@ const statusLabel: Record<string, string> = {
   past_due: "Pagamento pendente",
   paused: "Pausada",
   canceled: "Cancelada",
+  demo: "Modo demonstração",
+  inactive: "Sem plano",
 };
 
 export function AssinaturaClient() {
@@ -86,6 +88,8 @@ export function AssinaturaClient() {
   const [pixData, setPixData] = useState<{ qrCode: string; expirationDate: string | null; checkoutUrl: string | null } | null>(null);
 
   const [loadError, setLoadError] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
 
   async function load() {
     try {
@@ -246,6 +250,25 @@ export function AssinaturaClient() {
     }
   }
 
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
+
+  async function cancel() {
+    if (!confirmCancel) { setConfirmCancel(true); return; }
+    setCanceling(true);
+    try {
+      const r = await fetch("/api/billing/cakto/cancel", { method: "POST" });
+      const b = await r.json();
+      if (!r.ok) throw new Error(b.error || "Não foi possível cancelar.");
+      setConfirmCancel(false);
+      await load();
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Não foi possível cancelar.");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
   if (loading) {
     return (
       <AppShell title="Assinatura" subtitle="Carregando planos...">
@@ -256,9 +279,32 @@ export function AssinaturaClient() {
 
   const activePlan = sub && (sub.status === "active" || sub.status === "past_due") ? sub : null;
   const activePlanName = plans.find((p) => p.id === activePlan?.plan)?.name || activePlan?.plan || "";
+  
+  // Determine display state
+  const displayState = sub?.status === "active" ? "active" : 
+                       sub?.status === "past_due" ? "past_due" :
+                       sub?.status === "canceled" ? "canceled" :
+                       sub?.status === "paused" ? "paused" :
+                       sub?.status === "demo" ? "demo" : "inactive";
+  
+  const isDemoOrInactive = displayState === "demo" || displayState === "inactive";
+  const isPendingPayment = displayState === "past_due";
+  const isActiveSubscription = displayState === "active";
+  const isCanceled = displayState === "canceled";
 
   return (
-    <AppShell title="Assinatura" subtitle="Base mensal + R$ 0,10 por venda aprovada excedente. Black é ilimitado.">
+    <AppShell title="Assinatura" subtitle="Escolha o plano que acompanha seu volume. Excedente R$ 0,10/venda só com aceite explícito (desativado por padrão).">
+      {isPlanoRoute ? (
+        <button
+          type="button"
+          onClick={enterVitrine}
+          aria-label="Fechar e ver o painel"
+          title="Ver o painel"
+          className="fixed right-4 top-4 z-50 grid size-10 place-items-center rounded-full border border-white/15 bg-black/60 text-slate-300 backdrop-blur transition hover:bg-white/10 hover:text-white"
+        >
+          <X className="size-5" />
+        </button>
+      ) : null}
       {loadError ? (
         <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-300">
           {loadError}{" "}
@@ -267,22 +313,64 @@ export function AssinaturaClient() {
           </button>
         </p>
       ) : null}
-      {activePlan ? (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[.06] p-4">
-          <div>
-            <b className="text-emerald-700 dark:text-emerald-300">
-              Plano {activePlanName} · {statusLabel[activePlan.status] || activePlan.status}
-            </b>
-            <p className="mt-1 text-sm text-slate-500">
-              {activePlan.currentPeriodEnd
-                ? `Próxima cobrança em ${new Date(activePlan.currentPeriodEnd * 1000).toLocaleDateString("pt-BR")}`
-                : "Assinatura ativa"}
-            </p>
+      {isDemoOrInactive ? (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-200">
+          <div className="flex items-center gap-2"><ShieldCheck className="size-4" /><b>Modo demonstração</b></div>
+          <p className="mt-1">Você pode navegar em tudo, mas criar ou alterar exige um plano ativo.</p>
+          <p className="mt-2 text-xs text-blue-600">Nenhuma cobrança será feita até você assinar um plano.</p>
+        </div>
+      ) : isPendingPayment ? (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /><b>Pagamento pendente</b></div>
+          <p className="mt-1">Seu pagamento está sendo processado. O acesso será liberado assim que confirmado.</p>
+          <p className="mt-2 text-xs text-amber-600">Nenhum recurso pago está disponível até a confirmação.</p>
+          <div className="mt-3 flex gap-2">
+            <Button variant="outline" size="sm" onClick={load}>Verificar status</Button>
+            {activePlan && <Button variant="outline" size="sm" onClick={() => openCheckout(plans.find(p => p.id === activePlan!.plan)!)}>Tentar novamente</Button>}
           </div>
         </div>
+      ) : isActiveSubscription ? (
+        <div className="mb-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[.06] p-4">
+            <div>
+              <b className="text-emerald-700 dark:text-emerald-300">
+                Plano {activePlanName} {sub?.planVersion ? `· v${sub.planVersion}` : ""} · Ativo
+                {sub?.cancelAtPeriodEnd ? " · cancela no fim do ciclo" : ""}
+                {sub?.scheduledPlan ? ` · downgrade para ${sub.scheduledPlan} no próximo ciclo` : ""}
+              </b>
+              <p className="mt-1 text-sm text-slate-500">
+                {activePlan.currentPeriodEnd
+                  ? `Período atual até ${new Date(activePlan.currentPeriodEnd * 1000).toLocaleDateString("pt-BR")}`
+                  : "Assinatura ativa"}
+                {sub?.excessEnabled ? ` · excedente até R$ ${((sub.excessCap ?? 0) / 100).toFixed(2)}` : " · excedente desativado"}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowManageModal(true)}
+              className={`rounded-lg border px-4 py-2 text-sm transition ${"border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-500/30 dark:text-slate-300 dark:hover:bg-slate-500/10"}`}
+            >
+              Gerenciar assinatura
+            </button>
+          </div>
+          {usage ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[.03]">
+              <div className="flex items-center justify-between text-sm"><b>Vendas no ciclo</b><span className="tabular-nums text-slate-500">{usage.count} / {usage.limit} · {usage.pct}%</span></div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"><div className={`h-full ${usage.pct >= 100 ? "bg-red-500" : usage.pct >= 90 ? "bg-amber-500" : usage.pct >= 80 ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, usage.pct)}%` }} /></div>
+              {usage.pct >= 80 ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{usage.pct >= 100 ? "Franquia atingida — novas vendas ficam aguardando regularização (sem perda). Faça upgrade." : usage.pct >= 90 ? "90% da franquia — considere upgrade." : "80% da franquia — acompanhe seu consumo."}</p> : null}
+            </div>
+          ) : null}
+        </div>
+      ) : isCanceled ? (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/[.03] dark:text-slate-300">
+          <div className="flex items-center gap-2"><Ban className="size-4" /><b>Assinatura cancelada</b></div>
+          <p className="mt-1">Sua assinatura foi cancelada. Acesso mantido até o fim do período pago.</p>
+          {sub?.currentPeriodEnd && <p className="mt-1 text-xs text-slate-500">Válido até {new Date(sub.currentPeriodEnd * 1000).toLocaleDateString("pt-BR")}</p>}
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => location.href = "/planos"}>Reativar assinatura</Button>
+        </div>
       ) : (
-        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-200">
-          Você ainda não tem assinatura ativa. Escolha um plano abaixo e pague com cartão em menos de 1 minuto.
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">
+          <div className="flex items-center gap-2"><AlertCircle className="size-4" /><b>Assinatura expirada</b></div>
+          <p className="mt-1">Esta assinatura não está mais ativa. Escolha um plano abaixo para reativar.</p>
         </div>
       )}
 
@@ -339,7 +427,79 @@ export function AssinaturaClient() {
         .
       </p>
 
-      {modalPlan ? (
+      {showManageModal && isActiveSubscription && activePlan ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-5">
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-white/10 bg-[#101521] p-6 text-slate-100 sm:rounded-3xl sm:p-8">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <img
+                  src="/ghostscale-logo.png"
+                  alt="GhostScale"
+                  className="h-8 w-auto max-w-[160px] object-contain drop-shadow-[0_0_14px_rgba(255,48,80,.35)]"
+                />
+                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-amber-400">Gerenciar assinatura</p>
+                <h3 className="mt-1 text-xl font-semibold">
+                  Plano {activePlanName} · {activePlan.currentPeriodEnd ? `até ${new Date(activePlan.currentPeriodEnd * 1000).toLocaleDateString("pt-BR")}` : "ativo"}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowManageModal(false)}
+                aria-label="Fechar"
+                className="rounded-lg border border-white/10 p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-4">
+                <h4 className="text-sm font-medium text-slate-300">Cancelar renovação</h4>
+                <p className="mt-1 text-sm text-slate-400">Seu acesso continua até o fim do período pago. Após isso, a assinatura não será renovada automaticamente.</p>
+                <p className="mt-1 text-sm text-slate-400">Você pode reativar a qualquer momento antes do fim do período.</p>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => { setConfirmCancel(true); cancel(); }}
+                    disabled={canceling}
+                    className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-red-500 disabled:opacity-60"
+                  >
+                    {canceling ? "Cancelando..." : confirmCancel ? "Clique de novo para confirmar" : "Cancelar renovação"}
+                  </button>
+                  <button
+                    onClick={() => setShowManageModal(false)}
+                    className="flex-1 rounded-lg border border-white/10 px-4 py-2 text-center text-sm font-medium text-slate-300 hover:bg-white/5"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-4">
+                <h4 className="text-sm font-medium text-slate-300">Trocar de plano</h4>
+                <p className="mt-1 text-sm text-slate-400">Escolha outro plano na lista abaixo. A alteração entra em vigor no próximo ciclo.</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-4">
+                <h4 className="text-sm font-medium text-slate-300">Excedente</h4>
+                <p className="mt-1 text-sm text-slate-400">{sub?.excessEnabled ? `Ativo · teto R$ ${((sub.excessCap ?? 0) / 100).toFixed(2)}` : "Desativado (padrão)"}</p>
+                <p className="mt-1 text-xs text-slate-500">R$ 0,10 por venda excedente. Só cobrado com seu aceite explícito.</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-4">
+                <h4 className="text-sm font-medium text-slate-300">Histórico de pagamentos</h4>
+                <p className="mt-1 text-sm text-slate-400">Disponível em breve.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowManageModal(false)}
+              className="mt-6 w-full rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      ) : null}
+{modalPlan ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-5">
           <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-[#101521] p-6 text-slate-100 sm:rounded-3xl sm:p-8">
             <div className="flex items-start justify-between gap-3">

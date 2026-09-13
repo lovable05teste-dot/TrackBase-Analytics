@@ -1,6 +1,6 @@
 import { eq, or } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { users } from "@/db/schema";
+import { members, users, workspaces } from "@/db/schema";
 import {
   clientIpFromRequest,
   createSession,
@@ -10,6 +10,7 @@ import {
   logLoginAttempt,
   passwordPolicyError,
   sessionCookie,
+  sha256,
 } from "@/lib/trackbase-security";
 import { stripCpf, validateCpf } from "@/lib/cpf";
 
@@ -43,7 +44,13 @@ export async function POST(request: Request) {
     const passwordHash = await hashPassword(password);
     const id = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000);
+    // Criar workspace próprio do usuário
+    const workspaceId = "ws_" + (await sha256(id)).slice(0, 24);
+    const workspaceName = `GhostScale de ${name}`;
+    await db.insert(workspaces).values({ id: workspaceId, name: workspaceName, createdAt: new Date().toISOString() });
     await db.insert(users).values({ id, email, name, cpf, passwordHash, createdAt: now });
+    // Membership owner no próprio workspace
+    await db.insert(members).values({ id: crypto.randomUUID(), workspaceId, userId: id, email, role: "owner" });
     // A confirmação de e-mail usa código de 6 dígitos (tela /verificar-codigo),
     // solicitado pelo frontend logo após este retorno.
     await logLoginAttempt(email, ip, true);

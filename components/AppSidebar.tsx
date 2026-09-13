@@ -13,53 +13,60 @@ function isActive(pathname: string, href: string) {
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname() || "/";
-  const [open, setOpen] = useState<Record<string, boolean>>({
-    Principal: true,
-    "Análise & Otimização": true,
-    "Ferramentas Avançado": false,
-  });
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   const { plan, loaded: planLoaded } = usePlan();
+  
+  const firstGroupTitle = NAV_GROUPS[0]?.title;
+  
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <a href="/" className="flex items-center gap-3 px-2 py-2 mb-6">
+      <a href="/" className="flex items-center gap-3 px-2 py-2 mb-6" onClick={onNavigate}>
         <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[160px] shrink-0 object-contain" />
       </a>
-      <nav className="mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pb-4 pr-1">
+      <nav className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 pr-1">
         {NAV_GROUPS.map((g) => {
-          const expanded = open[g.title] ?? true;
+          const expanded = open[g.title] ?? g.title === firstGroupTitle;
+          const IconComponent = g.items[0]?.icon || ChevronDown;
           return (
             <div key={g.title} className="mb-3">
               <button
                 onClick={() => setOpen((s) => ({ ...s, [g.title]: !expanded }))}
-                className="w-full flex items-center justify-between px-2 py-2 rounded-xl border border-slate-200 text-sm font-medium uppercase tracking-wider text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium uppercase tracking-wider text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
               >
-                {g.title}
+                <span className="flex items-center gap-2">
+                  <IconComponent className="size-4 shrink-0" />
+                  {g.title}
+                </span>
                 <ChevronDown className={`size-3.5 transition ${expanded ? "" : "-rotate-90"}`} />
               </button>
               {expanded && (
-                <div className="mt-2 space-y-1 max-h-[200px] overflow-y-auto">
+                <div className="mt-2 space-y-1">
                   {g.items.map((item) => {
                     const active = isActive(pathname, item.href);
-                    // Sem assinatura navega livre (modo visualização); cadeado só p/ tier insuficiente.
                     const locked = planLoaded && plan !== null && !toolAllowed(item.href, plan);
                     const minLabel = toolPlanLabel(item.href);
+                    const ItemIcon = item.icon;
                     return (
                       <a
                         key={item.href}
                         href={locked ? "/planos" : item.href}
                         onClick={onNavigate}
                         title={locked ? `Incluso no plano ${minLabel} — ver planos` : undefined}
-                        className={active && !locked ? "nav-active justify-between" : locked ? "nav-item justify-between border-b border-[#FF4D67] pb-2" : "nav-item justify-between"}
+                        className={`
+                          flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                          ${active && !locked 
+                            ? "bg-violet-50 text-violet-700 font-medium" 
+                            : locked 
+                              ? "text-slate-400 hover:text-slate-500 border-l-2 border-[#FF4D67] pl-2" 
+                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}
+                        `}
                       >
-                        <span className="flex items-center gap-2">
-                          {g.title === "Principal" && item.href === "/" ? <LayoutDashboard className="size-4 shrink-0" /> : null}
-                          {locked ? <Lock className="size-3.5 shrink-0 text-[#FF4D67]" /> : null}
-                          <span className="truncate">{item.label}</span>
-                        </span>
+                        <ItemIcon className={`size-4 shrink-0 ${locked ? "text-[#FF4D67]" : active ? "text-violet-600" : "text-slate-400"}`} />
+                        <span className="truncate">{item.label}</span>
                         {locked && minLabel ? (
-                          <span className="ml-2 shrink-0 rounded-md bg-[#FF0030]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FF4D67]">{minLabel}</span>
+                          <span className="ml-auto shrink-0 rounded-md bg-[#FF0030]/10 px-2 py-0.5 text-[10px] font-semibold text-[#FF4D67]">{minLabel}</span>
                         ) : item.badge ? (
-                          <span className="ml-2 shrink-0 rounded-md bg-violet-500/20 px-1.5 py-0.5 text-[10px] text-violet-700 dark:text-violet-200">{item.badge}</span>
+                          <span className="ml-auto shrink-0 rounded-md bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-700">{item.badge}</span>
                         ) : null}
                       </a>
                     );

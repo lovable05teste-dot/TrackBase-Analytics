@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { users } from "@/db/schema";
+import { members, users, workspaces } from "@/db/schema";
 import {
   ACCOUNT_LOCKOUT_ATTEMPTS,
   ACCOUNT_LOCKOUT_SECONDS,
@@ -64,6 +64,17 @@ export async function POST(request: Request) {
           { error: "Confirme seu e-mail antes de entrar. Solicite o reenvio abaixo.", needVerification: true },
           { status: 403 },
         );
+      }
+      // Garantir workspace e membership para contas legadas
+      const db = getDb();
+      const workspaceId = "ws_" + (await sha256(user.id)).slice(0, 24);
+      const [ws] = await db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      if (!ws) {
+        await db.insert(workspaces).values({ id: workspaceId, name: `GhostScale de ${user.name || email.split("@")[0]}`, createdAt: new Date().toISOString() });
+      }
+      const [mem] = await db.select({ id: members.id }).from(members).where(eq(members.workspaceId, workspaceId)).limit(1);
+      if (!mem) {
+        await db.insert(members).values({ id: crypto.randomUUID(), workspaceId, userId: user.id, email: user.email, role: "owner" });
       }
       const has2fa = Boolean(user.totpEnabled && user.totpSecretCipher && user.totpIv);
       if (process.env.REQUIRE_2FA === "true" && !has2fa) {
