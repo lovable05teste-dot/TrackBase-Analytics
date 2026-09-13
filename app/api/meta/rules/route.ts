@@ -1,7 +1,7 @@
 import { and,eq } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { automationRules } from "@/db/schema";
-import { requestUserId,sha256 } from "@/lib/trackbase-security";
+import { hasActivePlan, planRequiredResponse, requestUserId,sha256 } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 const LEVELS=["campaign","adset","ad"],METRICS=["roas","spend","cpa","ctr","frequency","sales"],OPS=["<",">","<=",">="],ACTIONS=["pause","activate","notify"],WINDOWS=[1,3,7,14,30];
@@ -33,6 +33,7 @@ export async function GET(request:Request){
 
 export async function POST(request:Request){
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+ if(!(await hasActivePlan(userId)))return planRequiredResponse();
  const body=await request.json().catch(()=>({})) as RuleBody;
  const c=clean(body);if(typeof c==="string")return Response.json({error:c},{status:400});
  await ensureDb();
@@ -43,6 +44,7 @@ export async function POST(request:Request){
 
 export async function PUT(request:Request){
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+ if(!(await hasActivePlan(userId)))return planRequiredResponse();
  const body=await request.json().catch(()=>({})) as RuleBody;
  if(!body.id)return Response.json({error:"Regra não informada."},{status:400});
  const c=clean(body);if(typeof c==="string")return Response.json({error:c},{status:400});
@@ -54,8 +56,9 @@ export async function PUT(request:Request){
 }
 
 export async function DELETE(request:Request){
- const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
- const id=new URL(request.url).searchParams.get("id");
+  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+  if(!(await hasActivePlan(userId)))return planRequiredResponse();
+  const id=new URL(request.url).searchParams.get("id");
  if(!id)return Response.json({error:"Regra não informada."},{status:400});
  await ensureDb();
  const workspaceId=await ws(userId);

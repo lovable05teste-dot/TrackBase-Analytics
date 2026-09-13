@@ -3,7 +3,7 @@ import { ensureDb,getDb } from "@/db";
 import { metaAccounts,metaLinked } from "@/db/schema";
 import { metaConfig,metaJson } from "@/lib/meta";
 import { accountToken,graph } from "@/lib/meta-lab";
-import { decryptSecret,requestUserId,sha256 } from "@/lib/trackbase-security";
+import { decryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256 } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 type Audience={id:string;name:string;approximate_count?:number;time_updated?:number};
@@ -29,6 +29,7 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  try{
   const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+  if(!(await hasActivePlan(userId)))return planRequiredResponse();
   const body=await request.json().catch(()=>({})) as {accountId?:string;pixelId?:string;name?:string;days?:number};
   const name=String(body.name||"").trim().slice(0,100);
   const pixelId=String(body.pixelId||"").replace(/\D/g,"");

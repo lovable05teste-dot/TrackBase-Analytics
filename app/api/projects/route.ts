@@ -1,7 +1,7 @@
 import { and,eq } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../db";
 import { apiCredentials,events,members,orders,projects,workspaces } from "../../../db/schema";
-import { hasConflictingOrigin, requestUserId, sha256 } from "../../../lib/trackbase-security";
+import { hasActivePlan, hasConflictingOrigin, planRequiredResponse, requestUserId, sha256 } from "../../../lib/trackbase-security";
 
 export async function GET(request: Request) {
   await ensureDb();
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   await ensureDb();
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
+  if (!(await hasActivePlan(userId))) return planRequiredResponse();
   const body = await request.json() as { id?: string; name?: string; domain?: string; pixelId?: string };
   const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
   const db = getDb();
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request:Request){
   if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
-  await ensureDb();const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+  await ensureDb();const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});if(!(await hasActivePlan(userId)))return planRequiredResponse();
   const id=new URL(request.url).searchParams.get("id");if(!id)return Response.json({error:"Projeto não informado"},{status:400});
   const workspaceId="ws_"+(await sha256(userId)).slice(0,24),db=getDb(),[owned]=await db.select({id:projects.id}).from(projects).where(and(eq(projects.id,id),eq(projects.workspaceId,workspaceId))).limit(1);
   if(!owned)return Response.json({error:"Projeto não encontrado"},{status:404});

@@ -5,6 +5,7 @@ import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import type {Detection,EventRule,TrackingConfig} from "@/lib/tracking-config";
 import {defaultTrackingConfig} from "@/lib/tracking-config";
+import { apiFetch } from "@/lib/plan-client";
 
 const input="dashboard-input mt-1";
 const labels:{key:"lead"|"addToCart"|"initiateCheckout";title:string;event:string;hint:string}[]=[
@@ -19,7 +20,7 @@ function EventEditor({title,event,hint,value,onChange}:{title:string;event:strin
 export function TrackingRules({projectId,enabled}:{projectId:string;enabled:boolean}){
   const[config,setConfig]=useState<TrackingConfig>(defaultTrackingConfig),[loading,setLoading]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
   useEffect(()=>{if(!projectId||!enabled)return;let live=true;setLoading(true);setMessage("");fetch(`/api/projects/tracking-config?projectId=${encodeURIComponent(projectId)}`,{cache:"no-store"}).then(async r=>{const b=await r.json();if(!r.ok)throw new Error(b.error);if(live)setConfig(b.config)}).catch(e=>live&&setMessage(e instanceof Error?e.message:"Erro ao carregar regras.")).finally(()=>live&&setLoading(false));return()=>{live=false}},[projectId,enabled]);
-  const save=async()=>{setSaving(true);setMessage("");try{const r=await fetch(`/api/projects/tracking-config?projectId=${encodeURIComponent(projectId)}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({config})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível salvar.");setConfig(b.config);setMessage("Regras salvas. O script instalado já passa a usar esta configuração.")}catch(e){setMessage(e instanceof Error?e.message:"Não foi possível salvar.")}finally{setSaving(false)}};
+  const save=async()=>{setSaving(true);setMessage("");try{const r=await apiFetch(`/api/projects/tracking-config?projectId=${encodeURIComponent(projectId)}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({config})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível salvar.");setConfig(b.config);setMessage("Regras salvas. O script instalado já passa a usar esta configuração.")}catch(e){setMessage(e instanceof Error?e.message:"Não foi possível salvar.")}finally{setSaving(false)}};
   if(!enabled)return <div className="mt-6 rounded-xl border border-dashed border-slate-200 p-5 text-sm text-slate-500">Conecte ou crie um Pixel para liberar as regras de envio.</div>;
   if(loading)return <div className="mt-6 flex items-center gap-2 text-sm text-slate-400"><Loader2 className="animate-spin"/>Carregando regras do projeto...</div>;
   return <div className="mt-7 space-y-4 border-t border-slate-200 pt-6"><div><h3 className="flex items-center gap-2 text-lg font-semibold"><Settings2 className="size-5 text-blue-600"/>Regras do Pixel e do rastreamento</h3><p className="mt-1 text-sm leading-6 text-slate-500">Escolha como cada evento é detectado. O mesmo identificador é usado no navegador e no servidor para deduplicar.</p></div>{labels.map(item=><EventEditor key={item.key} title={item.title} event={item.event} hint={item.hint} value={config[item.key]} onChange={rule=>setConfig({...config,[item.key]:rule})}/>)}

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy, Loader2, Plus, PlugZap, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { copyText } from "@/lib/clipboard";
+import { apiFetch } from "@/lib/plan-client";
 
 type Project = { id: string; name: string; domain?: string; publicKey?: string; pixelId?: string; metaConnectedAt?: string };
 
@@ -32,7 +33,7 @@ export function TrackingInstall() {
   const create = async () => {
     setCreating(true);
     try {
-      const r = await fetch("/api/projects", {
+      const r = await apiFetch("/api/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name, domain }),
@@ -61,7 +62,7 @@ export function TrackingInstall() {
     setConnecting(p.id);
     setError("");
     try {
-      const r = await fetch("/api/meta/connect", {
+      const r = await apiFetch("/api/meta/connect", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ projectId: p.id, pixelId: (pixelDraft[p.id] || "").trim(), accessToken: (tokenDraft[p.id] || "").trim() }),
@@ -81,7 +82,7 @@ export function TrackingInstall() {
     setConnecting(p.id);
     setError("");
     try {
-      const r = await fetch(`/api/meta/connect?projectId=${encodeURIComponent(p.id)}`, { method: "DELETE" });
+      const r = await apiFetch(`/api/meta/connect?projectId=${encodeURIComponent(p.id)}`, { method: "DELETE" });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Não foi possível desconectar.");
       setProjects((ps) => ps.map((x) => (x.id === p.id ? { ...x, pixelId: undefined, metaConnectedAt: undefined } : x)));
@@ -97,7 +98,7 @@ export function TrackingInstall() {
     setDeleting(p.id);
     setError("");
     try {
-      const r = await fetch(`/api/projects?id=${encodeURIComponent(p.id)}`, { method: "DELETE" });
+      const r = await apiFetch(`/api/projects?id=${encodeURIComponent(p.id)}`, { method: "DELETE" });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Não foi possível apagar.");
       await load();

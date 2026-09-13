@@ -3,6 +3,8 @@ import {useEffect,useMemo,useState} from "react";
 import {ChevronDown,Loader2,Search,X} from "lucide-react";
 
 type Sale={id:string;externalId:string;provider:string;status:string;value:number;currency:string;updatedAt:number;projectName:string;utmCampaign?:string|null;utmSource?:string|null;utmMedium?:string|null;utmContent?:string|null;utmTerm?:string|null};
+// Cache de formatadores: evita recriar Intl.NumberFormat a cada célula (200 linhas).
+const fmtCache=new Map<string,Intl.NumberFormat>();
 const LIMIT=200;
 const STATUS_LABEL:Record<string,string>={approved:"Aprovada",pending:"Pendente",refunded:"Reembolsada",cancelled:"Cancelada",chargeback:"Chargeback"};
 const STATUS_TONE:Record<string,string>={approved:"bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",pending:"bg-amber-500/15 text-amber-700 dark:text-amber-300",refunded:"bg-slate-500/15 text-slate-600 dark:text-slate-300",cancelled:"bg-slate-500/15 text-slate-600 dark:text-slate-300",chargeback:"bg-red-500/15 text-red-600 dark:text-red-300"};
@@ -10,8 +12,13 @@ const STATUS_TONE:Record<string,string>={approved:"bg-emerald-500/15 text-emeral
 function money(value:number,currency:string){
   const v=Number(value);
   const cur=typeof currency==="string"&&/^[A-Z]{3}$/.test(currency)?currency:"BRL";
-  try{return new Intl.NumberFormat("pt-BR",{style:"currency",currency:cur}).format(Number.isFinite(v)?v:0)}
-  catch{return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number.isFinite(v)?v:0)}
+  const safe=Number.isFinite(v)?v:0;
+  let fmt=fmtCache.get(cur);
+  if(!fmt){try{fmt=new Intl.NumberFormat("pt-BR",{style:"currency",currency:cur})}catch{fmt=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"})}
+    if(fmtCache.size>8)fmtCache.clear();
+    fmtCache.set(cur,fmt)}
+  try{return fmt.format(safe)}
+  catch{return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(safe)}
 }
 function when(ts:number){
   if(!Number.isFinite(Number(ts))||Number(ts)<=0)return "—";
@@ -38,8 +45,8 @@ export function SalesClient(){
   const ticket=approved.length?approvedTotal/approved.length:0;
   const cur=typeof rows[0]?.currency==="string"&&/^[A-Z]{3}$/.test(rows[0].currency)?rows[0].currency:"BRL";
   if(error)return <p role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-300">{error}</p>;
-  return <div className="space-y-4">
-    <div className="grid gap-3 sm:grid-cols-3">{[["Receita aprovada",money(approvedTotal,cur),`${approved.length} venda(s)`],["Pendentes",String(pendingCount),"aguardando aprovação"],["Ticket médio",money(ticket,cur),"por venda aprovada"]].map(([k,v,s],i)=><div key={k} className={`relative overflow-hidden rounded-xl border p-4 ${i===0?"border-red-500/25 bg-gradient-to-br from-red-500/[.09] to-transparent dark:from-red-500/[.14]":"border-slate-200 bg-white dark:border-white/10 dark:bg-white/[.02]"}`}><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{k}</p><p className="mt-1 text-2xl font-bold tabular-nums">{v}</p><p className="mt-0.5 text-xs text-slate-500">{s}</p></div>)}</div>
+  return <div className="min-w-0 space-y-4">
+    <div className="grid gap-3 sm:grid-cols-3">{[["Receita aprovada",money(approvedTotal,cur),`${approved.length} venda(s)`],["Pendentes",String(pendingCount),"aguardando aprovação"],["Ticket médio",money(ticket,cur),"por venda aprovada"]].map(([k,v,s],i)=><div key={k} className={`min-w-0 relative overflow-hidden rounded-xl border p-4 ${i===0?"border-red-500/25 bg-gradient-to-br from-red-500/[.09] to-transparent dark:from-red-500/[.14]":"border-slate-200 bg-white dark:border-white/10 dark:bg-white/[.02]"}`}><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{k}</p><p className="mt-1 break-words text-xl font-bold tabular-nums sm:text-2xl">{v}</p><p className="mt-0.5 text-xs text-slate-500">{s}</p></div>)}</div>
     <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[.02] md:grid-cols-[1.4fr_1fr_1fr_1fr]">
       <label className="relative block"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar pedido, campanha, projeto..." aria-label="Buscar vendas" className="dashboard-input h-11 pl-9"/></label>
       <select value={status} onChange={e=>setStatus(e.target.value)} aria-label="Filtrar por status" className="dashboard-input h-11"><option value="all">Todos os status</option>{Object.entries(STATUS_LABEL).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>

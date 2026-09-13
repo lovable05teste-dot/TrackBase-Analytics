@@ -2,7 +2,7 @@ import {and,eq} from "drizzle-orm";
 import {ensureDb,getDb} from "@/db";
 import {metaAccounts} from "@/db/schema";
 import {metaConfig,metaJson} from "@/lib/meta";
-import {decryptSecret,requestUserId,sha256} from "@/lib/trackbase-security";
+import {decryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256} from "@/lib/trackbase-security";
 import {logHistory} from "@/lib/meta-rules";
 
 type Action="activate"|"pause"|"duplicate"|"budget"|"delete";
@@ -10,6 +10,7 @@ type Action="activate"|"pause"|"duplicate"|"budget"|"delete";
 export async function POST(request:Request){
   try{
     const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado."},{status:401});
+    if(!(await hasActivePlan(userId)))return planRequiredResponse();
     const body=await request.json() as {accountId?:string;objectId?:string;level?:string;action?:Action;value?:number};
     if(!body.accountId||!body.objectId||!body.action)return Response.json({error:"Ação incompleta."},{status:400});
     if(!["campaign","adset","ad"].includes(body.level||""))return Response.json({error:"Nível inválido."},{status:400});

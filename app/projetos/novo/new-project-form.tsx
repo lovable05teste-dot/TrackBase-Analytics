@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Check, Copy, Loader2, Plus } from "lucide-react";
 import { copyText } from "@/lib/clipboard";
+import { apiFetch } from "@/lib/plan-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -19,7 +20,7 @@ export function NewProjectForm() {
     setLoading(true);
     setError("");
     try {
-      const r = await fetch("/api/projects", {
+      const r = await apiFetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, domain }),

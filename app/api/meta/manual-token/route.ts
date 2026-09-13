@@ -1,10 +1,11 @@
 import { ensureDb,getDb } from "@/db";
 import { metaAccounts } from "@/db/schema";
 import { metaJson,requireMetaConfig } from "@/lib/meta";
-import { encryptSecret,requestUserId,sha256 } from "@/lib/trackbase-security";
+import { encryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256 } from "@/lib/trackbase-security";
 type Token={access_token:string;expires_in?:number};type MetaUser={id:string;name?:string};type AdAccounts={data:Array<{account_id:string;name?:string;currency?:string;timezone_name?:string;account_status?:number}>};
 export async function POST(request:Request){
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+ if(!(await hasActivePlan(userId)))return planRequiredResponse();
  const body=await request.json().catch(()=>({})) as {accessToken?:string};const pasted=(body.accessToken||"").trim();
  if(!pasted)return Response.json({error:"Cole o token gerado no Graph API Explorer."},{status:400});
  try{
