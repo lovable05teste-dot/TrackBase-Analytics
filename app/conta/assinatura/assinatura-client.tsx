@@ -1,11 +1,13 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import { ArrowRight, Check, Loader2, Lock, ShieldCheck, X, AlertCircle, Ban } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/AppShell";
 import { formatCpf, stripCpf, validateCpf } from "@/lib/cpf";
 
 type Plan = { id: string; name: string; price: number; priceLabel: string; sales: number | null; feats: string[]; hot?: boolean; configured: boolean };
-type Subscription = { plan: string; status: string; amount: string | null; currentPeriodEnd: number | null } | null;
+type Subscription = { plan: string; status: string; amount: string | null; currentPeriodEnd: number | null; planVersion?: number; cancelAtPeriodEnd?: boolean; scheduledPlan?: string | null; excessEnabled?: boolean; excessCap?: number | null } | null;
 
 declare global {
   interface Window {
@@ -65,6 +67,10 @@ const statusLabel: Record<string, string> = {
 };
 
 export function AssinaturaClient() {
+  const isPlanoRoute = usePathname() === "/planos";
+  const [canceling, setCanceling] = useState(false);
+  const [usage, setUsage] = useState<{count:number;limit:number;pct:number;remaining:number}|null>(null);
+  function enterVitrine() { document.cookie = "gs_vitrine=1; Path=/; SameSite=Lax; Max-Age=86400"; window.location.assign("/"); }
   const [plans, setPlans] = useState<Plan[]>([]);
   const [sub, setSub] = useState<Subscription>(null);
   const [sdkOk, setSdkOk] = useState(false);
@@ -98,6 +104,7 @@ export function AssinaturaClient() {
       if (!r.ok) throw new Error(b.error || "Falha ao carregar assinatura.");
       setPlans(b.plans || []);
       setSub(b.subscription || null);
+      setUsage(b.usage || null);
       setSdkOk(!!b.sdkClientId);
       setLoadError("");
     } catch (e) {
@@ -250,8 +257,7 @@ export function AssinaturaClient() {
     }
   }
 
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const [showManageModal, setShowManageModal] = useState(false);
+
 
   async function cancel() {
     if (!confirmCancel) { setConfirmCancel(true); return; }
@@ -329,7 +335,7 @@ export function AssinaturaClient() {
             {activePlan && <Button variant="outline" size="sm" onClick={() => openCheckout(plans.find(p => p.id === activePlan!.plan)!)}>Tentar novamente</Button>}
           </div>
         </div>
-      ) : isActiveSubscription ? (
+      ) : isActiveSubscription && activePlan ? (
         <div className="mb-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[.06] p-4">
             <div>

@@ -11,7 +11,7 @@ interface AccountData {
   avatarInitial: string;
 }
 
-export function AccountMenu({ data }: { data: AccountData }) {
+export function AccountMenu({ data = {userName:"Minha conta",userEmail:"",workspaceName:"",planName:"",planStatus:"",avatarInitial:""} }: { data?: AccountData }) {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
