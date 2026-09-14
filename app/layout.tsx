@@ -33,17 +33,19 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-YV71CM9ETF" strategy="afterInteractive" />
-        <Script id="ghostscale-google-analytics" strategy="afterInteractive">
-          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YV71CM9ETF',{anonymize_ip:true});`}
-        </Script>
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem("tb_theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}`,
           }}
         />
       </head>
-      <body className="antialiased"><PwaRegister/><SoundNotifications/><Toaster position="bottom-right" richColors/>{children}</body>
+      <body className="antialiased">
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-YV71CM9ETF" strategy="afterInteractive" />
+        <Script id="ghostscale-google-analytics" strategy="afterInteractive">
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YV71CM9ETF',{anonymize_ip:true});`}
+        </Script>
+        <PwaRegister/><SoundNotifications/><Toaster position="bottom-right" richColors/>{children}
+      </body>
     </html>
   );
 }
