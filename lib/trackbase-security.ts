@@ -126,14 +126,29 @@ export async function decryptSecret(cipher: string, iv: string) {
 export const SESSION_TTL_SECONDS = 30 * 24 * 3600;
 export const PENDING_2FA_TTL_SECONDS = 600;
 
+function sessionCookieDomain() {
+  // O OAuth da Meta retorna no callback canônico (www), enquanto o usuário
+  // pode ter iniciado a conexão no domínio raiz. Compartilhar o cookie entre
+  // os dois hosts evita perder a sessão nesse retorno. Nunca envia Domain em
+  // previews/localhost, onde ele seria rejeitado pelo navegador.
+  try {
+    const configured = process.env.APP_URL?.trim();
+    if (!configured) return "";
+    const host = new URL(configured).hostname.toLowerCase();
+    return host === "ghostscale.com.br" || host === "www.ghostscale.com.br" ? " Domain=ghostscale.com.br;" : "";
+  } catch {
+    return "";
+  }
+}
+
 export function sessionCookie(token: string, maxAge = SESSION_TTL_SECONDS) {
   const secure = process.env.SECURE_COOKIES === "true" || (!process.env.SECURE_COOKIES && process.env.NODE_ENV === "production") ? " Secure;" : "";
   // OAuth returns through a cross-site top-level GET. Mutations retain Origin/CSRF checks.
-  return `tb_session=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
+  return `tb_session=${token}; Path=/; HttpOnly;${sessionCookieDomain()}${secure} SameSite=Lax; Max-Age=${maxAge}`;
 }
 
 export function clearSessionCookie() {
-  return "tb_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
+  return `tb_session=; Path=/; HttpOnly;${sessionCookieDomain()} Secure; SameSite=Lax; Max-Age=0`;
 }
 
 // Compat: delega para lib/permissions (evita ciclo de import estático)
