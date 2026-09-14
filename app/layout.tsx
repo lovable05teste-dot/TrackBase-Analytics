@@ -1,4 +1,5 @@
 import type { Metadata,Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import {PwaRegister} from "./pwa-register";
 import {Toaster} from "@/components/ui/sonner";
@@ -32,6 +33,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-YV71CM9ETF" strategy="afterInteractive" />
+        <Script id="ghostscale-google-analytics" strategy="afterInteractive">
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YV71CM9ETF',{anonymize_ip:true});`}
+        </Script>
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem("tb_theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}`,
