@@ -8,6 +8,7 @@ export const metadata: Metadata = { title: "Documentação — GhostScale", desc
 
 const tabs = [
   ["/docs", "Visão geral"],
+  ["/docs/ferramentas", "Como usar as funções"],
   ["/docs/gateways", "Gateways"],
   ["/docs/pagina", "Página de vendas"],
   ["/docs/faq", "FAQ"],

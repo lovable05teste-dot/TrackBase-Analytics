@@ -14,16 +14,17 @@ export async function workspaceIdForUser(userId: string): Promise<string> {
 }
 
 export async function getPlanContext(userId: string | null | undefined) {
-  if (!userId || userId === "trackbase-owner") return { plan: "scale" as PlanId, status: "active", hasActive: true, version: PLAN_VERSION_CURRENT, sub: null as never };
+  if (!userId) return { plan: null as PlanId | null, status: null as string | null, hasActive: false, version: null as number | null, sub: null };
+  if (userId === "trackbase-owner") return { plan: "scale" as PlanId, status: "active", hasActive: true, version: PLAN_VERSION_CURRENT, sub: null as never };
   try {
     await ensureDb();
     const ws = await workspaceIdForUser(userId);
     const rows = await getDb().select().from(planSubscriptions).where(eq(planSubscriptions.workspaceId, ws)).orderBy(desc(planSubscriptions.createdAt)).limit(1);
     const row = rows[0];
     if (!row) return { plan: null as PlanId | null, status: null as string | null, hasActive: false, version: null as number | null, sub: null };
-    const hasActive = row.status === "active";
+    const hasActive = isPlanId(row.plan) && row.status === "active" && (!row.currentPeriodEnd || row.currentPeriodEnd > Math.floor(Date.now() / 1000));
     return { plan: row.plan as PlanId, status: row.status, hasActive, version: (row as { planVersion?: number | null }).planVersion ?? 1, sub: row };
-  } catch { return { plan: null as PlanId | null, status: null as string | null, hasActive: true, version: null as number | null, sub: null }; }
+  } catch { return { plan: null as PlanId | null, status: "unavailable", hasActive: false, version: null as number | null, sub: null }; }
 }
 export async function hasActivePlan(userId: string | null | undefined): Promise<boolean> {
   return (await getPlanContext(userId)).hasActive;
@@ -39,7 +40,7 @@ export async function requireWorkspaceAccess(userId: string, workspaceId: string
   // Owner implícito: se não há member mas workspace pertence ao user (hash), considera owner (workspace single-tenant legado)
   if (!row) {
     const expected = await workspaceIdForUser(userId);
-    if (expected === workspaceId) return "owner" as WorkspaceRole;
+    if (expected === workspaceId && (!allowedRoles || allowedRoles.includes("owner"))) return "owner" as WorkspaceRole;
     return null;
   }
   const role = (row.role as string) || "member";

@@ -34,11 +34,11 @@ export default async function Page() {
     if (cIc >= 10 && convIc < 20) sugestoes.push(`Checkout com gargalo (${convIc}% IC→compra). Reduza fricção: Pix à vista, 1-click, prova perto do botão.`);
     if (avgTicket > 0 && avgTicket < 50) sugestoes.push(`Ticket médio baixo (${brl(avgTicket)}). Teste order bump / upsell para elevar o faturamento sem mais tráfego.`);
     if (trend === "queda") sugestoes.push("Tendência de queda vs média 30d. Revise frequência dos criativos e sobreposição de público.");
-    if (!sugestoes.length) sugestoes.push("Base saudável. Escale +20% o orçamento das campanhas com ROAS > 2 e mantenha CAPI deduplicado.");
+    if (!sugestoes.length) sugestoes.push(cPurch ? "Confira margem, volume de conversões e custos antes de decidir sobre orçamento." : "Ainda não há compras suficientes para avaliar a tendência. Confira o tracker e o webhook antes de interpretar a projeção.");
   }
 
   return (
-    <AppShell title="Predict (IA)" subtitle="Projeção simples baseada nos últimos 7 e 30 dias + recomendações.">
+    <AppShell title="Predict" subtitle="Projeção simples baseada nos últimos 7 e 30 dias + recomendações.">
       <div className="grid gap-4 md:grid-cols-4">
         {[
           ["Health score", `${score}/100`, `Tendência: ${trend}`],

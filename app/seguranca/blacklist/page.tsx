@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
-    <AppShell title="Blacklist de IP" subtitle="Bloqueie bots, concorrentes e cliques repetidos.">
+    <AppShell title="Blacklist de IP" subtitle="Exclua endereços específicos dos novos eventos de rastreamento.">
       <BlacklistClient />
     </AppShell>
   );

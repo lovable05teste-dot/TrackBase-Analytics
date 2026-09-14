@@ -1,38 +1,33 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useToolState, ToolSaveBar } from "@/components/use-tool-state";
+import { useState } from "react";
 import { FlaskConical, Plus, Trash2 } from "lucide-react";
+import { parsePrice } from "@/lib/tool-state";
 import { uid } from "@/lib/uid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Offer = { id: string; name: string; price: number; hook: string; status: string };
-const KEY = "tb_offer_lab";
 
 export function OfferLabClient() {
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const store = useToolState<Offer[]>("offer_lab", []);
+  const { data: offers, setData: setOffers } = store;
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [hook, setHook] = useState("");
-  const [ready, setReady] = useState(false);
   const [formError, setFormError] = useState("");
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setOffers(JSON.parse(raw));
-    } catch { /* mantém vazio */ } finally { setReady(true); }
-  }, []);
-  useEffect(() => { if (!ready) return; try { localStorage.setItem(KEY, JSON.stringify(offers)); } catch { /* sem persistência */ } }, [offers, ready]);
   const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number.isFinite(v) ? v : 0);
   function add(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
     if (!name.trim()) { setFormError("Dê um nome para a variação."); return; }
-    const value = Number(String(price).replace(/\./g, "").replace(",", "."));
+    const value = parsePrice(price);
     if (!Number.isFinite(value) || value <= 0) { setFormError("Informe um preço válido maior que zero."); return; }
     setOffers((o) => [...o, { id: uid(), name: name.trim().slice(0, 80), price: Math.round(value * 100) / 100, hook: hook.trim().slice(0, 140), status: "em teste" }]);
     setName(""); setPrice(""); setHook("");
   }
   return (
+    <><ToolSaveBar state={store} /><fieldset disabled={store.loading || store.saving || !store.canEdit} className="min-w-0">
     <div className="grid gap-4">
       <Card className="metric-card">
         <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="size-5 text-violet-300" />Offer Lab — teste de ofertas</CardTitle></CardHeader>
@@ -44,7 +39,7 @@ export function OfferLabClient() {
             <Button type="submit" size="sm"><Plus className="size-4" />Adicionar</Button>
           </form>
           {formError ? <p role="alert" className="mt-2 text-sm text-red-400">{formError}</p> : null}
-          <p className="mt-3 text-xs text-slate-500">Metodologia: rode cada variação com o mesmo orçamento por 3 dias, compare IC→compra em /funil e mantenha a vencedora.</p>
+          <p className="mt-3 text-xs text-slate-500">Organize as variações e marque a vencedora após analisar seus dados. Salvar aqui não altera a oferta publicada.</p>
         </CardContent>
       </Card>
       <div className="grid gap-3">
@@ -59,5 +54,6 @@ export function OfferLabClient() {
         )) : <div className="metric-card rounded-xl p-8 text-center text-sm text-slate-500">Nenhuma oferta em teste. Adicione a primeira variação acima.</div>}
       </div>
     </div>
+    </fieldset></>
   );
 }

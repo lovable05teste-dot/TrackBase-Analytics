@@ -1,58 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Ban, Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const KEY = "tb_ip_blacklist";
-
+import { useState } from "react";
+import { Ban, Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useProjectProtection } from "@/components/use-project-protection";
+import { copyText } from "@/lib/clipboard";
 export function BlacklistClient() {
-  const [list, setList] = useState<string[]>([]);
-  const [ip, setIp] = useState("");
-  const [ready, setReady] = useState(false);
-  const [formError, setFormError] = useState("");
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setList(JSON.parse(raw));
-    } catch { /* mantém vazio */ } finally { setReady(true); }
-  }, []);
-  useEffect(() => { if (!ready) return; try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* sem persistência */ } }, [list, ready]);
-  const validIp = (v: string) =>
-    /^\d{1,3}(\.\d{1,3}){3}$/.test(v) && v.split(".").every((n) => Number(n) <= 255) ||
-    /^[0-9a-fA-F:]{2,45}$/.test(v) && v.includes(":");
-  function add(e: React.FormEvent) {
-    e.preventDefault();
-    const v = ip.trim();
-    setFormError("");
-    if (!v || list.includes(v)) return;
-    if (!validIp(v)) { setFormError("Digite um IPv4 ou IPv6 válido."); return; }
-    setList((l) => [...l, v]);
-    setIp("");
-  }
-  return (
-    <div className="grid gap-4">
-      <Card className="metric-card">
-        <CardHeader><CardTitle className="flex items-center gap-2"><Ban className="size-5 text-red-300" />Blacklist de IP ({list.length})</CardTitle></CardHeader>
-        <CardContent>
-          <p className="mb-4 text-sm text-slate-400">IPs aqui são ignorados nas análises e podem ser bloqueados no tracker/Cloudflare. Salvo neste navegador + exportável para o firewall.</p>
-          <form onSubmit={add} className="flex flex-col gap-2 sm:flex-row">
-            <input value={ip} onChange={(e) => setIp(e.target.value)} placeholder="Ex.: 192.168.0.10 ou 2804:..." aria-label="Endereço IP" className="h-11 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 text-sm" />
-            <Button type="submit" size="sm" className="h-11"><Plus className="size-4" />Adicionar</Button>
-          </form>
-          {formError ? <p role="alert" className="mt-2 text-sm text-red-400">{formError}</p> : null}
-        </CardContent>
-      </Card>
-      <div className="metric-card overflow-hidden rounded-xl">
-        <table className="w-full text-sm">
-          <thead><tr><th>IP</th><th>Ação</th></tr></thead>
-          <tbody>
-            {list.length ? list.map((v) => (
-              <tr key={v}><td className="font-mono">{v}</td><td><button onClick={() => setList((l) => l.filter((x) => x !== v))} className="rounded-lg border border-white/10 p-2 text-slate-400 hover:text-red-300"><Trash2 className="size-4" /></button></td></tr>
-            )) : <tr><td colSpan={2} className="py-8 text-center text-slate-500">Nenhum IP bloqueado.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+  const s = useProjectProtection();
+  const [ip, setIp] = useState(""), [message, setMessage] = useState("");
+  async function add(e: React.FormEvent) { e.preventDefault(); setMessage(""); if (await s.save("PATCH", { action: "add", ip })) { setIp(""); setMessage("IP salvo. Novos eventos desse endereço serão ignorados no servidor."); } }
+  async function remove(value: string) { setMessage(""); if (await s.save("PATCH", { action: "remove", ip: value })) setMessage("IP removido. As próximas visitas podem gerar eventos novamente."); }
+  async function copy() { if (await copyText(s.data?.blockedIps.join("\n") || "")) setMessage("Lista copiada para configurar no firewall da hospedagem."); else s.setError("Não foi possível copiar."); }
+  return <div className="space-y-5">
+    <section className="rounded-2xl border border-border bg-card p-5"><h2 className="flex items-center gap-2 text-lg font-semibold"><Ban className="size-5 text-red-500" />Excluir IPs do rastreamento</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Regras salvas na sua conta, por projeto. Os IPs são verificados no servidor antes de registrar novos eventos e enviar CAPI. A lista não bloqueia a abertura do site e não altera vendas confirmadas pelo gateway.</p><label className="mt-4 block text-sm">Projeto<select value={s.projectId} disabled={s.saving} onChange={e => { s.selectProject(e.target.value); setMessage(""); setIp(""); }} className="mt-1 w-full rounded-xl border border-border bg-background p-3"><option value="" disabled>Selecione seu projeto</option>{s.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+    <form onSubmit={add} className="mt-4 flex flex-col gap-2 sm:flex-row"><label className="flex-1"><span className="sr-only">Endereço IPv4 ou IPv6</span><input value={ip} onChange={e => setIp(e.target.value)} maxLength={45} placeholder="IPv4 ou IPv6 completo" className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm" /></label><button disabled={s.saving || s.loading || !s.data || !ip.trim()} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm text-white disabled:opacity-50"><Plus className="size-4" />Adicionar</button></form><p className="mt-3 text-xs leading-5 text-muted-foreground">Use um IP exato, sem porta ou /máscara. Para bloquear o acesso ao site inteiro, aplique a lista no firewall da hospedagem.</p></section>
+    {s.error && <p role="alert" className="text-sm text-red-500">{s.error}</p>}{message && <p role="status" className="text-sm text-emerald-600 dark:text-emerald-400">{message}</p>}
+    <section className="rounded-2xl border border-border bg-card p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">IPs excluídos ({s.data?.blockedIps.length || 0}/200)</h3><div className="flex gap-2"><button type="button" onClick={s.reload} disabled={!s.projectId || s.saving} className="rounded-lg border border-border p-2" aria-label="Recarregar lista"><RefreshCw className="size-4" /></button><button type="button" onClick={copy} disabled={!s.data?.blockedIps.length} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50"><Copy className="size-4" />Copiar lista</button></div></div>
+    {s.loading ? <p role="status" className="text-sm text-muted-foreground">Carregando…</p> : !s.projects.length ? <a className="text-red-500 underline" href="/projetos/novo">Crie um projeto para começar</a> : s.data?.blockedIps.length ? <ul className="space-y-2">{s.data.blockedIps.map(value => <li key={value} className="flex items-center justify-between gap-3 rounded-xl bg-background p-3"><code className="break-all text-sm">{value}</code><button type="button" onClick={() => remove(value)} disabled={s.saving} className="rounded-lg border border-border p-2 text-muted-foreground hover:text-red-500 disabled:opacity-50" aria-label={"Remover IP " + value}><Trash2 className="size-4" /></button></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhum IP excluído neste projeto.</p>}
+    </section>
+  </div>;
 }

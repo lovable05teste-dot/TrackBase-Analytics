@@ -1,0 +1,56 @@
+"use client";
+import { useState } from "react";
+import { Check, Copy, FlaskConical, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { useProjectProtection } from "@/components/use-project-protection";
+import { defaultProtection, evaluateProtection, normalizeDomain, validateProtection, type ProtectionConfig } from "@/lib/protection";
+import { copyText } from "@/lib/clipboard";
+
+const input = "mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-red-500/40";
+const panel = "rounded-2xl border border-border bg-card p-5 sm:p-6";
+export function ProtectionClient() {
+  const s = useProjectProtection();
+  const [draft, setDraft] = useState<{ projectId: string; value: ProtectionConfig; domains: string } | null>(null);
+  const [message, setMessage] = useState(""), [testUrl, setTestUrl] = useState(""), [frame, setFrame] = useState("no");
+  const [result, setResult] = useState(""), [copied, setCopied] = useState(false);
+  const config = draft?.projectId === s.projectId ? draft.value : s.data?.config || defaultProtection();
+  const domains = draft?.projectId === s.projectId ? draft.domains : config.allowedDomains.join("\n");
+  const change = (next: Partial<ProtectionConfig>, d = domains) => { setDraft({ projectId: s.projectId, value: { ...config, ...next }, domains: d }); setMessage(""); setResult(""); };
+  const currentConfig = () => validateProtection({ ...config, allowedDomains: domains.split(/[\n,]+/).map(d => d.trim()).filter(Boolean) });
+  async function save() {
+    setMessage("");
+    try { if (await s.save("PUT", { config: currentConfig() })) { setDraft(null); setMessage("Proteção salva. As próximas visitas já usam estas regras."); } }
+    catch (e) { s.setError(e instanceof Error ? e.message : "Confira as regras."); }
+  }
+  function simulate() {
+    try {
+      const v = evaluateProtection(currentConfig(), normalizeDomain(testUrl), frame !== "no", frame === "same");
+      setResult(v.reason === "disabled" ? "Proteção desativada: visita permitida." : v.violation ? (v.blocked ? "Bloqueado: " : "Apenas observado: ") + (v.reason === "domain" ? "domínio fora da lista autorizada." : "abertura em iframe não permitida.") : "Permitido: a visita atende às regras selecionadas.");
+    } catch (e) { setResult(e instanceof Error ? e.message : "URL inválida."); }
+  }
+  const snippet = '<script defer src="https://www.ghostscale.com.br/protection.js?key=' + encodeURIComponent(s.data?.project.publicKey || "SUA_CHAVE") + '"></script>';
+  async function copy() { if (await copyText(snippet)) setCopied(true); else s.setError("Não foi possível copiar. Selecione o código e copie manualmente."); }
+  return <div className="space-y-5">
+    <section className={panel + " border-red-500/20 bg-gradient-to-br from-red-500/[.08] to-transparent"}>
+      <h2 className="flex items-center gap-2 text-lg font-semibold"><ShieldCheck className="size-6 text-red-500" />Proteção da página de vendas</h2>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">Configure por projeto, teste a regra e só então ative o bloqueio. Comece em “Observar” para conferir seus domínios.</p>
+      <div className="mt-4 flex items-end gap-3"><label className="min-w-0 flex-1 text-sm">Projeto<select className={input} value={s.projectId} disabled={s.saving} onChange={e => { s.selectProject(e.target.value); setDraft(null); setMessage(""); setResult(""); setCopied(false); }}><option value="" disabled>Selecione seu projeto</option>{s.projects.map(p => <option key={p.id} value={p.id}>{p.name}{p.domain ? " · " + p.domain : ""}</option>)}</select></label><button type="button" onClick={() => { setDraft(null); s.reload(); }} disabled={!s.projectId || s.saving} className="h-11 rounded-xl border border-border p-3 disabled:opacity-50" aria-label="Recarregar regras"><RefreshCw className="size-4" /></button></div>
+    </section>
+    {s.error && <p role="alert" className="rounded-xl border border-red-500/20 p-4 text-sm text-red-500">{s.error}</p>}
+    {s.loading ? <p role="status" className="p-5 text-sm text-muted-foreground">Carregando regras…</p> : !s.projects.length ? <div className={panel}>Crie seu primeiro projeto para configurar a proteção. <a href="/projetos/novo" className="text-red-500 underline">Criar projeto</a></div> : null}
+    {!!s.data && !s.loading && <>
+      <fieldset disabled={s.saving} className="grid gap-5 disabled:opacity-70 xl:grid-cols-2">
+        <section className={panel}><div className="flex justify-between gap-4"><div><h3 className="font-semibold">1. Ativação e modo</h3><p className="mt-1 text-sm text-muted-foreground">As alterações entram em vigor depois de salvar.</p></div><input type="checkbox" className="mt-1 size-5 accent-red-500" aria-label="Ativar proteção" checked={config.enabled} onChange={e => change({ enabled: e.target.checked })} /></div>
+          <label className="mt-5 block text-sm">Ao encontrar uma violação<select className={input} value={config.mode} onChange={e => change({ mode: e.target.value as ProtectionConfig["mode"] })}><option value="monitor">Observar — registrar sem bloquear</option><option value="block">Bloquear — exibir página protegida</option></select></label>
+          <label className="mt-4 block text-sm">Mensagem de bloqueio<input className={input} value={config.message} maxLength={240} onChange={e => change({ message: e.target.value })} /></label>
+          <label className="mt-4 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-4 shrink-0 accent-red-500" checked={config.preventImageDrag} onChange={e => change({ preventImageDrag: e.target.checked })} /><span>Impedir arraste de imagens<span className="mt-1 block text-xs text-muted-foreground">Dificulta o arraste comum. Não impede capturas de tela ou download.</span></span></label>
+        </section>
+        <section className={panel}><h3 className="font-semibold">2. Domínios autorizados</h3><p className="mt-1 text-sm text-muted-foreground">Um por linha. Inclua o endereço com www e o checkout se instalar a proteção lá.</p><label className="mt-3 block"><span className="sr-only">Lista de domínios autorizados</span><textarea className={input + " font-mono"} rows={5} value={domains} placeholder={"suaoferta.com.br\nwww.suaoferta.com.br"} onChange={e => change({}, e.target.value)} /></label><label className="mt-3 flex items-center gap-3 text-sm"><input type="checkbox" className="size-4 accent-red-500" checked={config.includeSubdomains} onChange={e => change({ includeSubdomains: e.target.checked })} />Permitir todos os subdomínios desses endereços</label></section>
+        <section className={panel}><h3 className="font-semibold">3. Abertura dentro de outros sites</h3><label className="mt-3 block text-sm">Regra de iframe<select className={input} value={config.framePolicy} onChange={e => change({ framePolicy: e.target.value as ProtectionConfig["framePolicy"] })}><option value="same-origin">Permitir apenas na própria origem</option><option value="deny">Bloquear qualquer iframe</option><option value="allow">Permitir iframe</option></select></label><p className="mt-3 text-xs leading-5 text-muted-foreground">Construtores e previews podem usar iframe. Confira o preview em “Observar” antes de bloquear.</p></section>
+        <section className={panel}><h3 className="flex items-center gap-2 font-semibold"><FlaskConical className="size-4 text-red-500" />4. Simular uma visita</h3><p className="mt-1 text-sm text-muted-foreground">Usa o formulário. Não visita o site nem altera dados.</p><label className="mt-3 block text-sm">URL ou domínio<input className={input} value={testUrl} onChange={e => setTestUrl(e.target.value)} placeholder="https://suaoferta.com.br" /></label><label className="mt-3 block text-sm">Como a página foi aberta<select className={input} value={frame} onChange={e => setFrame(e.target.value)}><option value="no">Acesso direto</option><option value="same">Iframe na mesma origem</option><option value="other">Iframe em outro site</option></select></label><button type="button" onClick={simulate} className="mt-4 rounded-xl border border-border px-4 py-2 text-sm">Testar regras</button>{result && <p role="status" className="mt-3 text-sm">{result}</p>}</section>
+      </fieldset>
+      <div className="flex flex-wrap items-center gap-3"><button type="button" disabled={s.saving} onClick={save} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"><Save className="size-4" />{s.saving ? "Salvando…" : "Salvar proteção"}</button>{message && <p role="status" className="text-sm text-emerald-600 dark:text-emerald-400">{message}</p>}</div>
+      <section className={panel}><h3 className="font-semibold">Instalar na página</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">O tracker GhostScale já inclui a proteção. Se está instalado, salve e abra a página novamente. Para usar só a proteção, cole este script no &lt;head&gt;. Remova o snippet Anti-Clone antigo para evitar regras duplicadas.</p><pre className="mt-4 overflow-x-auto rounded-xl bg-background p-4 text-xs leading-6"><code>{snippet}</code></pre><button type="button" onClick={copy} disabled={!s.data.project.publicKey} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm">{copied ? <Check className="size-4" /> : <Copy className="size-4" />}{copied ? "Copiado" : "Copiar script"}</button><p className="mt-3 text-xs leading-5 text-muted-foreground">Scripts podem ser removidos de uma cópia. Para impedir iframe antes de carregar a página, configure também o cabeçalho HTTP <code>{"Content-Security-Policy: frame-ancestors 'self'"}</code> na hospedagem da página. Não funciona em tag meta. <a className="underline" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/frame-ancestors" target="_blank" rel="noreferrer">Referência</a>.</p></section>
+      <section className={panel}><h3 className="font-semibold">Diagnósticos recebidos</h3><p className="mt-1 text-xs text-muted-foreground">Relatos do script agrupados por domínio, motivo e hora. Recarregue para ver novas visitas.</p><div className="mt-4 space-y-2">{s.data.reports.length ? s.data.reports.map((r, i) => <div key={i} className="flex flex-wrap justify-between gap-2 rounded-xl bg-background p-3 text-sm"><span className="break-all">{r.host} · {r.reason === "allowed" ? "Permitido" : r.reason === "domain" ? "Domínio fora da lista" : "Iframe não permitido"} · {r.mode === "block" ? "modo bloquear" : "modo observar"}</span><time className="text-xs text-muted-foreground">{new Date(r.occurredAt * 1000).toLocaleString("pt-BR")}</time></div>) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico. Ative “Observar”, salve e abra a página com o script instalado.</p>}</div></section>
+    </>}
+  </div>;
+}

@@ -22,8 +22,8 @@ export default function Docs(){
      <p>O que ele faz sozinho: guarda <code>utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid</code> por 90 dias, envia <code>PageView</code> e <code>ViewContent</code>, repassa os parâmetros nos links/botões até o checkout e dispara o Pixel da Meta se houver um conectado.</p>
      <p>Botão de checkout (opcional, marca o início da compra):</p>
      <Code>{`<a href="/checkout" data-trackbase-event="InitiateCheckout" data-value="69.90" data-currency="BRL">Comprar agora</a>`}</Code>
-     <p>Página de obrigado (opcional, reforça a atribuição — o webhook continua sendo obrigatório):</p>
-     <Code>{`<script>TrackBase.purchase({value:69.90,currency:"BRL",externalId:"PEDIDO_ID"})</script>`}</Code>
+     <p>A página de obrigado não confirma uma venda. Para registrar o pagamento, configure o webhook do gateway:</p>
+     <p><a className="text-red-400 underline" href="/integracoes/gateways">Configurar o gateway</a> · <a className="text-red-400 underline" href="/docs/ferramentas">Ver o passo a passo de cada função</a></p>
     </Sec>
     <Sec id="webhook" n="Parte 3" title="Webhook de vendas">
      <p>Envie um <code>POST</code> com JSON para:</p>

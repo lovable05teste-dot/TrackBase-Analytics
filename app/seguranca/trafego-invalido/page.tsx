@@ -19,23 +19,24 @@ export default async function Page() {
     if (e.eventName === "AdClick") ad += 1;
     else if (e.eventName === "PageView") pv += 1;
     else if (e.eventName === "PageError") err += 1;
-    const v = (e.visitorId || "").trim();
+    const v = e.visitorId ? e.visitorId + ":" + Math.floor(e.occurredAt / 60) : "";
     if (v) perVisitor.set(v, (perVisitor.get(v) ?? 0) + 1);
   }
-  let dupVisitors = 0;
-  for (const n of perVisitor.values()) if (n > 30) dupVisitors += 1;
+  const intenseVisitors = new Set<string>();
+  for (const [key, n] of perVisitor) if (n > 30) intenseVisitors.add(key.slice(0, key.lastIndexOf(":")));
+  const dupVisitors = intenseVisitors.size;
   const stats = { ad, pv, err, dupVisitors };
   const lost = Math.max(0, stats.ad - stats.pv);
   return (
-    <AppShell title="Tráfego Inválido" subtitle="Detecte bots, cliques perdidos e erros que drenam orçamento.">
+    <AppShell title="Tráfego Inválido" subtitle="Investigue erros e padrões de navegação que merecem revisão.">
       {loadError ? <div role="alert" className="metric-card rounded-xl border-red-400/30 p-8 text-center text-sm text-red-600 dark:text-red-300">{loadError}</div> : (!rows.length || !list.length) ? <div className="metric-card rounded-xl p-8 text-center text-slate-400">Sem eventos no período. Instale o tracker para começar a análise.</div> : (
         <div className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               ["Cliques sem PageView", String(lost), `${pct(lost, stats.ad)}% dos cliques`],
               ["PageErrors", String(stats.err), "Falhas de carregamento"],
-              ["Visitantes hiperativos", String(stats.dupVisitors), ">30 eventos em 30d (possível bot)"],
-              ["Saúde do tráfego", lost > 0 && pct(lost, stats.ad) > 30 ? "Crítica" : "OK", "Meta: perda < 20%"],
+              ["Visitantes hiperativos", String(stats.dupVisitors), ">30 eventos em 1 min; requer análise"],
+              ["Diferença entre etapas", !stats.ad ? "Sem base" : lost > 0 && pct(lost, stats.ad) > 30 ? "Revisar" : "Baixa", "Indicador agregado; não comprova fraude"],
             ].map(([k, v, s]) => (
               <div key={k} className="metric-card rounded-xl p-5"><p className="text-sm text-slate-400">{k}</p><p className="mt-2 text-2xl font-semibold">{v}</p><p className="mt-1 text-xs text-slate-500">{s}</p></div>
             ))}

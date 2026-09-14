@@ -23,6 +23,7 @@ export default async function Page() {
     if (e.eventName === "Purchase") row.compras += 1;
     srcMap.set(s, row);
   }
+  const totalSourceEvents = [...srcMap.values()].reduce((sum, source) => sum + source.n, 0);
   const bySource = [...srcMap.values()].sort((a, b) => b.n - a.n).slice(0, 20);
 
   return (
@@ -45,7 +46,7 @@ export default async function Page() {
               <thead><tr>{["Fonte", "Eventos", "Compras", "Participação"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
               <tbody>
                 {bySource.length ? bySource.map((s) => (
-                  <tr key={s.source}><td className="font-medium">{s.source}</td><td>{s.n}</td><td>{s.compras}</td><td>{pct(s.n, total)}%</td></tr>
+                  <tr key={s.source}><td className="font-medium">{s.source}</td><td>{s.n}</td><td>{s.compras}</td><td>{pct(s.n, totalSourceEvents)}%</td></tr>
                 )) : <tr><td colSpan={4} className="py-8 text-center text-slate-500">Sem eventos no período.</td></tr>}
               </tbody>
             </table>

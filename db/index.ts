@@ -11,6 +11,11 @@ function url(){const value=process.env.DATABASE_URL||process.env.POSTGRES_URL||p
 export function getSql(){if(d1())throw new Error("SQL direto indisponível no D1; use getDb().");if(!pgClient)pgClient=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return pgClient}
 export function getDb():DrizzleD1Database<typeof schema>{const binding=d1();if(binding)return drizzleD1(binding as never,{schema});if(!pgClient)pgClient=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return drizzlePg(pgClient,{schema}) as unknown as DrizzleD1Database<typeof schema>}
 const statements=[
+"CREATE TABLE IF NOT EXISTS protection_reports(id text PRIMARY KEY,project_id text NOT NULL,event_name text NOT NULL,occurred_at integer NOT NULL,payload text NOT NULL)",
+"CREATE INDEX IF NOT EXISTS idx_protection_reports_project_time ON protection_reports(project_id,occurred_at)",
+"CREATE TABLE IF NOT EXISTS site_protections(project_id text PRIMARY KEY,workspace_id text NOT NULL,config text NOT NULL,blocked_ips text NOT NULL DEFAULT '[]',revision integer NOT NULL DEFAULT 0,updated_at integer NOT NULL)",
+"CREATE TABLE IF NOT EXISTS tool_states(id text PRIMARY KEY,workspace_id text NOT NULL,tool text NOT NULL,data text NOT NULL,revision integer NOT NULL DEFAULT 0,updated_at integer NOT NULL)",
+"CREATE UNIQUE INDEX IF NOT EXISTS idx_tool_states_ws_tool ON tool_states(workspace_id,tool)",
 "CREATE TABLE IF NOT EXISTS workspaces(id text PRIMARY KEY,name text NOT NULL,created_at text NOT NULL)",
 "CREATE TABLE IF NOT EXISTS members(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,email text,role text NOT NULL DEFAULT 'member')",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_members_workspace_user ON members(workspace_id,user_id)",

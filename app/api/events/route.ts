@@ -1,10 +1,12 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../db";
-import { events, projects } from "../../../db/schema";
+import { events, projects, siteProtections, protectionReports } from "../../../db/schema";
 import { decryptSecret, requestUserId, sha256 } from "../../../lib/trackbase-security";
 import {parseTrackingConfig} from "../../../lib/tracking-config";
+import { domainAllowed, parseProtection } from "@/lib/protection";
+import { parseBlockedIps, requestIp } from "@/lib/protection-ip";
 
-const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead"]);
+const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation"]);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST,OPTIONS" };
 export function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
 async function hash(value:unknown,phone=false){const raw=String(value||"").trim().toLocaleLowerCase(),normalized=phone?raw.replace(/\D/g,""):raw.replace(/\s+/g,"");if(!normalized)return undefined;const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));return Array.from(new Uint8Array(bytes)).map(byte=>byte.toString(16).padStart(2,"0")).join("")}
@@ -13,20 +15,42 @@ function clientIp(request:Request,mode:"auto"|"ipv4"|"disabled"){if(mode==="disa
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json() as Record<string, unknown>;
+    const raw = await request.text();
+    if (raw.length > 32768) return Response.json({ error: "Evento muito grande" }, { status: 413, headers: cors });
+    const body = JSON.parse(raw) as Record<string, unknown>;
     const key = String(body.projectKey || "");
     const eventName = String(body.eventName || "");
     if (eventName === "Purchase") return Response.json({ error: "Compra deve ser confirmada pelo webhook de pagamento" }, { status: 400, headers: cors });
     if (!key || !allowed.has(eventName)) return Response.json({ error: "Evento inválido" }, { status: 400, headers: cors });
     const [project] = await getDb().select().from(projects).where(eq(projects.publicKey, key)).limit(1);
     if (!project) return Response.json({ error: "Projeto inválido" }, { status: 404, headers: cors });
+    const [protectionRow] = await getDb().select().from(siteProtections).where(and(eq(siteProtections.projectId, project.id), eq(siteProtections.workspaceId, project.workspaceId))).limit(1);
+    const protection = parseProtection(protectionRow?.config, project.domain);
+    const incomingIp = requestIp(request);
+    if (incomingIp && parseBlockedIps(protectionRow?.blockedIps).includes(incomingIp)) return Response.json({ received: false, ignored: true, reason: "excluded_ip" }, { headers: cors });
     const eventId = String(body.eventId || crypto.randomUUID());
     const now = Math.floor(Date.now()/1000);
     const url = String(body.url || "");
     const u = url ? new URL(url) : null;
+    if (!u || !["https:", "http:"].includes(u.protocol)) return Response.json({ error: "URL do evento inválida" }, { status: 400, headers: cors });
+    if (eventName === "SecurityCheck" || eventName === "SecurityViolation") {
+      if (!protection.enabled) return new Response(null, { status: 204, headers: cors });
+      const host = u.hostname.toLowerCase().replace(/\.$/, "");
+      const reason = !domainAllowed(host, protection) ? "domain" : body.reason === "frame" ? "frame" : "allowed";
+      // Diagnóstico do navegador, agregado por hora; nunca é enviado à Meta.
+      const reportId = "security_" + await sha256(`${project.id}:${host}:${reason}:${protection.mode}:${Math.floor(now / 3600)}`);
+      await getDb().insert(protectionReports).values({ id: reportId, projectId: project.id, eventName: reason === "allowed" ? "SecurityCheck" : "SecurityViolation", occurredAt: now, payload: JSON.stringify({ host, reason, mode: protection.mode }) }).onConflictDoNothing();
+      return Response.json({ received: true }, { headers: cors });
+    }
+    if (protection.enabled && protection.mode === "block") {
+      const origin = request.headers.get("origin");
+      if (!domainAllowed(u.hostname, protection) || (origin && (origin === "null" || !domainAllowed(new URL(origin).hostname, protection)))) return Response.json({ error: "Domínio não autorizado para este projeto" }, { status: 403, headers: cors });
+    }
+    if (eventId.length > 200) return Response.json({ error: "Identificador de evento inválido" }, { status: 400, headers: cors });
     const attribution=(body.attribution&&typeof body.attribution==="object"?body.attribution:{}) as Record<string,unknown>;
     const utm=(name:string)=>u?.searchParams.get(name)||String(attribution[name]||"")||null;
     const value = Number(body.value || 0);
+    if (!Number.isFinite(value) || value < 0) return Response.json({ error: "Valor inválido" }, { status: 400, headers: cors });
     const safeBody={...body,email:body.email?"[HASHED]":undefined,phone:body.phone?"[HASHED]":undefined};
     await getDb().insert(events).values({
       id: crypto.randomUUID(), projectId: project.id, eventId, eventName, source: "browser",

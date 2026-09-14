@@ -10,7 +10,8 @@ const events: [string, string][] = [
   ["ViewContent", "Página carregada (contentName = título da página)"],
   ["PageError", "Erro de script ou rejeição capturada"],
   ["InitiateCheckout", "Clique em botão de compra (detectado automaticamente)"],
-  ["AddToCart / Lead / Purchase", "Disparados manualmente com window.TrackBase.track"],
+  ["AddToCart / Lead", "Regras configuradas no projeto ou window.TrackBase.track"],
+  ["Purchase", "Confirmado pelo webhook do gateway; recusado no navegador"],
 ];
 
 export default function PaginaDoc() {
@@ -51,21 +52,14 @@ export default function PaginaDoc() {
         <Table head={["Evento", "Quando dispara"]} rows={events.map(([a, b]) => [a, b])} />
 
         <H3>Checkout (InitiateCheckout)</H3>
-        <p className="text-sm leading-6 text-slate-400">O script detecta automaticamente cliques em links/botões cujo texto ou URL contenha <code className="rounded bg-black/30 px-1 text-violet-300">checkout</code>, <code className="rounded bg-black/30 px-1 text-violet-300">comprar</code>, <code className="rounded bg-black/30 px-1 text-violet-300">buy</code> ou <code className="rounded bg-black/30 px-1 text-violet-300">pix</code>. Para controle fino, use o atributo:</p>
+        <p className="text-sm leading-6 text-slate-400">Configure a regra em Pixel &amp; CAPI usando texto do botão, seletor CSS ou trecho do link. O padrão procura o texto COMPRAR AGORA. Para marcar um botão diretamente, use o atributo:</p>
         <Code lang="html">{`<button data-trackbase-event="InitiateCheckout" data-value="129.90" data-currency="BRL">
   Comprar agora
 </button>`}</Code>
 
-        <H3>Compra (Purchase) — manual</H3>
-        <p className="text-sm leading-6 text-slate-400">Dispare no sucesso do pedido (ex.: tela de obrigado):</p>
-        <Code lang="javascript">{`// após o pagamento ser confirmado
-window.TrackBase.track("Purchase", {
-  value: 129.90,
-  currency: "BRL",
-  contentName: "Kit Bíblico",
-  contentIds: ["prod-123"]
-});`}</Code>
-        <Box tone="ok">A compra também chega pelo webhook do gateway (approval → Purchase) com o mesmo <code className="rounded bg-black/30 px-1 text-violet-300">event_id</code>, sem duplicar.</Box>
+        <H3>Compra (Purchase) — pagamento confirmado</H3>
+        <p className="text-sm leading-6 text-slate-400">Configure o webhook do gateway para enviar o ID, valor e status do pedido. O navegador não pode confirmar Purchase: abrir a página de obrigado ou gerar Pix ainda não comprova pagamento.</p>
+        <Box tone="ok">Após a confirmação do gateway, o servidor registra a venda e envia Purchase pela CAPI quando o Pixel está conectado. Reenvios do mesmo pedido devem manter o mesmo ID.</Box>
       </CardContent></Card>
 
       <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><Radio className="size-5 text-violet-300" />Pixel Meta + Conversions API</CardTitle></CardHeader><CardContent className="space-y-4">

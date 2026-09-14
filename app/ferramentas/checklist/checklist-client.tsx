@@ -1,8 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useToolState, ToolSaveBar } from "@/components/use-tool-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const KEY = "tb_checklist_campanha";
 const ITEMS = [
   "Pixel + CAPI conectados e deduplicando por event_id",
   "UTMs padrão instaladas no anúncio (campaign/adset/ad)",
@@ -10,18 +9,18 @@ const ITEMS = [
   "Evento InitiateCheckout dispara no botão de compra",
   "Webhook do gateway retornando 200 {received:true}",
   "CPA máximo calculado e anotado",
-  "3 criativos + 2 hooks por conjunto",
-  "Orçamento inicial = 1x CPA/dia por conjunto",
+  "Criativos e hooks revisados para a oferta",
+  "Orçamento e limite de gasto definidos para o teste",
   "Remarketing IC 7d + ViewContent 30d ativo",
   "Blacklist + Anti-Clone revisados",
 ];
 
 export function ChecklistClient() {
-  const [done, setDone] = useState<Record<string, boolean>>({});
-  useEffect(() => { try { setDone(JSON.parse(localStorage.getItem(KEY) || "{}")); } catch { setDone({}); } }, []);
-  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(done)); }, [done]);
-  const pct = Math.round((Object.values(done).filter(Boolean).length / ITEMS.length) * 100);
+  const store = useToolState<Record<string, boolean>>("checklist", {});
+  const { data: done, setData: setDone } = store;
+  const pct = Math.round((ITEMS.filter(item => done[item]).length / ITEMS.length) * 100);
   return (
+    <><ToolSaveBar state={store} /><fieldset disabled={store.loading || store.saving || !store.canEdit} className="min-w-0">
     <Card className="metric-card">
       <CardHeader><CardTitle>Checklist Campanha — {pct}%</CardTitle></CardHeader>
       <CardContent>
@@ -36,5 +35,6 @@ export function ChecklistClient() {
         </div>
       </CardContent>
     </Card>
+    </fieldset></>
   );
 }
