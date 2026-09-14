@@ -240,9 +240,9 @@ const PriceCalculator = memo(function PriceCalculator() {
           return (
             <div
               key={p.name}
-              className={`min-w-0 rounded-[20px] border p-6 text-left ${
+              className={`gs-price-card min-w-0 rounded-[20px] border p-6 text-left ${
                 isBest
-                  ? "gs-top-hi border-[#FF4D67]/40 bg-gradient-to-b from-[#FF4D67]/[.08] to-transparent shadow-[0_0_44px_-12px_rgba(255,77,103,.25)]"
+                  ? "gs-top-hi gs-price-best border-[#FF4D67]/40 bg-gradient-to-b from-[#FF4D67]/[.08] to-transparent shadow-[0_0_44px_-12px_rgba(255,77,103,.25)]"
                   : "border-white/10 bg-[#150A0D]"
               }`}
             >
@@ -438,6 +438,12 @@ export function LandingPage() {
 
   return (
     <main className="gs-landing gs-grain min-h-screen w-full max-w-full overflow-x-clip">
+      <div className="gs-ambient" aria-hidden="true">
+        <span className="gs-ambient-orb gs-ambient-orb-a" />
+        <span className="gs-ambient-orb gs-ambient-orb-b" />
+        <span className="gs-ambient-orb gs-ambient-orb-c" />
+        <span className="gs-ambient-scan" />
+      </div>
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${
           scrolled ? "border-b border-white/10 bg-[#0C0608]/90 backdrop-blur-md" : "bg-transparent"
@@ -518,7 +524,7 @@ export function LandingPage() {
             ))}
           </div>
 
-          <div className="gs-glass gs-top-hi relative mx-auto mt-12 w-full max-w-4xl min-w-0 rounded-[20px] p-4 text-left sm:p-5">
+          <div className="gs-glass gs-top-hi gs-hero-panel relative mx-auto mt-12 w-full max-w-4xl min-w-0 rounded-[20px] p-4 text-left sm:p-5">
             <div className="flex min-w-0 items-center gap-1.5 border-b border-white/10 pb-3">
               <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
               <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
@@ -880,7 +886,7 @@ export function LandingPage() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl min-w-0 px-4 pb-16 sm:px-5 sm:pb-24">
-        <div className="gs-glass gs-top-hi relative min-w-0 overflow-hidden rounded-[24px] p-8 text-center sm:p-14">
+        <div className="gs-glass gs-top-hi gs-final-cta relative min-w-0 overflow-hidden rounded-[24px] p-8 text-center sm:p-14">
           <div className="gs-hero-art pointer-events-none absolute inset-0" aria-hidden />
           <h2 className="relative mx-auto max-w-2xl text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-5xl">
             Pare de perder venda. <span className="gs-display gs-gradient-text font-normal italic">Escale no dado.</span>

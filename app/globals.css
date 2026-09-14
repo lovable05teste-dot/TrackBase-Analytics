@@ -132,3 +132,57 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 .gs-card{transition:transform .2s ease,border-color .18s ease,box-shadow .2s ease}
 .gs-card:hover{transform:translateY(-3px);box-shadow:0 20px 44px -20px rgba(255,0,48,.4)}
 .gs-mouse-glow{background:radial-gradient(560px circle at var(--mx,50%) var(--my,28%),rgba(255,48,80,.13),transparent 65%)}
+
+/* GhostScale atmosphere: layered motion that stays light on the main thread. */
+.gs-landing{position:relative;isolation:isolate;overflow:clip}
+.gs-landing>section,.gs-landing>footer{position:relative;z-index:1}
+.gs-ambient{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;contain:paint}
+.gs-ambient-orb{position:absolute;border-radius:999px;opacity:.28;will-change:transform;background:radial-gradient(circle at 32% 28%,rgba(255,115,135,.32),rgba(255,0,48,.08) 42%,transparent 72%)}
+.gs-ambient-orb-a{width:clamp(280px,42vw,640px);height:clamp(280px,42vw,640px);top:7rem;left:-14rem;animation:gs-orb-a 19s ease-in-out infinite alternate}
+.gs-ambient-orb-b{width:clamp(220px,32vw,520px);height:clamp(220px,32vw,520px);top:42%;right:-12rem;opacity:.22;animation:gs-orb-b 23s ease-in-out infinite alternate}
+.gs-ambient-orb-c{width:clamp(170px,25vw,380px);height:clamp(170px,25vw,380px);bottom:9%;left:32%;opacity:.16;animation:gs-orb-c 17s ease-in-out infinite alternate}
+.gs-ambient-scan{position:absolute;top:-8%;left:0;width:100%;height:1px;opacity:.3;background:linear-gradient(90deg,transparent,rgba(255,77,103,.65),transparent);animation:gs-scan 16s ease-in-out infinite}
+@keyframes gs-orb-a{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(10vw,13vh,0) scale(1.12)}}
+@keyframes gs-orb-b{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(-12vw,-10vh,0) scale(1.08)}}
+@keyframes gs-orb-c{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(7vw,-8vh,0)}}
+@keyframes gs-scan{0%,12%{transform:translate3d(0,-4vh,0);opacity:0}25%{opacity:.28}70%{opacity:.18}100%{transform:translate3d(0,110vh,0);opacity:0}}
+.gs-hero-art{overflow:hidden;isolation:isolate}
+.gs-hero-art::before{content:"";position:absolute;inset:13% 9%;border:1px solid rgba(255,77,103,.12);border-radius:48% 52% 45% 55%;transform:rotate(-7deg);animation:gs-orbit 22s linear infinite}
+.gs-hero-art::after{content:"";position:absolute;inset:-35% 38%;background:linear-gradient(100deg,transparent,rgba(255,128,148,.12),transparent);transform:translate3d(-120%,0,0) rotate(14deg);animation:gs-hero-sweep 13s ease-in-out infinite}
+@keyframes gs-orbit{to{transform:rotate(353deg)}}
+@keyframes gs-hero-sweep{0%,25%{transform:translate3d(-120%,0,0) rotate(14deg);opacity:0}42%{opacity:1}70%,100%{transform:translate3d(250%,0,0) rotate(14deg);opacity:0}}
+.gs-hero-panel{box-shadow:0 28px 90px -42px rgba(255,0,48,.72),0 0 0 1px rgba(255,77,103,.08);transform:translateZ(0);animation:gs-panel-breathe 8s ease-in-out infinite}
+.gs-hero-panel::after{content:"";position:absolute;inset:-140% 34%;z-index:0;pointer-events:none;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.06) 49%,transparent 60%);transform:translate3d(-120%,0,0) rotate(15deg);animation:gs-panel-sweep 11s ease-in-out infinite}
+.gs-hero-panel>div{position:relative;z-index:1}
+.gs-hero-panel>.grid>div{transition:transform .24s ease,border-color .24s ease,background .24s ease}
+.gs-hero-panel>.grid>div:hover{transform:translateY(-3px);border-color:rgba(255,77,103,.28);background:rgba(255,77,103,.06)}
+@keyframes gs-panel-breathe{0%,100%{box-shadow:0 28px 90px -42px rgba(255,0,48,.62),0 0 0 1px rgba(255,77,103,.08)}50%{box-shadow:0 34px 110px -42px rgba(255,0,48,.82),0 0 0 1px rgba(255,77,103,.16)}}
+@keyframes gs-panel-sweep{0%,30%{transform:translate3d(-120%,0,0) rotate(15deg);opacity:0}46%{opacity:1}66%,100%{transform:translate3d(250%,0,0) rotate(15deg);opacity:0}}
+.gs-card{position:relative;overflow:hidden;isolation:isolate}
+.gs-card::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(360px circle at var(--card-x,50%) var(--card-y,0%),rgba(255,77,103,.14),transparent 68%);opacity:0;transition:opacity .3s ease}
+.gs-card::after{content:"";position:absolute;top:-120%;left:-40%;z-index:0;width:32%;height:340%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,255,255,.08),transparent);transform:rotate(18deg) translate3d(-260%,0,0);transition:transform .9s ease}
+.gs-card>*,.gs-price-card>*{position:relative;z-index:1}
+.gs-card:hover::before,.gs-card:focus-within::before{opacity:1}
+.gs-card:hover::after,.gs-card:focus-within::after{transform:rotate(18deg) translate3d(620%,0,0)}
+.gs-card .gs-icon-box{transition:transform .24s ease,box-shadow .24s ease}
+.gs-card:hover .gs-icon-box,.gs-card:focus-within .gs-icon-box{transform:translateY(-2px) rotate(-3deg);box-shadow:0 8px 22px -12px rgba(255,77,103,.9)}
+.gs-eyebrow i{animation:gs-dot-pulse 2.2s ease-in-out infinite}
+@keyframes gs-dot-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,103,0);transform:scale(1)}45%{box-shadow:0 0 0 5px rgba(255,77,103,.12);transform:scale(1.12)}}
+.gs-price-card{position:relative;overflow:hidden;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+.gs-price-card::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.06),transparent 34%);opacity:0;transition:opacity .25s ease}
+.gs-price-card:hover{transform:translateY(-5px);border-color:rgba(255,77,103,.36);box-shadow:0 24px 56px -28px rgba(255,0,48,.58)}
+.gs-price-card:hover::before{opacity:1}
+.gs-price-best{animation:gs-price-glow 5s ease-in-out infinite}
+@keyframes gs-price-glow{0%,100%{box-shadow:0 0 44px -16px rgba(255,77,103,.3)}50%{box-shadow:0 0 58px -12px rgba(255,77,103,.55)}}
+.gs-landing table tbody tr{transition:background-color .2s ease,transform .2s ease}
+.gs-landing table tbody tr:hover{background:rgba(255,77,103,.07);transform:translateX(3px)}
+#faq .space-y-3>div{transition:transform .22s ease,box-shadow .22s ease}
+#faq .space-y-3>div:hover{transform:translateX(3px);box-shadow:0 14px 36px -28px rgba(255,77,103,.72)}
+.gs-final-cta{isolation:isolate;box-shadow:0 30px 100px -48px rgba(255,0,48,.78)}
+.gs-final-cta::after{content:"";position:absolute;inset:1px;z-index:0;pointer-events:none;border:1px solid rgba(255,77,103,.18);border-radius:inherit;animation:gs-cta-ring 4.5s ease-in-out infinite}
+.gs-final-cta>.gs-hero-art{z-index:0}
+.gs-final-cta>*:not(.gs-hero-art){z-index:1}
+@keyframes gs-cta-ring{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.85;transform:scale(1.006)}}
+.gs-landing section[id]::after{content:"";position:absolute;right:10%;bottom:0;left:10%;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,77,103,.25),transparent);opacity:.65}
+@media(max-width:640px){.gs-ambient-orb{opacity:.16}.gs-ambient-scan{opacity:.16}.gs-hero-art::before{inset:18% -18%;opacity:.65}.gs-card:hover{transform:translateY(-2px)}.gs-landing table tbody tr:hover{transform:none}}
+@media (prefers-reduced-motion:reduce){.gs-ambient-orb,.gs-ambient-scan,.gs-hero-art::before,.gs-hero-art::after,.gs-hero-panel,.gs-hero-panel::after,.gs-price-best,.gs-final-cta::after,.gs-eyebrow i{animation:none!important}.gs-card::after,.gs-card::before,.gs-price-card::before{transition:none!important}.gs-price-card:hover,.gs-card:hover,#faq .space-y-3>div:hover{transform:none}}
