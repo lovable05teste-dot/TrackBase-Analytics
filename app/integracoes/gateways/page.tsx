@@ -9,10 +9,16 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const { workspaceId } = await getWorkspace();
   const { rows, ids } = await getProjectIds(workspaceId);
-  await ensureDb();
-  const db = getDb();
-  const creds = workspaceId ? await db.select({ id: apiCredentials.id, name: apiCredentials.name, provider: apiCredentials.provider, projectId: apiCredentials.projectId, active: apiCredentials.active }).from(apiCredentials).where(eq(apiCredentials.workspaceId, workspaceId)) : [];
-  const lastOrders = ids.length ? await db.select({ provider: orders.provider, status: orders.status, value: orders.value, externalId: orders.externalId, updatedAt: orders.updatedAt }).from(orders).where(inArray(orders.projectId, ids)).orderBy(desc(orders.updatedAt)).limit(20) : [];
+  let creds: Array<{ id: string; name: string; provider: string; projectId: string; active: boolean | number }> = [];
+  let lastOrders: Array<{ provider: string; status: string; value: number | string | null; externalId: string; updatedAt: number | string }> = [];
+  try {
+    await ensureDb();
+    const db = getDb();
+    creds = workspaceId ? await db.select({ id: apiCredentials.id, name: apiCredentials.name, provider: apiCredentials.provider, projectId: apiCredentials.projectId, active: apiCredentials.active }).from(apiCredentials).where(eq(apiCredentials.workspaceId, workspaceId)) : [];
+    lastOrders = ids.length ? await db.select({ provider: orders.provider, status: orders.status, value: orders.value, externalId: orders.externalId, updatedAt: orders.updatedAt }).from(orders).where(inArray(orders.projectId, ids)).orderBy(desc(orders.updatedAt)).limit(20) : [];
+  } catch (error) {
+    console.error("gateway page lookup", error);
+  }
   return (
     <AppShell title="Gateways" subtitle="Credenciais de webhook e últimos pedidos por gateway.">
       <div className="grid gap-4">
