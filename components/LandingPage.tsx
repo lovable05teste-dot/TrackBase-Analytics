@@ -148,6 +148,43 @@ const SalesTicker = memo(function SalesTicker() {
   );
 });
 
+const integrations: ReadonlyArray<{ name: string; image?: string; mark?: string; icon?: typeof Webhook; orbit: string; delay?: string }> = [
+  { name: "Meta Ads", image: "https://cdn.simpleicons.org/meta/2D88FF", orbit: "gs-orbit-one" },
+  { name: "TikTok Ads", image: "https://cdn.simpleicons.org/tiktok/FFFFFF", orbit: "gs-orbit-one", delay: "-10s" },
+  { name: "Shopify", image: "https://cdn.simpleicons.org/shopify/7AB55C", orbit: "gs-orbit-two", delay: "-7s" },
+  { name: "FortPay", image: "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/f1/7c/5b/f17c5b44-1a31-79fa-94ac-6a002b47fea1/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg", orbit: "gs-orbit-two", delay: "-22s" },
+  { name: "Sigilo Pay", mark: "S", orbit: "gs-orbit-three", delay: "-15s" },
+  { name: "Webhooks", icon: Webhook, orbit: "gs-orbit-three", delay: "-2s" },
+];
+
+function IntegrationsOrbit() {
+  return (
+    <section id="integracoes" className="gs-integrations relative w-full overflow-hidden border-y border-white/10 py-16 sm:py-24">
+      <div className="gs-integrations-beam" aria-hidden />
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-4 sm:px-5 lg:grid-cols-[.9fr_1.1fr]">
+        <div className="min-w-0">
+          <Eyebrow>Integrações que acompanham sua operação</Eyebrow>
+          <h2 className="mt-4 max-w-xl text-3xl font-bold tracking-tight text-[#FFF3F5] sm:text-4xl">Tudo conectado. Cada venda no lugar certo.</h2>
+          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-[#C99AA4]">Conecte anúncios, checkout e webhooks para enxergar o caminho completo do clique até a venda aprovada.</p>
+          <div className="mt-7 flex flex-wrap gap-2">
+            {integrations.map(({ name }) => <span key={name} className="rounded-full border border-white/10 bg-white/[.035] px-3 py-1.5 text-xs text-[#F2C2CB]">{name}</span>)}
+          </div>
+          <div className="mt-7"><GhostButton href="/integracoes">Ver integrações</GhostButton></div>
+        </div>
+        <div className="gs-orbit-stage mx-auto w-full max-w-[540px]" aria-label="Integrações disponíveis">
+          <span className="gs-orbit-ring gs-orbit-ring-one" aria-hidden /><span className="gs-orbit-ring gs-orbit-ring-two" aria-hidden /><span className="gs-orbit-ring gs-orbit-ring-three" aria-hidden />
+          <div className="gs-orbit-core"><img src="/ghostscale-logo.png" alt="GhostScale" className="h-auto w-28 object-contain" /><span>Integrações</span></div>
+          {integrations.map(({ name, image, mark, icon: Icon, orbit, delay }) => (
+            <div key={name} className={`gs-orbit-path ${orbit}`} style={{ animationDelay: delay }}>
+              <div className="gs-orbit-token" title={name}>{image ? <img src={image} alt={name} loading="lazy" /> : Icon ? <Icon className="size-6 text-[#B9A6FF]" /> : <b className="text-xl text-[#F1C48C]">{mark}</b>}<span>{name}</span></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const ScaleSimulator = memo(function ScaleSimulator() {
   const [invest, setInvest] = useState(5000);
   const [sales, setSales] = useState(120);
@@ -884,6 +921,8 @@ export function LandingPage() {
           })}
         </div>
       </section>
+
+      <IntegrationsOrbit />
 
       <section className="mx-auto w-full max-w-6xl min-w-0 px-4 pb-16 sm:px-5 sm:pb-24">
         <div className="gs-glass gs-top-hi gs-final-cta relative min-w-0 overflow-hidden rounded-[24px] p-8 text-center sm:p-14">
