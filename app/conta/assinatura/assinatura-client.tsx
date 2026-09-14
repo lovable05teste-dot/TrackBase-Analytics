@@ -1,10 +1,11 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, Loader2, Lock, ShieldCheck, X, AlertCircle, Ban } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/AppShell";
 import { formatCpf, stripCpf, validateCpf } from "@/lib/cpf";
+import { sendGAEvent } from "@next/third-parties/google";
 
 type Plan = { id: string; name: string; price: number; priceLabel: string; sales: number | null; feats: string[]; hot?: boolean; configured: boolean };
 type Subscription = { plan: string; status: string; amount: string | null; currentPeriodEnd: number | null; planVersion?: number; cancelAtPeriodEnd?: boolean; scheduledPlan?: string | null; excessEnabled?: boolean; excessCap?: number | null } | null;
@@ -96,6 +97,18 @@ export function AssinaturaClient() {
   const [loadError, setLoadError] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
+  const analyticsEvents = useRef(new Set<string>());
+
+  function trackCheckoutOnce(key: string, name: "begin_checkout" | "add_payment_info", plan: Plan, paymentType?: "card" | "pix") {
+    if (analyticsEvents.current.has(key)) return;
+    analyticsEvents.current.add(key);
+    sendGAEvent("event", name, {
+      currency: "BRL",
+      value: plan.price,
+      ...(paymentType ? { payment_type: paymentType } : {}),
+      items: [{ item_id: `plan_${plan.id}`, item_name: `GhostScale ${plan.name}`, item_category: "subscription", price: plan.price, quantity: 1 }],
+    });
+  }
 
   async function load() {
     try {
@@ -149,6 +162,7 @@ export function AssinaturaClient() {
     setPayMethod("card");
     setInstallments(1);
     setModalPlan(plan);
+    trackCheckoutOnce(`begin:${plan.id}`, "begin_checkout", plan);
   }
 
   function validCustomer() {
@@ -177,6 +191,7 @@ export function AssinaturaClient() {
     if (!validExp(exp)) return setPayError("Validade inválida ou vencida.");
     if (!/^\d{3,4}$/.test(cvv.trim())) return setPayError("Confira o CVV.");
     if (!sdk) return setPayError("Checkout ainda carregando. Aguarde 5 segundos e tente de novo.");
+    trackCheckoutOnce(`payment:card:${modalPlan.id}`, "add_payment_info", modalPlan, "card");
     setPaying(true);
     try {
       await sdk.completeAntifraudProfile();
@@ -221,6 +236,7 @@ export function AssinaturaClient() {
     if (err) return setPayError(err);
     const phoneDigits = phone.replace(/\D/g, "");
     const phoneE164 = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
+    trackCheckoutOnce(`payment:pix:${modalPlan.id}`, "add_payment_info", modalPlan, "pix");
     setPaying(true);
     try {
       const r = await fetch("/api/billing/cakto/checkout", {

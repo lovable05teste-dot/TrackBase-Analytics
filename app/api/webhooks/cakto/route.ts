@@ -5,6 +5,7 @@ import { sha256 } from "@/lib/trackbase-security";
 import { planOfferId, PLAN_IDS, PLAN_VERSION_CURRENT, type PlanId, getEffectivePlan } from "@/lib/plans";
 import { verifyWebhookSecret, verifyWebhookSignature } from "@/lib/cakto";
 import { emailPaymentConfirmed, emailCanceled, emailRefunded } from "@/lib/emails";
+import { safeServerAnalyticsEvent, serverAnalyticsClientId } from "@/lib/google-analytics";
 
 type OrderData = {
   id?: unknown;
@@ -31,7 +32,35 @@ function tsOf(value: unknown): number | null {
   return Number.isFinite(t) ? t : null;
 }
 
-async function handleOrderEvent(event: string, data: OrderData) {
+function moneyOf(value: unknown, fallback: number): number {
+  const parsed = typeof value === "number" ? value : Number(String(value ?? "").replace(",", "."));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+async function trackSubscriptionEvent(
+  name: "purchase" | "refund" | "cancel_subscription" | "payment_failed" | "subscription_paused" | "subscription_resumed",
+  eventId: string,
+  userId: string,
+  plan: ReturnType<typeof getEffectivePlan>,
+  data: OrderData,
+) {
+  const currency = typeof data.currency === "string" && data.currency ? data.currency.toUpperCase() : "BRL";
+  await safeServerAnalyticsEvent({
+    name,
+    clientId: serverAnalyticsClientId(userId),
+    userId,
+    params: {
+      transaction_id: eventId,
+      currency,
+      value: moneyOf(data.amount, plan.price),
+      plan_id: plan.id,
+      plan_name: plan.name,
+      items: [{ item_id: `plan_${plan.id}`, item_name: `GhostScale ${plan.name}`, item_category: "subscription", price: moneyOf(data.amount, plan.price), quantity: 1 }],
+    },
+  });
+}
+
+async function handleOrderEvent(event: string, data: OrderData, analyticsEventId: string) {
   const offerId = typeof data.offer?.id === "string" ? data.offer.id : "";
   const subId = typeof data.subscription?.id === "string" ? data.subscription.id : "";
   const db = getDb();
@@ -46,6 +75,7 @@ async function handleOrderEvent(event: string, data: OrderData) {
     if (refundedStates.has(row.status) && (event === "subscription_renewed" || event === "subscription_resumed" || event === "purchase_approved")) return;
     const periodEnd = tsOf(data.subscription?.next_payment_date);
     const periodStart = now;
+    const effectivePlan = getEffectivePlan(row.plan as PlanId, (row as { planVersion?: number | null }).planVersion);
     if (event === "subscription_renewed" || event === "subscription_resumed" || event === "subscription_late_recovered" || event === "purchase_approved") {
       const wasActive = row.status === "active";
       await db.update(planSubscriptions).set({ status: "active", ...(periodEnd ? { currentPeriodEnd: periodEnd, currentPeriodStart: periodStart } : {}), updatedAt: now }).where(eq(planSubscriptions.id, row.id));
@@ -55,18 +85,24 @@ async function handleOrderEvent(event: string, data: OrderData) {
       if (sched && periodEnd) {
         // agenda aplica no próximo ciclo; por enquanto só loga — aplicação real no cron de renovação
       }
+      const paidEvent = event === "subscription_renewed" || event === "subscription_late_recovered" || event === "purchase_approved";
+      await trackSubscriptionEvent(paidEvent ? "purchase" : "subscription_resumed", analyticsEventId, row.userId, effectivePlan, data);
     } else if (event === "subscription_canceled" || event === "subscription_expired") {
       // mantém acesso até periodEnd se cancelAtPeriodEnd; webhook da Cakto já reflete fim do ciclo
       await db.update(planSubscriptions).set({ status: "canceled", updatedAt: now }).where(eq(planSubscriptions.id, row.id));
       if (row.email) { try { const p = getEffectivePlan(row.plan as PlanId, (row as { planVersion?: number | null }).planVersion); const until = periodEnd ? new Date(periodEnd * 1000).toLocaleDateString("pt-BR") : "fim do período pago"; await emailCanceled(row.email, p.name, until); } catch {} }
+      await trackSubscriptionEvent("cancel_subscription", analyticsEventId, row.userId, effectivePlan, data);
     } else if (event === "subscription_late") {
       await db.update(planSubscriptions).set({ status: "past_due", updatedAt: now }).where(eq(planSubscriptions.id, row.id));
+      await trackSubscriptionEvent("payment_failed", analyticsEventId, row.userId, effectivePlan, data);
     } else if (event === "subscription_paused") {
       await db.update(planSubscriptions).set({ status: "paused", updatedAt: now }).where(eq(planSubscriptions.id, row.id));
+      await trackSubscriptionEvent("subscription_paused", analyticsEventId, row.userId, effectivePlan, data);
     } else if (event === "refund" || event === "chargeback" || event === "purchase_refused") {
       const st = event === "chargeback" ? "chargeback" : event === "refund" ? "refunded" : "canceled";
       await db.update(planSubscriptions).set({ status: st, updatedAt: now }).where(eq(planSubscriptions.id, row.id));
       if (row.email) { try { const p = getEffectivePlan(row.plan as PlanId, (row as { planVersion?: number | null }).planVersion); await emailRefunded(row.email, p.name); } catch {} }
+      await trackSubscriptionEvent(event === "purchase_refused" ? "payment_failed" : "refund", analyticsEventId, row.userId, effectivePlan, data);
     }
     return;
   }
@@ -86,6 +122,7 @@ async function handleOrderEvent(event: string, data: OrderData) {
     if (pendingSameOrder) {
       await db.update(planSubscriptions).set({ status: "active", plan, planVersion: PLAN_VERSION_CURRENT, caktoOfferId: offerId, ...(subId ? { caktoSubscriptionId: subId } : {}), currentPeriodStart: now, currentPeriodEnd: null, updatedAt: now }).where(eq(planSubscriptions.id, pendingSameOrder.id));
       try { const p = getEffectivePlan(plan, PLAN_VERSION_CURRENT); await emailPaymentConfirmed(email, p.name); } catch {}
+      await trackSubscriptionEvent("purchase", orderId, user.id, getEffectivePlan(plan, PLAN_VERSION_CURRENT), data);
       return;
     }
     const alreadyActive = existing.some((r) => r.status === "active");
@@ -99,6 +136,7 @@ async function handleOrderEvent(event: string, data: OrderData) {
       currentPeriodStart: now, currentPeriodEnd: null, cancelAtPeriodEnd: 0, excessEnabled: 0, excessCap: null, scheduledPlan: null, scheduledAt: null, createdAt: now, updatedAt: now,
     } as never);
     try { const p = getEffectivePlan(plan, PLAN_VERSION_CURRENT); await emailPaymentConfirmed(email, p.name); } catch {}
+    await trackSubscriptionEvent("purchase", orderId, user.id, getEffectivePlan(plan, PLAN_VERSION_CURRENT), data);
   }
 }
 
@@ -125,8 +163,8 @@ export async function POST(request: Request) {
   }
   try {
     if (event === "checkout_abandonment") { await db.update(webhookEvents).set({ status: "ignored", processedAt: now }).where(eq(webhookEvents.eventId, eventId) as never); return Response.json({ received: true }); }
-    if (Array.isArray(body.data)) for (const item of body.data) await handleOrderEvent(event, (item || {}) as OrderData);
-    else if (body.data && typeof body.data === "object") await handleOrderEvent(event, body.data as OrderData);
+    if (Array.isArray(body.data)) for (const [index, item] of body.data.entries()) await handleOrderEvent(event, (item || {}) as OrderData, `${eventId}:${index}`);
+    else if (body.data && typeof body.data === "object") await handleOrderEvent(event, body.data as OrderData, eventId);
     await db.update(webhookEvents).set({ status: "processed", processedAt: now }).where(eq(webhookEvents.eventId, eventId) as never);
     // audit
     try { await db.insert(auditLogs).values({ id: crypto.randomUUID(), workspaceId: null, userId: null, action: `webhook:${event}`, targetType: "cakto", targetId: eventId.slice(0, 64), detail: `event ${event}`, ip: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null, createdAt: now } as never); } catch {}
