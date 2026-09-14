@@ -34,6 +34,29 @@ const WHATSAPP_URL =
 const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
 
+function AnimatedMetric({ value, prefix = "", suffix = "", decimals = 0 }: { value: number; prefix?: string; suffix?: string; decimals?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [display, setDisplay] = useState(value);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      const start = performance.now();
+      const tick = (now: number) => {
+        const progress = Math.min(1, (now - start) / 1500);
+        setDisplay(value * (1 - Math.pow(1 - progress, 3)));
+        if (progress < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    }, { threshold: .3 });
+    if (ref.current) observer.observe(ref.current);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [value]);
+  return <span ref={ref} className="tabular-nums" aria-label={prefix + value.toLocaleString("pt-BR") + suffix}><span aria-hidden>{prefix}{display.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span></span>;
+}
+
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -433,7 +456,7 @@ function useLandingFx(heroRef: React.RefObject<HTMLElement | null>) {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let io: IntersectionObserver | null = null;
     if (!reduce) {
-      const els = Array.from(document.querySelectorAll("main.gs-landing section[id]:not(#home)"));
+      const els = Array.from(document.querySelectorAll("main.gs-landing section[id]:not(#home), .gs-landing .gs-card, .gs-hero-panel, .gs-hero-panel .grid>div"));
       els.forEach((el) => el.classList.add("reveal"));
       io = new IntersectionObserver(
         (entries) => {
@@ -444,7 +467,7 @@ function useLandingFx(heroRef: React.RefObject<HTMLElement | null>) {
             }
           });
         },
-        { threshold: 0.1, rootMargin: "0px 0px -6% 0px" }
+        { threshold: 0, rootMargin: "0px 0px -24px 0px" }
       );
       els.forEach((el) => io?.observe(el));
     }
@@ -569,7 +592,7 @@ export function LandingPage() {
               <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
               <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
               <span className="size-2.5 shrink-0 rounded-full bg-[#3A4358]" />
-              <span className="ml-3 truncate text-xs text-[#6B7280]">painel.ghostscale · tempo real</span>
+              <span className="ml-3 truncate text-xs text-[#6B7280]">painel.ghostscale · demonstração</span>
               <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full border border-[#34D399]/25 bg-[#34D399]/10 px-2.5 py-1 text-[11px] whitespace-nowrap text-[#7DE8B8] sm:inline-flex">
                 <span className="size-1.5 rounded-full bg-[#34D399]" /> ao vivo
               </span>
@@ -582,7 +605,7 @@ export function LandingPage() {
               ].map(([label, value, sub]) => (
                 <div key={label} className="min-w-0 rounded-xl border border-white/10 bg-white/[.03] p-4">
                   <small className="block truncate text-xs text-[#C99AA4]">{label}</small>
-                  <b className="mt-1 block truncate text-2xl text-[#FFF3F5] tabular-nums">{value}</b>
+                  <b className="mt-1 block truncate text-2xl text-[#FFF3F5] tabular-nums">{label === "Gasto Meta" ? <AnimatedMetric value={4820} prefix="R$ " /> : label === "Vendas aprovadas" ? <AnimatedMetric value={312} /> : <AnimatedMetric value={3.8} decimals={1} suffix="x" />}</b>
                   <small className="block truncate text-[11px] text-[#6B7280]">{sub}</small>
                 </div>
               ))}
@@ -680,7 +703,7 @@ export function LandingPage() {
           Por que não é só mais um tracker
         </h2>
         <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10 bg-[#150A0D]">
-          <table className="w-full min-w-[560px] text-sm">
+          <table className="gs-comparison w-full text-sm">
             <thead>
               <tr className="bg-white/[.03]">
                 <th scope="col" className="p-4 text-left font-medium text-[#C99AA4]">Funcionalidade</th>
@@ -779,9 +802,9 @@ export function LandingPage() {
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
               <span className="text-[#C99AA4]">
-                ROAS <b className="text-[#FFF3F5]">3,8x</b>
+                ROAS <b className="text-[#FFF3F5]"><AnimatedMetric value={3.8} decimals={1} suffix="x" /></b>
               </span>
-              <span className="font-medium text-[#7DE8B8]">+312 hoje</span>
+              <span className="font-medium text-[#7DE8B8]"><AnimatedMetric value={312} prefix="+" suffix=" hoje" /></span>
             </div>
           </div>
           <div className="gs-card gs-slide-right min-w-0 overflow-hidden p-5">
@@ -825,7 +848,7 @@ export function LandingPage() {
               </div>
             </div>
             <p className="mt-3 text-xs text-[#C99AA4]">
-              <b className="text-[#FFF3F5]">1.240 cliques</b> mapeados na dobra
+              <b className="text-[#FFF3F5]"><AnimatedMetric value={1240} suffix=" cliques" /></b> mapeados na dobra
             </p>
           </div>
         </div>

@@ -134,7 +134,43 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 .gs-mouse-glow{background:radial-gradient(560px circle at var(--mx,50%) var(--my,28%),rgba(255,48,80,.13),transparent 65%)}
 
 /* GhostScale atmosphere: layered motion that stays light on the main thread. */
-.gs-landing{position:relative;isolation:isolate;overflow:clip}
+.gs-landing{position:relative;isolation:isolate;overflow:clip;color-scheme:dark}
+.gs-landing table tbody tr{background:#170b10}
+.gs-landing table tbody tr:nth-child(even){background:#211118}
+.gs-landing table tbody tr:hover{background:#30131d}
+.gs-landing table th,.gs-landing table td{border-color:rgba(255,180,193,.1)}
+.gs-comparison{table-layout:fixed}
+.gs-comparison th:first-child{width:48%}
+.gs-comparison th:nth-child(2){width:20%}
+.gs-comparison td span{white-space:normal}
+@media(max-width:640px){
+ .gs-comparison th,.gs-comparison td{padding:12px 8px;font-size:11px;overflow-wrap:anywhere}
+ .gs-comparison th{white-space:normal}
+ .gs-comparison th:first-child{width:46%}
+ .gs-comparison th:nth-child(2){width:22%}
+ .gs-comparison td:last-child span{display:flex;flex-direction:column;gap:4px}
+ .gs-comparison td:last-child svg{width:12px;height:12px}
+}
+.gs-landing .gs-ambient{position:fixed;height:100dvh}
+.gs-landing .gs-flow-line-a{top:0}
+.gs-landing .gs-flow-line-b{top:35%}
+.gs-landing .gs-flow-line-c{bottom:-50%}
+.gs-landing .gs-ambient-orb-b{top:30%}
+.gs-landing .gs-card.reveal{animation:none;transition:opacity .85s ease,transform .85s cubic-bezier(.16,1,.3,1);transform:translate3d(-36px,10px,0);opacity:0}
+.gs-landing .gs-card.reveal:nth-child(even){transform:translate3d(36px,10px,0)}
+.gs-landing .gs-card.reveal-visible{opacity:1;transform:none}
+.gs-landing .gs-hero-panel .grid>div.reveal{transform:translate3d(-24px,0,0);transition:opacity .8s ease,transform .8s ease}
+.gs-landing .gs-hero-panel .grid>div.reveal:nth-child(even){transform:translate3d(24px,0,0)}
+.gs-landing .gs-hero-panel .grid>div.reveal-visible{transform:none}
+#por-dentro .gs-card.reveal-visible .h-24>div{transform-origin:bottom;animation:gs-chart-grow 1.3s cubic-bezier(.16,1,.3,1) both}
+#por-dentro .gs-card.reveal-visible .h-24>div:nth-child(even){animation-delay:.14s}
+#por-dentro .gs-card.reveal-visible .h-2>div{transform-origin:left;animation:gs-funnel-grow 1.4s ease both}
+@keyframes gs-chart-grow{from{transform:scaleY(.05)}to{transform:scaleY(1)}}
+@keyframes gs-funnel-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){
+ .gs-landing .gs-card.reveal,.gs-landing .gs-hero-panel .grid>div.reveal{opacity:1;transform:none!important;transition:none}
+ #por-dentro .gs-card .h-24>div,#por-dentro .gs-card .h-2>div{animation:none!important}
+}
 .gs-landing>section,.gs-landing>footer{position:relative;z-index:1}
 .gs-ambient{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;contain:paint}
 .gs-ambient-orb{position:absolute;border-radius:999px;opacity:.28;will-change:transform;background:radial-gradient(circle at 32% 28%,rgba(255,115,135,.32),rgba(255,0,48,.08) 42%,transparent 72%)}
