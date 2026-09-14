@@ -163,7 +163,7 @@ export async function POST(request: Request) {
       createdAt: now,
       updatedAt: now,
     } as never);
-    return Response.json({ ok: true, plan: body.plan, status: "active" });
+    return Response.json({ ok: true, plan: body.plan, status: "active", orderId: charge.id });
   } catch (e) {
     if (e instanceof CaktoError) return Response.json({ error: friendlyCakto(e) }, { status: e.status >= 500 ? 502 : 400 });
     return Response.json({ error: e instanceof Error ? e.message : "Falha na cobrança." }, { status: 400 });

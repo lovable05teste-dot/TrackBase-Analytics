@@ -23,6 +23,7 @@ type CaktoSdk = {
 };
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const GOOGLE_ADS_PURCHASE_DESTINATION = "AW-11244930106/e5LYCJub_fccELqIgPIp";
 
 function luhn(num: string) {
   const d = num.replace(/\D/g, "");
@@ -107,6 +108,19 @@ export function AssinaturaClient() {
       value: plan.price,
       ...(paymentType ? { payment_type: paymentType } : {}),
       items: [{ item_id: `plan_${plan.id}`, item_name: `GhostScale ${plan.name}`, item_category: "subscription", price: plan.price, quantity: 1 }],
+    });
+  }
+
+  function trackGoogleAdsPurchase(plan: Plan, orderId: string) {
+    const key = `google-ads:purchase:${orderId}`;
+    if (!orderId || analyticsEvents.current.has(key)) return;
+    analyticsEvents.current.add(key);
+    // A tag do Google Ads usa o ID da transação para não contar uma compra duas vezes.
+    sendGAEvent("event", "conversion", {
+      send_to: GOOGLE_ADS_PURCHASE_DESTINATION,
+      value: plan.price,
+      currency: "BRL",
+      transaction_id: orderId,
     });
   }
 
@@ -219,6 +233,7 @@ export function AssinaturaClient() {
       });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Pagamento não aprovado.");
+      trackGoogleAdsPurchase(modalPlan, typeof b.orderId === "string" ? b.orderId : "");
       setPayOk(true);
       await load();
     } catch (err) {
@@ -258,6 +273,7 @@ export function AssinaturaClient() {
           const s = await fetch("/api/billing/cakto/status");
           const sb = await s.json();
           if (s.ok && sb.subscription && sb.subscription.plan === modalPlan.id && sb.subscription.status === "active") {
+            trackGoogleAdsPurchase(modalPlan, typeof b.orderId === "string" ? b.orderId : "");
             setPayOk(true);
             await load();
             break;

@@ -1,5 +1,6 @@
 import type { Metadata,Viewport } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 import "./globals.css";
 import {PwaRegister} from "./pwa-register";
 import {Toaster} from "@/components/ui/sonner";
@@ -43,6 +44,9 @@ export default function RootLayout({
         <PwaRegister/><SoundNotifications/><Toaster position="bottom-right" richColors/>{children}
       </body>
       <GoogleAnalytics gaId="G-YV71CM9ETF" />
+      <Script id="ghostscale-google-ads" strategy="afterInteractive">
+        {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag('config','AW-11244930106');`}
+      </Script>
     </html>
   );
 }
