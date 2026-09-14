@@ -2,26 +2,40 @@
 import { useEffect, useRef, useState } from "react";
 import { CreditCard, LogOut, Moon, Sun, User, Volume2, Building2, Crown, ShieldCheck } from "lucide-react";
 
-interface AccountData {
+export interface AccountData {
   userName: string;
   userEmail: string;
   workspaceName: string;
   planName: string;
   planStatus: string;
   avatarInitial: string;
+  isAdmin: boolean;
 }
 
-export function AccountMenu({ data = {userName:"Minha conta",userEmail:"",workspaceName:"",planName:"",planStatus:"",avatarInitial:""} }: { data?: AccountData }) {
+export const EMPTY_ACCOUNT: AccountData = { userName: "Usuário", userEmail: "", workspaceName: "", planName: "—", planStatus: "demo", avatarInitial: "U", isAdmin: false };
+
+export function AccountMenu({ data = EMPTY_ACCOUNT }: { data?: AccountData }) {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
+  const [remoteAccount, setRemoteAccount] = useState<AccountData | null>(null);
+  const account = data.userEmail ? data : remoteAccount ?? data;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (data.userEmail) return;
+    let alive = true;
+    fetch("/api/account/data", { cache: "no-store" })
+      .then(async (response) => (response.ok ? (await response.json()) as AccountData : null))
+      .then((next) => { if (alive && next?.userEmail) setRemoteAccount(next); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [data]);
+
+  useEffect(() => {
+    let themeFrame: number | undefined;
     try {
-      setDark(
-        document.documentElement.classList.contains("dark") ||
-          localStorage.getItem("tb_theme") === "dark"
-      );
+      const storedDark = document.documentElement.classList.contains("dark") || localStorage.getItem("tb_theme") === "dark";
+      themeFrame = window.requestAnimationFrame(() => setDark(storedDark));
     } catch {
       /* noop */
     }
@@ -34,6 +48,7 @@ export function AccountMenu({ data = {userName:"Minha conta",userEmail:"",worksp
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     return () => {
+      if (themeFrame !== undefined) window.cancelAnimationFrame(themeFrame);
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
@@ -79,28 +94,28 @@ export function AccountMenu({ data = {userName:"Minha conta",userEmail:"",worksp
         aria-expanded={open}
         className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-blue-600 text-sm font-semibold text-white shadow-sm transition hover:from-violet-500 hover:to-blue-500"
       >
-        {data.avatarInitial}
+        {account.avatarInitial}
       </button>
       {open ? (
         <div className="absolute right-0 top-11 z-50 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
           <div className="border-b border-slate-100 px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-blue-600 text-sm font-semibold text-white">
-                {data.avatarInitial}
+                {account.avatarInitial}
               </div>
               <div className="min-w-0">
-                <b className="block text-sm text-slate-900 truncate">{data.userName}</b>
-                <small className="text-xs text-slate-500 truncate block">{data.workspaceName}</small>
+                <b className="block text-sm text-slate-900 truncate">{account.userName}</b>
+                <small className="text-xs text-slate-500 truncate block">{account.isAdmin ? account.workspaceName : account.userEmail}</small>
               </div>
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                  planStatusColors[data.planStatus] || "text-slate-600 bg-slate-50"
+                  planStatusColors[account.planStatus] || "text-slate-600 bg-slate-50"
                 }`}
               >
-                {data.planStatus === "active" ? <Crown className="size-3" /> : data.planStatus === "demo" ? <ShieldCheck className="size-3" /> : null}
-                {planStatusLabel[data.planStatus] || data.planStatus}
+                {account.planStatus === "active" ? <Crown className="size-3" /> : account.planStatus === "demo" ? <ShieldCheck className="size-3" /> : null}
+                {planStatusLabel[account.planStatus] || account.planStatus}
               </span>
             </div>
           </div>
@@ -113,10 +128,10 @@ export function AccountMenu({ data = {userName:"Minha conta",userEmail:"",worksp
               <CreditCard className="size-4 shrink-0 text-slate-400" />
               Assinatura
             </a>
-            <a href="/equipe" onClick={() => setOpen(false)} className={item}>
+            {account.isAdmin ? <a href="/equipe" onClick={() => setOpen(false)} className={item}>
               <Building2 className="size-4 shrink-0 text-slate-400" />
               Workspace e equipe
-            </a>
+            </a> : null}
             <a href="/configuracoes#som" onClick={() => setOpen(false)} className={item}>
               <Volume2 className="size-4 shrink-0 text-slate-400" />
               Sons de venda

@@ -16,12 +16,17 @@ export async function getWorkspace() {
 
 export async function getProjectIds(workspaceId: string | null) {
   if (!workspaceId) return { rows: [], ids: [] as string[] };
-  await ensureDb();
-  const rows = await getDb()
-    .select({ id: projects.id, name: projects.name, domain: projects.domain, publicKey: projects.publicKey })
-    .from(projects)
-    .where(eq(projects.workspaceId, workspaceId));
-  return { rows, ids: rows.map((p) => p.id) };
+  try {
+    await ensureDb();
+    const rows = await getDb()
+      .select({ id: projects.id, name: projects.name, domain: projects.domain, publicKey: projects.publicKey })
+      .from(projects)
+      .where(eq(projects.workspaceId, workspaceId));
+    return { rows, ids: rows.map((p) => p.id) };
+  } catch (error) {
+    console.error("projects lookup", error);
+    return { rows: [], ids: [] as string[] };
+  }
 }
 
 export type TrackEvent = {
@@ -39,25 +44,30 @@ export type TrackEvent = {
 
 export async function getEvents(ids: string[], since: number | null): Promise<TrackEvent[]> {
   if (!ids.length) return [];
-  await ensureDb();
-  const conds = [inArray(events.projectId, ids)];
-  if (since) conds.push(gte(events.occurredAt, since));
-  const rows = await getDb()
-    .select({
-      eventName: events.eventName,
-      value: events.value,
-      occurredAt: events.occurredAt,
-      visitorId: events.visitorId,
-      fbclid: events.fbclid,
-      utmSource: events.utmSource,
-      utmCampaign: events.utmCampaign,
-      utmMedium: events.utmMedium,
-      utmContent: events.utmContent,
-      utmTerm: events.utmTerm,
-    })
-    .from(events)
-    .where(and(...conds));
-  return rows.map((r) => ({ ...r, value: Number(r.value ?? 0) }));
+  try {
+    await ensureDb();
+    const conds = [inArray(events.projectId, ids)];
+    if (since) conds.push(gte(events.occurredAt, since));
+    const rows = await getDb()
+      .select({
+        eventName: events.eventName,
+        value: events.value,
+        occurredAt: events.occurredAt,
+        visitorId: events.visitorId,
+        fbclid: events.fbclid,
+        utmSource: events.utmSource,
+        utmCampaign: events.utmCampaign,
+        utmMedium: events.utmMedium,
+        utmContent: events.utmContent,
+        utmTerm: events.utmTerm,
+      })
+      .from(events)
+      .where(and(...conds));
+    return rows.map((r) => ({ ...r, value: Number(r.value ?? 0) }));
+  } catch (error) {
+    console.error("events lookup", error);
+    return [];
+  }
 }
 
 export async function getEventTotals(ids: string[], since: number | null) {
@@ -73,26 +83,31 @@ export async function getEventTotals(ids: string[], since: number | null) {
 
 export async function getOrdersSummary(ids: string[], since: number | null) {
   if (!ids.length) return { byStatus: new Map<string, { n: number; v: number }>(), total: 0, totalValue: 0 };
-  await ensureDb();
-  const db = getDb();
-  const conds = [inArray(orders.projectId, ids)];
-  if (since) conds.push(gte(orders.createdAt, since));
-  const rows = await db
-    .select({ status: orders.status, n: count(), v: sum(orders.value) })
-    .from(orders)
-    .where(and(...conds))
-    .groupBy(orders.status);
-  const byStatus = new Map<string, { n: number; v: number }>();
-  let total = 0;
-  let totalValue = 0;
-  for (const r of rows) {
-    const n = Number(r.n);
-    const v = Number(r.v ?? 0);
-    byStatus.set(r.status, { n, v });
-    total += n;
-    totalValue += v;
+  try {
+    await ensureDb();
+    const db = getDb();
+    const conds = [inArray(orders.projectId, ids)];
+    if (since) conds.push(gte(orders.createdAt, since));
+    const rows = await db
+      .select({ status: orders.status, n: count(), v: sum(orders.value) })
+      .from(orders)
+      .where(and(...conds))
+      .groupBy(orders.status);
+    const byStatus = new Map<string, { n: number; v: number }>();
+    let total = 0;
+    let totalValue = 0;
+    for (const r of rows) {
+      const n = Number(r.n);
+      const v = Number(r.v ?? 0);
+      byStatus.set(r.status, { n, v });
+      total += n;
+      totalValue += v;
+    }
+    return { byStatus, total, totalValue };
+  } catch (error) {
+    console.error("orders lookup", error);
+    return { byStatus: new Map<string, { n: number; v: number }>(), total: 0, totalValue: 0 };
   }
-  return { byStatus, total, totalValue };
 }
 
 const UTM_KEYS = {
