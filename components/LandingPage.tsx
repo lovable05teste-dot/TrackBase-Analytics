@@ -152,9 +152,9 @@ const integrations: ReadonlyArray<{ name: string; image?: string; mark?: string;
   { name: "Meta Ads", image: "https://cdn.simpleicons.org/meta/2D88FF", orbit: "gs-orbit-one" },
   { name: "TikTok Ads", image: "https://cdn.simpleicons.org/tiktok/FFFFFF", orbit: "gs-orbit-one", delay: "-10s" },
   { name: "Shopify", image: "https://cdn.simpleicons.org/shopify/7AB55C", orbit: "gs-orbit-two", delay: "-7s" },
-  { name: "FortPay", image: "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/f1/7c/5b/f17c5b44-1a31-79fa-94ac-6a002b47fea1/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg", orbit: "gs-orbit-two", delay: "-22s" },
-  { name: "Sigilo Pay", mark: "S", orbit: "gs-orbit-three", delay: "-15s" },
-  { name: "Webhooks", icon: Webhook, orbit: "gs-orbit-three", delay: "-2s" },
+  { name: "FortPay", image: "/integration-fortpay.png", orbit: "gs-orbit-two", delay: "-22s" },
+  { name: "Sigilo Pay", image: "/integration-sigilo-pay.png", orbit: "gs-orbit-three", delay: "-15s" },
+  { name: "Webhooks", image: "/integration-webhook.png", orbit: "gs-orbit-three", delay: "-2s" },
 ];
 
 function IntegrationsOrbit() {
@@ -480,6 +480,9 @@ export function LandingPage() {
         <span className="gs-ambient-orb gs-ambient-orb-b" />
         <span className="gs-ambient-orb gs-ambient-orb-c" />
         <span className="gs-ambient-scan" />
+        <span className="gs-flow-line gs-flow-line-a" />
+        <span className="gs-flow-line gs-flow-line-b" />
+        <span className="gs-flow-line gs-flow-line-c" />
       </div>
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${
@@ -765,7 +768,7 @@ export function LandingPage() {
           Uma prévia das telas que você vai usar todo dia.
         </p>
         <div className="mt-8 grid min-w-0 gap-4 md:grid-cols-3">
-          <div className="gs-card min-w-0 overflow-hidden p-5">
+          <div className="gs-card gs-slide-left min-w-0 overflow-hidden p-5">
             <p className="flex items-center gap-2 text-sm font-semibold text-[#FFF3F5]">
               <BarChart3 className="size-4 shrink-0 text-[#FF4D67]" /> Dashboard em tempo real
             </p>
@@ -781,7 +784,7 @@ export function LandingPage() {
               <span className="font-medium text-[#7DE8B8]">+312 hoje</span>
             </div>
           </div>
-          <div className="gs-card min-w-0 overflow-hidden p-5">
+          <div className="gs-card gs-slide-right min-w-0 overflow-hidden p-5">
             <p className="flex items-center gap-2 text-sm font-semibold text-[#FFF3F5]">
               <Filter className="size-4 shrink-0 text-[#FF4D67]" /> Funil de conversão
             </p>
@@ -804,7 +807,7 @@ export function LandingPage() {
               ))}
             </div>
           </div>
-          <div className="gs-card min-w-0 overflow-hidden p-5">
+          <div className="gs-card gs-slide-left min-w-0 overflow-hidden p-5">
             <p className="flex items-center gap-2 text-sm font-semibold text-[#FFF3F5]">
               <MousePointerClick className="size-4 shrink-0 text-[#FF4D67]" /> Heatmap de cliques
             </p>
