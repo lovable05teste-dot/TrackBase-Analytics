@@ -25,12 +25,9 @@ function load() {
 export function usePlan(): PlanState {
   const [state, setState] = useState<PlanState>(cache ?? { plan: null, hasActive: false, loaded: false });
   useEffect(() => {
-    if (cache) {
-      setState(cache);
-      return;
-    }
     listeners.add(setState);
-    load();
+    if (cache) setState(cache);
+    else load();
     return () => {
       listeners.delete(setState);
     };

@@ -26,9 +26,13 @@ type Purchase = {
 export function SoundNotifications() {
   const [pref, setPref] = useState<SoundPrefs>(getSoundPrefs);
   // Refs p/ o polling reutilizar o estado mais novo sem reiniciar o intervalo.
-  const prefRef = useRef(pref); prefRef.current = pref;
+  const prefRef = useRef(pref);
   const seen = useRef<Record<string, boolean>>({});
   const authOk = useRef(true);
+
+  useEffect(() => {
+    prefRef.current = pref;
+  }, [pref]);
 
   useEffect(() => {
     const off = subscribeSoundPrefs(setPref);
