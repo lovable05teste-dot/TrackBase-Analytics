@@ -6,7 +6,7 @@ import {parseTrackingConfig} from "../../../lib/tracking-config";
 import { domainAllowed, parseProtection } from "@/lib/protection";
 import { parseBlockedIps, requestIp } from "@/lib/protection-ip";
 
-const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation"]);
+const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation","SecurityRecovery"]);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST,OPTIONS" };
 export function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
 async function hash(value:unknown,phone=false){const raw=String(value||"").trim().toLocaleLowerCase(),normalized=phone?raw.replace(/\D/g,""):raw.replace(/\s+/g,"");if(!normalized)return undefined;const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));return Array.from(new Uint8Array(bytes)).map(byte=>byte.toString(16).padStart(2,"0")).join("")}
@@ -33,13 +33,15 @@ export async function POST(request: Request) {
     const url = String(body.url || "");
     const u = url ? new URL(url) : null;
     if (!u || !["https:", "http:"].includes(u.protocol)) return Response.json({ error: "URL do evento inválida" }, { status: 400, headers: cors });
-    if (eventName === "SecurityCheck" || eventName === "SecurityViolation") {
+    if (eventName === "SecurityCheck" || eventName === "SecurityViolation" || eventName === "SecurityRecovery") {
       if (!protection.enabled) return new Response(null, { status: 204, headers: cors });
       const host = u.hostname.toLowerCase().replace(/\.$/, "");
       const reason = !domainAllowed(host, protection) ? "domain" : body.reason === "frame" ? "frame" : "allowed";
       // Diagnóstico do navegador, agregado por hora; nunca é enviado à Meta.
-      const reportId = "security_" + await sha256(`${project.id}:${host}:${reason}:${protection.mode}:${Math.floor(now / 3600)}`);
-      await getDb().insert(protectionReports).values({ id: reportId, projectId: project.id, eventName: reason === "allowed" ? "SecurityCheck" : "SecurityViolation", occurredAt: now, payload: JSON.stringify({ host, reason, mode: protection.mode }) }).onConflictDoNothing();
+      const reportedName = eventName === "SecurityRecovery" && reason === "domain" && protection.recoveryEnabled ? "SecurityRecovery" : reason === "allowed" ? "SecurityCheck" : "SecurityViolation";
+      const reportMode = reportedName === "SecurityRecovery" ? "recover" : protection.mode;
+      const reportId = "security_" + await sha256(`${project.id}:${host}:${reason}:${reportMode}:${Math.floor(now / 3600)}`);
+      await getDb().insert(protectionReports).values({ id: reportId, projectId: project.id, eventName: reportedName, occurredAt: now, payload: JSON.stringify({ host, reason, mode: reportMode }) }).onConflictDoNothing();
       return Response.json({ received: true }, { headers: cors });
     }
     if (protection.enabled && protection.mode === "block") {

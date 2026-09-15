@@ -35,16 +35,36 @@ test("IPs: normalização de IPv6, IPv4 mapeado e rejeição de entradas inváli
 });
 
 function browser(url = "https://site.com/", frame = "direct", readyState = "complete") {
-  const listeners = {}, requests = [], fbq = [], nodes = [], storage = new Map();
+  const listeners = {}, requests = [], fbq = [], nodes = [], redirects = [], storage = new Map();
   const location = new URL(url);
+  location.replace = value => redirects.push(value);
   const node = tag => ({ tagName: tag.toUpperCase(), style: {}, children: [], textContent: "", setAttribute() {}, appendChild(child) { this.children.push(child); }, replaceChildren(...children) { this.children = children; }, querySelectorAll() { return []; } });
   const document = { cookie: "", title: "Página teste", referrer: "", readyState, body: node("body"), head: node("head"), documentElement: node("html"), querySelectorAll: () => [], addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); }, createElement: tag => { const n = node(tag); nodes.push(n); return n; } };
   const context = { location, document, console, URL, URLSearchParams, Blob, crypto, Date, Math, Object, JSON, Number, String, Array, Boolean, Promise, navigator: { sendBeacon: () => false }, localStorage: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v) }, sessionStorage: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v) }, fetch: (url, init) => { requests.push({ url, ...init }); return Promise.resolve({ ok: true }); }, MutationObserver: class { observe() {} }, addEventListener: () => {}, history: { pushState() {}, replaceState() {} }, queueMicrotask: fn => fn(), setTimeout: () => 1 };
   context.window = context; context.self = context;
   context.top = frame === "direct" ? context : frame === "same" ? { location } : { get location() { throw new Error("cross origin"); } };
   context.fbq = (...args) => fbq.push(args); context.__tbPixelId = "123";
-  return { context: vm.createContext(context), document, listeners, requests, fbq, nodes };
+  return { context: vm.createContext(context), document, listeners, requests, fbq, nodes, redirects };
 }
+
+test("recuperação envia clone ao domínio oficial e preserva apenas atribuição", () => {
+  const c = { ...defaultProtection("site.com"), enabled: true, mode: "block", recoveryEnabled: true, recoveryUrl: "https://site.com/oferta?produto=1", preserveAttribution: true };
+  const validated = validateProtection(c);
+  const b = browser("https://clone.com/copia?utm_source=meta&fbclid=abc&email=segredo");
+  vm.runInContext(protectionScript(validated, "key1", "https://app.com/api/events"), b.context);
+  assert.equal(b.context.__gsProtectionResult.recovered, true);
+  assert.equal(b.context.__gsProtectionResult.blocked, false);
+  assert.equal(JSON.parse(b.requests[0].body).eventName, "SecurityRecovery");
+  assert.equal(b.redirects.length, 1);
+  const destination = new URL(b.redirects[0]);
+  assert.equal(destination.origin + destination.pathname, "https://site.com/oferta");
+  assert.equal(destination.searchParams.get("produto"), "1");
+  assert.equal(destination.searchParams.get("utm_source"), "meta");
+  assert.equal(destination.searchParams.get("fbclid"), "abc");
+  assert.equal(destination.searchParams.has("email"), false);
+  assert.throws(() => validateProtection({ ...c, recoveryUrl: "https://outro.com/" }));
+  assert.throws(() => validateProtection({ ...c, recoveryUrl: "javascript:alert(1)" }));
+});
 
 test("script externo funciona no head, usa mensagem como texto e alternativa ao Beacon", () => {
   const c = { ...defaultProtection("site.com"), enabled: true, mode: "block", message: "<img src=x onerror=alert(1)>" };
