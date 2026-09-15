@@ -35,6 +35,21 @@
 .gs-metric[data-tone="red"] .gs-metric-caption span {background:#fb7185}
 .gs-metric[data-tone="green"] .gs-metric-value {color:#c3f6df}
 .gs-metric[data-tone="red"] .gs-metric-value {color:#f5b0bc}
+.gs-funnel-card {background:radial-gradient(520px 220px at 65% 55%,#7e26351c,transparent 72%),var(--card)!important}
+.gs-section-dot {width:8px;height:8px;border-radius:999px;background:#fb7185;box-shadow:0 0 0 4px #fb71851c,0 0 18px #fb7185;flex-shrink:0}
+.gs-live-badge {display:inline-flex;align-items:center;gap:6px;border:1px solid #fb71853d;border-radius:999px;padding:5px 9px;color:#ff9aaf;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.gs-live-badge i {width:5px;height:5px;border-radius:50%;background:#fb7185;box-shadow:0 0 10px #fb7185;animation:gs-pulse 1.8s ease-in-out infinite}
+.gs-funnel {display:grid;gap:12px}
+.gs-funnel-stage {animation:gs-funnel-in 500ms var(--stage-delay) both;min-width:0}
+.gs-funnel-label {display:flex;align-items:center;justify-content:space-between;gap:10px;color:#c9c5cc;font-size:12px}
+.gs-funnel-label b {color:#fff;font-size:14px;font-variant-numeric:tabular-nums}
+.gs-funnel-track {height:16px;margin-top:7px;overflow:hidden;border:1px solid #ffffff0d;border-radius:999px;background:#ffffff08}
+.gs-funnel-fill {position:relative;width:var(--stage-width);height:100%;min-width:30px;border-radius:inherit;background:linear-gradient(90deg,#8c253d,#ef526d 65%,#ff9aaf);box-shadow:0 0 18px #ef526d38;animation:gs-funnel-grow 900ms cubic-bezier(.22,.8,.25,1) var(--stage-delay) both}
+.gs-funnel-fill span {position:absolute;inset:2px 6px auto 2px;height:2px;border-radius:99px;background:#ffffff80;filter:blur(.3px)}
+.gs-funnel-stage p {margin-top:5px;color:#87838d;font-size:10px}
+@keyframes gs-funnel-in {from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+@keyframes gs-funnel-grow {from{width:0}to{width:var(--stage-width)}}
+@keyframes gs-pulse {0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.25)}}
 .gs-goals {background:linear-gradient(110deg,#281b22,#19191e)!important}
 .gs-revenue {color:#f4f2f3;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
 .gs-filter-actions {display:flex;align-items:center;gap:12px;margin-top:12px;font-size:11px;color:#a7a5af}
@@ -53,5 +68,5 @@
 @keyframes gs-value {from {opacity:.45;transform:translateY(3px)}to {opacity:1;transform:none}}
 @media(hover:hover) {.gs-dashboard .gs-metric:hover {transform:translateY(-2px);border-color:#ef526d55}.gs-dashboard nav a:hover {background:#ffffff07}}
 @media(max-width:1200px) {.gs-results-grid,.gs-skeleton-grid {grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:640px) {.gs-results-grid,.gs-skeleton-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.gs-metric [data-slot="card-content"] {padding:16px}.gs-metric-value {font-size:22px}.gs-metric-heading {font-size:11px}.gs-metric-caption {font-size:9px}.gs-content {padding:16px}.gs-filter-actions {flex-wrap:wrap}.gs-filter-actions>span {margin-left:0}}
+@media(max-width:640px) {.gs-results-grid,.gs-skeleton-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.gs-metric [data-slot="card-content"] {padding:16px}.gs-metric-value {font-size:22px}.gs-metric-heading {font-size:11px}.gs-metric-caption {font-size:9px}.gs-content {padding:16px}.gs-filter-actions {flex-wrap:wrap}.gs-filter-actions>span {margin-left:0}.gs-funnel-track {height:14px}.gs-funnel-label {font-size:11px}.gs-funnel-label b {font-size:13px}}
 @media(prefers-reduced-motion:reduce) {.gs-dashboard *,.gs-dashboard *::before {animation:none!important;transition:none!important;scroll-behavior:auto!important}}
