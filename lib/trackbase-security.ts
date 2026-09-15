@@ -170,6 +170,7 @@ type SessionRow = {
   isAdmin: number | boolean | null;
   pending2fa: number | boolean | null;
   expiresAt: number;
+  lastSeenAt?: number;
 };
 
 async function sessionTableReady() {
@@ -213,22 +214,29 @@ export async function createSession(opts: {
 
 export async function getSessionByToken(token: string | undefined | null): Promise<SessionRow | null> {
   if (!token) return null;
-  if (!(await sessionTableReady())) return null;
-  try {
-    const { getDb } = await import("@/db");
-    const { sessions } = await import("@/db/schema");
-    const { eq } = await import("drizzle-orm");
-    const [row] = await getDb()
-      .select({ userId: sessions.userId, isAdmin: sessions.isAdmin, pending2fa: sessions.pending2fa, expiresAt: sessions.expiresAt })
-      .from(sessions)
-      .where(eq(sessions.tokenHash, await sha256(token)))
-      .limit(1);
-    if (!row || row.expiresAt < Math.floor(Date.now() / 1000)) return null;
-    return row;
-  } catch (error) {
-    console.error("session lookup", error);
-    return null;
+  const tokenHash = await sha256(token);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (!(await sessionTableReady())) throw new Error("SESSION_DB_UNAVAILABLE");
+      const { getDb } = await import("@/db");
+      const { sessions } = await import("@/db/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await getDb()
+        .select({ userId: sessions.userId, isAdmin: sessions.isAdmin, pending2fa: sessions.pending2fa, expiresAt: sessions.expiresAt, lastSeenAt: sessions.lastSeenAt })
+        .from(sessions)
+        .where(eq(sessions.tokenHash, tokenHash))
+        .limit(1);
+      if (!row || row.expiresAt < Math.floor(Date.now() / 1000)) return null;
+      return row;
+    } catch (error) {
+      if (attempt === 2) {
+        console.error("session lookup unavailable", error);
+        return null;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 80 * (attempt + 1)));
+    }
   }
+  return null;
 }
 
 export async function finalizePendingSession(token: string, ttlSeconds = SESSION_TTL_SECONDS) {
@@ -288,18 +296,6 @@ export async function getUserIdFromSessionCookie(session: string | undefined | n
   const active = await getSessionByToken(session);
   // Pending-2FA sessions authenticate nothing until the code is verified.
   if (active && !active.pending2fa) {
-    try {
-      const { ensureDb, getDb } = await import("@/db");
-      const { sessions } = await import("@/db/schema");
-      const { eq } = await import("drizzle-orm");
-      await ensureDb();
-      await getDb()
-        .update(sessions)
-        .set({ lastSeenAt: Math.floor(Date.now() / 1000) })
-        .where(eq(sessions.tokenHash, await sha256(session)));
-    } catch {
-      // best effort
-    }
     return active.userId;
   }
   // Legacy fallback: deterministic pre-session tokens, so existing logins

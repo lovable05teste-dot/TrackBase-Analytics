@@ -2,19 +2,19 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { metaRedirectUri, metaPages } from "../lib/meta.ts";
 
-test("callback is canonical and configuration is validated", () => {
+test("callback is always canonical and cannot be changed by environment or Host", () => {
   const old = {...process.env};
   try {
     delete process.env.META_REDIRECT_URI;
     delete process.env.APP_URL;
     assert.equal(metaRedirectUri(), "https://www.ghostscale.com.br/api/meta/oauth/callback");
     process.env.APP_URL = "https://example.com";
-    assert.equal(metaRedirectUri(), "https://example.com/api/meta/oauth/callback");
+    assert.equal(metaRedirectUri(), "https://www.ghostscale.com.br/api/meta/oauth/callback");
     process.env.META_REDIRECT_URI = "https://other.example/api/meta/oauth/callback";
-    assert.equal(metaRedirectUri(), process.env.META_REDIRECT_URI);
+    assert.equal(metaRedirectUri(), "https://www.ghostscale.com.br/api/meta/oauth/callback");
     for (const url of ["http://example.com/api/meta/oauth/callback", "https://example.com/wrong", "https://example.com/api/meta/oauth/callback?secret=x", "https://user:pass@example.com/api/meta/oauth/callback"]) {
       process.env.META_REDIRECT_URI = url;
-      assert.throws(() => metaRedirectUri());
+      assert.equal(metaRedirectUri(), "https://www.ghostscale.com.br/api/meta/oauth/callback");
     }
   } finally { for (const key of ["APP_URL","META_REDIRECT_URI"]) { if (old[key] === undefined) delete process.env[key]; else process.env[key]=old[key]; } }
 });

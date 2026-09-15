@@ -26,7 +26,8 @@ export async function GET(request: Request) {
     const now = Math.floor(Date.now() / 1000);
     const db = getDb();
 
-    await db.delete(metaOauthStates).where(lt(metaOauthStates.expiresAt, now));
+    // Limpeza é best-effort e nunca pode impedir uma conexão nova.
+    try { await db.delete(metaOauthStates).where(lt(metaOauthStates.expiresAt, now)); } catch {}
     await db.insert(metaOauthStates).values({
       id: crypto.randomUUID(),
       userId,
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     url.searchParams.set("scope", "ads_read,ads_management,business_management");
     if (config.configId) url.searchParams.set("config_id", config.configId);
 
-    const headers = new Headers({ Location: url.toString(), "Cache-Control": "no-store" });
+    const headers = new Headers({ Location: url.toString(), "Cache-Control": "no-store, no-cache, must-revalidate", "Referrer-Policy": "no-referrer" });
     const token = request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
     if (token) headers.set("Set-Cookie", sessionCookie(token));
     return new Response(null, { status: 302, headers });
