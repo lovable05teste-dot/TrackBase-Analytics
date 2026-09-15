@@ -1,10 +1,10 @@
 export const SALE_SOUNDS=[
- {id:"fortpay_caixa_registradora",name:"FortPay — Caixa registradora",desc:"Som original enviado por você.",file:"/sounds/fortpay_caixa_registradora.wav",icon:"💰"},
- {id:"fortpay_moedas_caindo",name:"FortPay — Moedas caindo",desc:"Som original enviado por você.",file:"/sounds/fortpay_moedas_caindo.wav",icon:"🪙"},
- {id:"fortpay_registradora",name:"FortPay — Registradora",desc:"Som original enviado por você.",file:"/sounds/fortpay_registradora.wav",icon:"🔔"},
- {id:"fortpay_caixa_quiet",name:"FortPay — Caixa",desc:"Som original enviado por você.",file:"/sounds/fortpay_caixa_quiet.wav",icon:"🧾"},
- {id:"fortpay_moeda_meia_coroa",name:"FortPay — Moeda meia coroa",desc:"Som original enviado por você.",file:"/sounds/fortpay_moeda_meia_coroa.wav",icon:"🪙"},
- {id:"fortpay_moeda",name:"FortPay — Moeda",desc:"Som original enviado por você.",file:"/sounds/fortpay_moeda.wav",icon:"✨"},
+ {id:"fortpay_caixa_registradora",name:"Caixa registradora",desc:"Som de venda.",file:"/sounds/fortpay_caixa_registradora.wav",icon:"💰"},
+ {id:"fortpay_moedas_caindo",name:"Moedas caindo",desc:"Som de venda.",file:"/sounds/fortpay_moedas_caindo.wav",icon:"🪙"},
+ {id:"fortpay_registradora",name:"Registradora",desc:"Som de venda.",file:"/sounds/fortpay_registradora.wav",icon:"🔔"},
+ {id:"fortpay_caixa_quiet",name:"Caixa",desc:"Som de venda.",file:"/sounds/fortpay_caixa_quiet.wav",icon:"🧾"},
+ {id:"fortpay_moeda_meia_coroa",name:"Moeda meia coroa",desc:"Som de venda.",file:"/sounds/fortpay_moeda_meia_coroa.wav",icon:"🪙"},
+ {id:"fortpay_moeda",name:"Moeda",desc:"Som de venda.",file:"/sounds/fortpay_moeda.wav",icon:"✨"},
 ] as const;
 export type SaleSoundId=(typeof SALE_SOUNDS)[number]["id"]|"none";
 export const SALE_SOUND_IDS:Set<string>=new Set([...SALE_SOUNDS.map(s=>s.id),"none"]);
