@@ -26,7 +26,7 @@ export function NamesClient() {
         <label className="text-sm">Data<input value={data} onChange={(e) => setData(e.target.value)} className={input} /></label>
         <div className="space-y-2 md:col-span-4">
           {names.map((n) => (
-            <div key={n} className="flex items-center justify-between gap-3 rounded-lg bg-black/30 p-3"><code className="truncate text-sm text-sky-300">{n}</code><Button size="sm" variant="outline" onClick={() => copy(n)}>{copied === n ? <Check /> : <Copy />}</Button></div>
+            <div key={n} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-black/30 p-3"><code className="min-w-0 whitespace-normal break-all text-left text-sm leading-6 text-sky-300">{n}</code><Button className="shrink-0" size="sm" variant="outline" onClick={() => copy(n)}>{copied === n ? <Check /> : <Copy />}</Button></div>
           ))}
         </div>
       </CardContent>

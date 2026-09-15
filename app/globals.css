@@ -123,6 +123,12 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 .gs-faq-grid{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .22s ease,opacity .22s ease}
 .gs-faq-grid[data-open="true"]{grid-template-rows:1fr;opacity:1}
 @media(max-width:640px){.gs-grid-fade{background-size:48px 48px}.gs-grain::after{opacity:.02}}
+@media(max-width:640px){
+  /* Every authenticated screen stays inside the phone viewport. */
+  main,main section,main header,main article,main form,main [data-slot="card"],main [data-slot="card-content"]{min-width:0;max-width:100%}
+  main h1,main h2,main h3,main h4,main p,main span,main label,main code{overflow-wrap:anywhere}
+  main pre{max-width:100%;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+}
 @media (prefers-reduced-motion:reduce){.gs-enter,.gs-gradient-text{animation:none}}
 .gs-gradient-text{background-size:220% auto;animation:gs-sheen 8s linear infinite}
 @keyframes gs-sheen{to{background-position:220% center}}
@@ -139,7 +145,30 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 .gs-landing table tbody tr:nth-child(even){background:#211118}
 .gs-landing table tbody tr:hover{background:#30131d}
 .gs-landing table th,.gs-landing table td{border-color:rgba(255,180,193,.1)}
-.gs-comparison{table-layout:fixed}
+.gs-landing .gs-comparison{table-layout:fixed}
+.gs-landing .gs-comparison th{color:#fff0f4!important;background:#2c1720;font-size:14px}
+.gs-landing .gs-comparison td{color:#fff!important;font-size:14px;line-height:1.65}
+.gs-landing .gs-comparison td:last-child span{color:#e8dce2!important}
+.gs-landing .gs-comparison td:last-child svg{color:#d9c7d0;opacity:1}
+.gs-comparison-mobile article{box-shadow:0 10px 30px #0003}
+.gs-particle-field{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.gs-particle-field i{position:absolute;bottom:-20px;width:3px;height:3px;border-radius:50%;background:#ff8da6;box-shadow:0 0 12px #ff315e;animation:gs-particle-rise 18s linear infinite;opacity:0}
+@keyframes gs-particle-rise{0%{opacity:0;transform:translate3d(0,0,0)}15%,75%{opacity:.55}100%{opacity:0;transform:translate3d(48px,-105vh,0)}}
+.gs-landing .gs-ambient-orb{opacity:.42}
+.gs-landing .gs-flow-line{opacity:.65}
+.gs-landing .gs-icon-box svg{transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+.gs-landing .gs-card:hover .gs-icon-box svg{transform:rotate(-10deg) scale(1.12)}
+.gs-landing #por-dentro .gs-card{box-shadow:0 15px 55px -28px #ff335b66}
+.gs-landing #por-dentro .grid-cols-8 span{animation:gs-heat-glow 4s ease-in-out infinite alternate}
+.gs-landing #por-dentro .grid-cols-8 span:nth-child(3n){animation-delay:-2s}
+@keyframes gs-heat-glow{to{transform:scale(1.22);box-shadow:0 0 8px #ff4d6755}}
+.gs-landing .gs-btn-primary{animation:gs-button-aura 5s ease-in-out infinite}
+@keyframes gs-button-aura{50%{box-shadow:0 8px 35px -8px #ff003099}}
+.gs-landing .gs-hero-panel .bar-anim{position:relative;overflow:hidden}
+.gs-landing .gs-hero-panel .bar-anim::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,#ffffff66,transparent);animation:gs-bar-light 4s ease-in-out infinite}
+@keyframes gs-bar-light{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@media(max-width:640px){.gs-particle-field i:nth-child(even){display:none}}
+@media(prefers-reduced-motion:reduce){.gs-particle-field i,.gs-landing #por-dentro .grid-cols-8 span,.gs-landing .gs-btn-primary,.gs-landing .gs-hero-panel .bar-anim::after{animation:none!important}}
 .gs-comparison th:first-child{width:48%}
 .gs-comparison th:nth-child(2){width:20%}
 .gs-comparison td span{white-space:normal}

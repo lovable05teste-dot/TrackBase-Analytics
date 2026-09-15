@@ -50,8 +50,8 @@ export function SoundSettings() {
           <span className="inline-flex items-center gap-2">{pref.toast ? <BellRing className="size-4" /> : <BellOff className="size-4" />} Mostrar aviso na tela</span>
           <Switch checked={pref.toast} onCheckedChange={(v) => setSoundPrefs({ toast: v })} />
         </label>
-        <Button type="button" variant="outline" size="sm" onClick={() => showSaleToast({ value: 197.9, currency: "BRL", product: "Oferta GhostScale (exemplo)", campaign: "TESTE_TOAST", project: "Projeto demo" })}>
-          <Play className="size-3.5" /> Testar aviso
+        <Button type="button" variant="outline" size="sm" onClick={() => { showSaleToast({ value: 197.9, currency: "BRL", product: "Oferta GhostScale (exemplo)", campaign: "TESTE_TOAST", project: "Projeto demo" }); if (pref.enabled && pref.selected !== "none") previewSound(pref.selected); }}>
+          <Play className="size-3.5" /> Testar aviso e som
         </Button>
         <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
           <span className="inline-flex items-center gap-2">{pref.enabled ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />} Som ligado</span>
@@ -89,7 +89,7 @@ export function SoundSettings() {
             className="w-full accent-blue-600" aria-label="Volume do som de venda"
           />
         </div>
-        <p className="text-xs text-slate-500">Os quatro sons são leves e pré-carregados. No celular, abra o GhostScale e toque em Testar uma vez para liberar o áudio do navegador. O aviso dura 5s e identifica venda pendente ou aprovada.</p>
+        <p className="text-xs text-slate-500">O botão de teste reproduz exatamente o arquivo que será usado numa venda real. O som só toca quando o webhook registra uma venda pendente ou aprovada; o teste não cria venda nem altera métricas.</p>
       </CardContent>
     </Card>
   );

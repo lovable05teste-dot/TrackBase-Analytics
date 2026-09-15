@@ -44,9 +44,9 @@ export function AppShell({
             <button onClick={() => setMobileOpen(true)} className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-accent lg:hidden" aria-label="Abrir menu">
               <Menu className="size-4" />
             </button>
-            <img src="/ghostscale-logo.png" alt="GhostScale" className="h-10 w-auto max-w-[200px] shrink-0 object-contain lg:hidden" />
+            <img src="/ghostscale-logo.png" alt="GhostScale" className="h-8 w-auto max-w-[132px] shrink-0 object-contain sm:h-10 sm:max-w-[200px] lg:hidden" />
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold sm:text-xl lg:text-xl">{title}</h1>
+              <h1 className="break-words text-base font-semibold leading-tight sm:text-xl lg:text-xl">{title}</h1>
               {subtitle ? <p className="hidden text-sm text-muted-foreground sm:block">{subtitle}</p> : null}
             </div>
           </div>
