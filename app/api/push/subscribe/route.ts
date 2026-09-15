@@ -5,6 +5,12 @@ import { requestUserId,sha256 } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 
+export async function GET(request:Request){
+ const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+ const publicKey=(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY||process.env.VAPID_PUBLIC_KEY||"").trim();
+ return Response.json({configured:Boolean(publicKey&&process.env.VAPID_PRIVATE_KEY),publicKey},{headers:{"cache-control":"no-store"}});
+}
+
 export async function POST(request:Request){
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  const body=await request.json().catch(()=>({})) as {endpoint?:string;keys?:{p256dh?:string;auth?:string}};

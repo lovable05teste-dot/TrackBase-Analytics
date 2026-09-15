@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { apiCredentials, projects } from "@/db/schema";
+import { apiCredentials, notificationPrefs, projects } from "@/db/schema";
+import { parsePrefs } from "@/lib/notify";
+import { pushToWorkspace } from "@/lib/push";
 import { decryptSecret, sha256 } from "@/lib/trackbase-security";
 import { parseTrackingConfig } from "@/lib/tracking-config";
 import {
@@ -200,6 +202,37 @@ export async function POST(request: Request) {
     }
 
     await db.update(apiCredentials).set({ lastUsedAt: new Date().toISOString() }).where(eq(apiCredentials.id, credential.id));
+    if (status === "approved" || status === "pending") {
+      const [prefRow] = await db.select().from(notificationPrefs).where(eq(notificationPrefs.workspaceId, credential.workspaceId)).limit(1);
+      const prefs = parsePrefs(prefRow?.prefs);
+      const allowed = status === "approved" ? prefs.approved : prefs.pending;
+      if (allowed) {
+        const money = `R$ ${value.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+        const title = `${status === "approved" ? "Venda aprovada" : "Venda pendente"}${prefs.showValue ? ` · ${money}` : ""}`;
+        const parts: string[] = [];
+        if (prefs.showProject) {
+          const [project] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, credential.projectId)).limit(1);
+          if (project?.name) parts.push(project.name);
+        }
+        if (prefs.showProduct) {
+          const product = String(pick(body, ["product", "product_name", "productName", "item_name", "offer_name", "data.product_name"]) || "").trim();
+          if (product) parts.push(product);
+        }
+        if (prefs.showUtm) {
+          const campaign = String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || "").split("|")[0].trim();
+          if (campaign) parts.push(campaign);
+        }
+        await Promise.race([
+          pushToWorkspace(credential.workspaceId, {
+            title,
+            body: parts.join(" · ") || (status === "approved" ? "Toque para ver a venda aprovada" : "Toque para ver o Pix pendente"),
+            url: "/vendas",
+            tag: `tb-${status}-${externalId}`,
+          }),
+          new Promise(resolve => setTimeout(resolve, 3000)),
+        ]).catch(() => {});
+      }
+    }
     await drainCapiOutbox(db, { workspaceId: credential.workspaceId, limit: 3 });
     return Response.json({ received: true, orderId: externalId, status, event: eventName }, { headers: cors });
   } catch (error) {

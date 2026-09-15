@@ -12,7 +12,7 @@ const SEEN_KEY="tb_notif_seen";
 const money=(v:number,c="BRL")=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:c}).format(v||0);
 function ago(ts:number){const s=Math.max(1,Math.floor(Date.now()/1000)-ts);if(s<60)return `há ${s}s`;const m=Math.floor(s/60);if(m<60)return `há ${m}min`;const h=Math.floor(m/60);if(h<24)return `há ${h}h`;return `há ${Math.floor(h/24)}d`}
 function bufToB64(buf:ArrayBuffer|null){if(!buf)return "";const b=new Uint8Array(buf);let s="";for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
-function vapidKey(){const k=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY||"";const pad="=".repeat((4-k.length%4)%4);return Uint8Array.from(atob((k+pad).replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))}
+function vapidKey(k:string){const pad="=".repeat((4-k.length%4)%4);return Uint8Array.from(atob((k+pad).replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))}
 
 export function NotificationsBell(){
  const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
@@ -53,6 +53,25 @@ const fresh=list.filter(o=>!known.current.has(o.id));
   return ()=>clearInterval(timer);
  },[load]);
 
+ useEffect(()=>{
+  let alive=true;
+  const detect=async()=>{
+   if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){if(alive)setPush("unsupported");return;}
+   if(Notification.permission==="denied"){if(alive)setPush("denied");return;}
+   try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub&&Notification.permission==="granted"){
+     const body={endpoint:sub.endpoint,keys:{p256dh:bufToB64(sub.getKey("p256dh")),auth:bufToB64(sub.getKey("auth"))}};
+     const synced=await fetch("/api/push/subscribe",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+     if(alive)setPush(synced.ok?"on":"off");
+    }else if(alive)setPush("off");
+   }catch{if(alive)setPush("off");}
+  };
+  void detect();
+  return()=>{alive=false;};
+ },[]);
+
  useEffect(()=>{const off=subscribeSoundPrefs(setSound);return off;},[]);
 
  useEffect(()=>{
@@ -69,8 +88,12 @@ const fresh=list.filter(o=>!known.current.has(o.id));
   try{
    const perm=await Notification.requestPermission();
    if(perm!=="granted"){setPush("denied");return;}
+   const config=await fetch("/api/push/subscribe",{cache:"no-store"});
+   const cfg=await config.json() as {configured?:boolean;publicKey?:string};
+   if(!config.ok||!cfg.configured||!cfg.publicKey){setPush("off");return;}
    const reg=await navigator.serviceWorker.ready;
-   const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidKey()});
+   const existing=await reg.pushManager.getSubscription();
+   const sub=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidKey(cfg.publicKey)});
    const r=await fetch("/api/push/subscribe",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({endpoint:sub.endpoint,keys:{p256dh:bufToB64(sub.getKey("p256dh")),auth:bufToB64(sub.getKey("auth"))}})});
    setPush(r.ok?"on":"off");
   }catch{setPush("off");}
@@ -90,9 +113,10 @@ const fresh=list.filter(o=>!known.current.has(o.id));
      {recent.map(o=><div key={o.id} className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 last:border-0"><span className={`size-2.5 shrink-0 rounded-full ${o.status==="approved"?"bg-emerald-500":"bg-amber-400"}`}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{o.status==="approved"?"Venda aprovada":"Venda pendente"} · {money(o.value,o.currency)}</p><p className="truncate text-xs text-slate-500">{o.utmCampaign||o.projectName} · {ago(o.updatedAt)}</p></div></div>)}
     </div>
     <div className="space-y-2 border-t border-slate-200 p-3">
-     {push==="off"&&<Button variant="outline" size="sm" className="w-full" onClick={enablePush}><Smartphone/>Ativar notificação no celular</Button>}
+     {(push==="off"||push==="unknown")&&<Button variant="outline" size="sm" className="w-full" onClick={enablePush} disabled={push==="unknown"}><Smartphone/>{push==="unknown"?"Verificando notificações…":"Ativar notificação no celular"}</Button>}
      {push==="loading"&&<p className="text-center text-xs text-slate-500">Ativando… confirme no navegador.</p>}
      {push==="denied"&&<p className="text-center text-xs text-slate-500">Notificação bloqueada no navegador — libere nas configurações do site.</p>}
+     {push==="unsupported"&&<p className="text-center text-xs text-slate-500">Este navegador não aceita notificações push. No iPhone, adicione o GhostScale à Tela de Início e abra pelo ícone.</p>}
      {push==="on"&&<p className="text-center text-xs text-emerald-600">Notificações no celular ativas ✓</p>}
     </div>
     <div className="space-y-2.5 border-t border-slate-200 p-3">
