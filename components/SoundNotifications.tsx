@@ -5,7 +5,7 @@
 // Em páginas anônimas a API responde 401: após a 1ª chamada o polling é encerrado.
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { getSoundPrefs, notifyApprovedSales, subscribeSoundPrefs } from "@/lib/sale-sounds";
+import { getSoundPrefs, notifyApprovedSales, refreshSoundPrefs, subscribeSoundPrefs } from "@/lib/sale-sounds";
 import { showSaleToast } from "@/lib/sales-toast";
 import type { SoundPrefs } from "@/lib/sound-prefs";
 
@@ -32,6 +32,9 @@ export function SoundNotifications() {
 
   useEffect(() => {
     const off = subscribeSoundPrefs(setPref);
+    // Carrega a escolha salva na conta também em um celular novo. Antes, o
+    // player global só lia o localStorage daquele aparelho e ficava mudo.
+    void refreshSoundPrefs();
     return off;
   }, []);
 

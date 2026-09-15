@@ -5,8 +5,10 @@ import { requestUserId,sha256 } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 
-export async function GET(request:Request){
- const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
+// A chave VAPID pública é enviada ao navegador por definição; nenhum dado de
+// usuário ou inscrição é exposto aqui. Isso também permite diagnosticar a
+// configuração antes de pedir a permissão do celular.
+export async function GET(){
  const publicKey=(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY||process.env.VAPID_PUBLIC_KEY||"").trim();
  return Response.json({configured:Boolean(publicKey&&process.env.VAPID_PRIVATE_KEY),publicKey},{headers:{"cache-control":"no-store"}});
 }
