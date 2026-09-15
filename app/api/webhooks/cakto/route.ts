@@ -166,8 +166,11 @@ export async function POST(request: Request) {
   try {
     await db.insert(webhookEvents).values({ id: crypto.randomUUID(), provider: "cakto", eventId, eventType: event, payload: raw.slice(0, 8000), status: "received", createdAt: now, processedAt: null } as never);
   } catch {
-    // duplicado → já processado
-    return Response.json({ received: true, deduplicated: true });
+    // Eventos concluídos são idempotentes. Eventos que falharam anteriormente
+    // podem ser reprocessados: retornar 2xx aqui faria a Cakto parar de tentar.
+    const [previous] = await db.select({ status: webhookEvents.status }).from(webhookEvents).where(eq(webhookEvents.eventId, eventId)).limit(1);
+    if (previous?.status === "processed" || previous?.status === "ignored") return Response.json({ received: true, deduplicated: true });
+    await db.update(webhookEvents).set({ status: "received", processedAt: null, payload: raw.slice(0, 8000) }).where(eq(webhookEvents.eventId, eventId));
   }
   try {
     if (event === "checkout_abandonment") { await db.update(webhookEvents).set({ status: "ignored", processedAt: now }).where(eq(webhookEvents.eventId, eventId) as never); return Response.json({ received: true }); }
@@ -179,6 +182,9 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("cakto webhook", e);
     try { await db.update(webhookEvents).set({ status: "error", processedAt: now }).where(eq(webhookEvents.eventId, eventId) as never); } catch {}
+    // 5xx sinaliza falha transitória à Cakto. O evento permanece salvo e será
+    // tentado novamente, sem liberar acesso com processamento incompleto.
+    return Response.json({ received: false, retry: true }, { status: 500 });
   }
   return Response.json({ received: true });
 }

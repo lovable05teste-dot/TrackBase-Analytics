@@ -1,5 +1,6 @@
 "use client";
 import { memo, useEffect, useRef, useState, type ReactNode } from "react";
+import Script from "next/script";
 import {
   ArrowUpRight,
   BarChart3,
@@ -498,7 +499,11 @@ export function LandingPage() {
 
   return (
     <main className="gs-landing gs-grain min-h-screen w-full max-w-full overflow-x-clip">
+      <Script id="ghostscale-public-meta-pixel" strategy="afterInteractive">
+        {`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','2154942472068771');fbq('track','PageView');`}
+      </Script>
       <div className="gs-ambient" aria-hidden="true">
+        <div className="gs-particle-field">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{ left: `${(i * 23 + 7) % 100}%`, animationDelay: `-${i * 1.7}s`, animationDuration: `${14 + i % 7}s` }} />)}</div>
         <span className="gs-ambient-orb gs-ambient-orb-a" />
         <span className="gs-ambient-orb gs-ambient-orb-b" />
         <span className="gs-ambient-orb gs-ambient-orb-c" />
@@ -702,7 +707,16 @@ export function LandingPage() {
         <h2 className="mt-4 text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
           Por que não é só mais um tracker
         </h2>
-        <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10 bg-[#150A0D]">
+        <div className="gs-comparison-mobile mt-8 space-y-3 md:hidden">
+          {compareRows.map(([feature, included, other]) => <article key={feature} className="rounded-2xl border border-[#5b3440] bg-[#190d12] p-5">
+            <h3 className="text-base font-semibold leading-relaxed text-white">{feature}</h3>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl border border-[#76374a] bg-[#30121d] p-3"><b className="block text-[#ffd5df]">GhostScale</b><span className="mt-2 flex items-center gap-2 text-white"><Check size={18} className="text-[#82f1bd]" />{included ? "Incluído" : "—"}</span></div>
+              <div className="rounded-xl border border-[#45404a] bg-[#211c23] p-3"><b className="block text-[#eee9ed]">Trackers comuns</b><span className="mt-2 block leading-relaxed text-[#e4d9de]">{other}</span></div>
+            </div>
+          </article>)}
+        </div>
+        <div className="mt-8 hidden overflow-x-auto rounded-2xl border border-white/10 bg-[#150A0D] md:block">
           <table className="gs-comparison w-full text-sm">
             <thead>
               <tr className="bg-white/[.03]">
