@@ -39,7 +39,7 @@ export function SoundSettings() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm leading-6 text-slate-600">
-          Quando uma venda aprovada chegar com o painel aberto, o app avisa na tela e pode tocar um som. Som e aviso visual são independentes — escolha os dois aqui. A configuração vale em qualquer dispositivo que você entrar.
+          Quando uma venda pendente ou aprovada chegar com o painel aberto, o app avisa e toca o mesmo som escolhido. Som e aviso visual são independentes. A configuração vale em qualquer dispositivo que você entrar.
         </p>
         {blocked && pref.enabled && pref.selected !== "none" && (
           <p role="alert" className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3.5 py-2.5 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
@@ -89,7 +89,7 @@ export function SoundSettings() {
             className="w-full accent-blue-600" aria-label="Volume do som de venda"
           />
         </div>
-        <p className="text-xs text-slate-500">Arquivos de som leves em /sounds, pré-carregados após a página abrir. O aviso visual (toast) dura 5s e empilha quando várias vendas chegam juntas. Contas novas começam com toast ligado e som mudo — ative quando quiser.</p>
+        <p className="text-xs text-slate-500">Os quatro sons são leves e pré-carregados. No celular, abra o GhostScale e toque em Testar uma vez para liberar o áudio do navegador. O aviso dura 5s e identifica venda pendente ou aprovada.</p>
       </CardContent>
     </Card>
   );

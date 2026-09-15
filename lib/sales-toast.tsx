@@ -4,6 +4,7 @@
 import { toast } from "sonner";
 
 export type SaleToastData = {
+  status?: "pending" | "approved";
   value: number | null;
   currency?: string | null;
   product?: string | null;   // utm_content (variante/oferta) quando disponível
@@ -17,11 +18,13 @@ const money = (v: number | null, c?: string | null) => {
 };
 
 function SaleCard({ id, d }: { id: string | number; d: SaleToastData }) {
+  const approved = d.status !== "pending";
   return (
-    <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-card/95 px-4 py-3 shadow-2xl backdrop-blur">
-      <div className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-lg">💰</div>
+    <div className={`pointer-events-auto flex items-center gap-3 rounded-2xl border bg-card/95 px-4 py-3 shadow-2xl backdrop-blur ${approved ? "border-emerald-500/30" : "border-amber-500/30"}`}>
+      <div className={`grid size-10 shrink-0 place-items-center rounded-full text-lg ${approved ? "bg-emerald-500/15" : "bg-amber-500/15"}`}>{approved ? "💰" : "⏳"}</div>
       <div className="min-w-0 flex-1">
-        <p className="text-base font-bold leading-tight text-emerald-600 dark:text-emerald-400">{money(d.value, d.currency)}</p>
+        <p className={`text-xs font-semibold uppercase tracking-wide ${approved ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>{approved ? "Venda aprovada" : "Venda pendente"}</p>
+        <p className="text-base font-bold leading-tight text-foreground">{money(d.value, d.currency)}</p>
         {d.product && <p className="truncate text-sm font-medium text-foreground">🛒 {d.product}</p>}
         {(d.campaign || d.project) && (
           <p className="truncate text-xs text-muted-foreground">{[d.project, d.campaign].filter(Boolean).join(" · ")}</p>

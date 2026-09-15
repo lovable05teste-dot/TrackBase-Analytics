@@ -2,6 +2,7 @@ export const SALE_SOUNDS=[
  {id:"venda_cha_ching",name:"Caixa registradora",desc:"Impactante, estilo caixa.",file:"/sounds/venda_cha_ching.wav",icon:"💰"},
  {id:"venda_moeda",name:"Moeda arcade",desc:"Blip curto e discreto.",file:"/sounds/venda_moeda.wav",icon:"🪙"},
  {id:"venda_chime_sucesso",name:"Chime de sucesso",desc:"Acorde quente ascendente.",file:"/sounds/venda_chime_sucesso.wav",icon:"🔔"},
+ {id:"venda_pulso_digital",name:"Pulso digital",desc:"Confirmação moderna e objetiva.",file:"/sounds/venda_pulso_digital.wav",icon:"⚡"},
 ] as const;
 export type SaleSoundId=(typeof SALE_SOUNDS)[number]["id"]|"none";
 export const SALE_SOUND_IDS:Set<string>=new Set([...SALE_SOUNDS.map(s=>s.id),"none"]);

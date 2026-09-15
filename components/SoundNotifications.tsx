@@ -1,5 +1,5 @@
-// Celebrator global de venda aprovada. Montado no layout raiz: faz polling de
-// /api/purchases/latest (Purchase events), deduplica por id e dispara:
+// Celebrator global de venda pendente ou aprovada. Montado no layout raiz:
+// consulta pedidos recentes, deduplica por pedido+status e dispara:
 //  - toast visual (Sonner) se `prefs.toast` estiver ligado — independente do som;
 //  - som (lib/sale-sounds, com debounce de rajada/eleição de aba) se o som estiver ligado.
 // Em páginas anônimas a API responde 401: após a 1ª chamada o polling é encerrado.
@@ -14,6 +14,7 @@ const POLL_MS = 5000;
 type Purchase = {
   id: string;
   eventId: string;
+  status: "pending" | "approved";
   value: number | null;
   currency: string | null;
   occurredAt: number;
@@ -47,19 +48,21 @@ export function SoundNotifications() {
 
         if (seed) {
           // Primeira execução: só marca o que já existe, sem celebrar histórico.
-          for (const p of purchases) seen.current[p.id] = true;
+          for (const p of purchases) seen.current[`${p.id}:${p.status}`] = true;
           return;
         }
 
         const p = prefRef.current;
         const wantToast = p.toast;
         const wantSound = p.enabled && p.selected !== "none";
-        const fresh = purchases.filter((x) => !seen.current[x.id]);
+        const fresh = purchases.filter((x) => !seen.current[`${x.id}:${x.status}`]);
 
         for (const x of fresh) {
-          seen.current[x.id] = true;
+          const notificationId = `${x.id}:${x.status}`;
+          seen.current[notificationId] = true;
           if (wantToast) {
             showSaleToast({
+              status: x.status,
               value: x.value,
               currency: x.currency,
               product: x.utmContent || undefined,
@@ -70,7 +73,7 @@ export function SoundNotifications() {
         }
         if (wantSound && fresh.length) {
           // Rajada em 1 toque; eleição de aba cuidada pelo player.
-          notifyApprovedSales(fresh.map((x) => x.id));
+          notifyApprovedSales(fresh.map((x) => `${x.id}:${x.status}`));
         }
       } catch {}
     };
