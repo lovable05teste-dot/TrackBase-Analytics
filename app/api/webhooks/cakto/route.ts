@@ -6,6 +6,7 @@ import { planOfferId, PLAN_IDS, PLAN_VERSION_CURRENT, type PlanId, getEffectiveP
 import { verifyWebhookSecret, verifyWebhookSignature } from "@/lib/cakto";
 import { emailPaymentConfirmed, emailCanceled, emailRefunded } from "@/lib/emails";
 import { safeServerAnalyticsEvent, serverAnalyticsClientId } from "@/lib/google-analytics";
+import { safePlatformMetaPurchase } from "@/lib/platform-meta-capi";
 
 type OrderData = {
   id?: unknown;
@@ -60,6 +61,10 @@ async function trackSubscriptionEvent(
   });
 }
 
+async function trackPlatformPurchase(orderId: string, email: string | null | undefined, plan: ReturnType<typeof getEffectivePlan>, data: OrderData) {
+  await safePlatformMetaPurchase({ orderId, email, value: moneyOf(data.amount, plan.price), currency: typeof data.currency === "string" ? data.currency : "BRL", planName: plan.name });
+}
+
 async function handleOrderEvent(event: string, data: OrderData, analyticsEventId: string) {
   const offerId = typeof data.offer?.id === "string" ? data.offer.id : "";
   const subId = typeof data.subscription?.id === "string" ? data.subscription.id : "";
@@ -87,6 +92,7 @@ async function handleOrderEvent(event: string, data: OrderData, analyticsEventId
       }
       const paidEvent = event === "subscription_renewed" || event === "subscription_late_recovered" || event === "purchase_approved";
       await trackSubscriptionEvent(paidEvent ? "purchase" : "subscription_resumed", analyticsEventId, row.userId, effectivePlan, data);
+      if (event === "purchase_approved") await trackPlatformPurchase(typeof data.id === "string" ? data.id : analyticsEventId, row.email, effectivePlan, data);
     } else if (event === "subscription_canceled" || event === "subscription_expired") {
       // mantém acesso até periodEnd se cancelAtPeriodEnd; webhook da Cakto já reflete fim do ciclo
       await db.update(planSubscriptions).set({ status: "canceled", updatedAt: now }).where(eq(planSubscriptions.id, row.id));
@@ -123,6 +129,7 @@ async function handleOrderEvent(event: string, data: OrderData, analyticsEventId
       await db.update(planSubscriptions).set({ status: "active", plan, planVersion: PLAN_VERSION_CURRENT, caktoOfferId: offerId, ...(subId ? { caktoSubscriptionId: subId } : {}), currentPeriodStart: now, currentPeriodEnd: null, updatedAt: now }).where(eq(planSubscriptions.id, pendingSameOrder.id));
       try { const p = getEffectivePlan(plan, PLAN_VERSION_CURRENT); await emailPaymentConfirmed(email, p.name); } catch {}
       await trackSubscriptionEvent("purchase", orderId, user.id, getEffectivePlan(plan, PLAN_VERSION_CURRENT), data);
+      await trackPlatformPurchase(orderId, email, getEffectivePlan(plan, PLAN_VERSION_CURRENT), data);
       return;
     }
     const alreadyActive = existing.some((r) => r.status === "active");
@@ -137,6 +144,7 @@ async function handleOrderEvent(event: string, data: OrderData, analyticsEventId
     } as never);
     try { const p = getEffectivePlan(plan, PLAN_VERSION_CURRENT); await emailPaymentConfirmed(email, p.name); } catch {}
     await trackSubscriptionEvent("purchase", orderId, user.id, getEffectivePlan(plan, PLAN_VERSION_CURRENT), data);
+    await trackPlatformPurchase(orderId, email, getEffectivePlan(plan, PLAN_VERSION_CURRENT), data);
   }
 }
 

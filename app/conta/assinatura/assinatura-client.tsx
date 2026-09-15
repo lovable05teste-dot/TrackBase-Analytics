@@ -13,6 +13,7 @@ type Subscription = { plan: string; status: string; amount: string | null; curre
 declare global {
   interface Window {
     Cakto?: { CaktoSDK: new (opts: { client_id: string }) => CaktoSdk };
+    fbq?: (...args: unknown[]) => void;
   }
 }
 type CaktoSdk = {
@@ -122,6 +123,13 @@ export function AssinaturaClient() {
       currency: "BRL",
       transaction_id: orderId,
     });
+  }
+
+  function trackMetaPurchase(plan: Plan, orderId: string) {
+    const key = `meta:purchase:${orderId}`;
+    if (!orderId || analyticsEvents.current.has(key)) return;
+    analyticsEvents.current.add(key);
+    window.fbq?.("track", "Purchase", { value: plan.price, currency: "BRL" }, { eventID: `purchase_${orderId}` });
   }
 
   async function load() {
@@ -234,6 +242,7 @@ export function AssinaturaClient() {
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Pagamento não aprovado.");
       trackGoogleAdsPurchase(modalPlan, typeof b.orderId === "string" ? b.orderId : "");
+      trackMetaPurchase(modalPlan, typeof b.orderId === "string" ? b.orderId : "");
       setPayOk(true);
       await load();
     } catch (err) {
@@ -274,6 +283,7 @@ export function AssinaturaClient() {
           const sb = await s.json();
           if (s.ok && sb.subscription && sb.subscription.plan === modalPlan.id && sb.subscription.status === "active") {
             trackGoogleAdsPurchase(modalPlan, typeof b.orderId === "string" ? b.orderId : "");
+            trackMetaPurchase(modalPlan, typeof b.orderId === "string" ? b.orderId : "");
             setPayOk(true);
             await load();
             break;
