@@ -6,6 +6,7 @@ import { CaktoError, createCardCharge, createPixAutoCharge, createSubscription }
 import { isPlanId, planOfferId, PLAN_VERSION_CURRENT, PLANS } from "@/lib/plans";
 import { audit } from "@/lib/permissions";
 import { emailPaymentPending } from "@/lib/emails";
+import { pushToWorkspace } from "@/lib/push";
 
 function friendlyCakto(e: CaktoError): string {
   const body = e.body as Record<string, unknown>;
@@ -91,6 +92,15 @@ export async function POST(request: Request) {
       } as never);
       try { await emailPaymentPending(email, PLANS[body.plan].name); } catch {}
       await audit(workspaceId, userId, "checkout:pix_pending", "plan", body.plan, `pix ${pix.id}`, request.headers.get("x-forwarded-for"));
+      await Promise.race([
+        pushToWorkspace(workspaceId, {
+          title: "Pix gerado · pagamento pendente",
+          body: `Plano ${PLANS[body.plan].name}. O acesso será liberado após a confirmação do pagamento.`,
+          url: "/conta/assinatura",
+          tag: `ghostscale-plan-pending-${pix.id}`,
+        }),
+        new Promise(resolve => setTimeout(resolve, 3000)),
+      ]).catch(() => {});
       return Response.json({
         ok: true,
         method: "pix_auto",
