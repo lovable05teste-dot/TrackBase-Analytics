@@ -287,7 +287,6 @@ export async function handleSalesQuota(
 ) {
   if (nextStatus !== "approved" || prevStatus === "approved") return;
   try {
-    const { getPlanContext } = await import("@/lib/permissions");
     const { getEffectivePlan } = await import("@/lib/plans");
     // workspace -> user? derivar via planSubscriptions
     const { planSubscriptions } = await import("@/db/schema");
@@ -299,7 +298,7 @@ export async function handleSalesQuota(
     if (!limit) return;
     const start = (sub as { currentPeriodStart?: number | null }).currentPeriodStart ?? sub.createdAt;
     const end = (sub as { currentPeriodEnd?: number | null }).currentPeriodEnd ?? start + 30 * 86400;
-    const { usageCounters, users } = await import("@/db/schema");
+    const { usageCounters } = await import("@/db/schema");
     const { and } = await import("drizzle-orm");
     // incrementa atomically via insert + update (simples)
     const id = `${workspaceId}:sales:${start}`;

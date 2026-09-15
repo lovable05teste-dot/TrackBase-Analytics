@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, Lock } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { NAV_GROUPS } from "@/lib/nav";
 import { toolAllowed, toolPlanLabel } from "@/lib/plan-tools";
 import { usePlan } from "@/lib/plan-client";

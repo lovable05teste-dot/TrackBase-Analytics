@@ -29,7 +29,7 @@ const GOOGLE_ADS_PURCHASE_DESTINATION = "AW-11244930106/e5LYCJub_fccELqIgPIp";
 async function readJson(response: Response) {
   const text = await response.text();
   if (!text) throw new Error(`A API não respondeu (${response.status}).`);
-  try { return JSON.parse(text) as Record<string, any>; }
+  try { return JSON.parse(text) as Record<string, unknown>; }
   catch { throw new Error(`Resposta inválida da API (${response.status}).`); }
 }
 
@@ -66,15 +66,6 @@ function validExp(v: string) {
   const exp = new Date(2000 + Number(m[2]), Number(m[1]), 1);
   return exp.getTime() > Date.now();
 }
-
-const statusLabel: Record<string, string> = {
-  active: "Ativa",
-  past_due: "Pagamento pendente",
-  paused: "Pausada",
-  canceled: "Cancelada",
-  demo: "Modo demonstração",
-  inactive: "Sem plano",
-};
 
 export function AssinaturaClient() {
   const isPlanoRoute = usePathname() === "/planos";
@@ -150,9 +141,9 @@ export function AssinaturaClient() {
         window.location.assign(`/login?return_to=${encodeURIComponent(window.location.pathname)}`);
         return;
       }
-      if (!r.ok) throw new Error(b.error || "Falha ao carregar assinatura.");
-      setSub(b.subscription || null);
-      setUsage(b.usage || null);
+      if (!r.ok) throw new Error((b.error as string) || "Falha ao carregar assinatura.");
+      setSub((b.subscription as Subscription) || null);
+      setUsage((b.usage as { count: number; limit: number; pct: number; remaining: number } | null) || null);
       setSdkOk(!!b.sdkClientId);
       setLoadError(typeof b.warning === "string" ? b.warning : "");
     } catch (e) {

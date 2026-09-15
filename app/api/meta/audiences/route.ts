@@ -3,7 +3,7 @@ import { ensureDb,getDb } from "@/db";
 import { metaAccounts,metaLinked } from "@/db/schema";
 import { metaConfig,metaJson } from "@/lib/meta";
 import { accountToken,graph } from "@/lib/meta-lab";
-import { decryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256 } from "@/lib/trackbase-security";
+import { decryptSecret,hasActivePlan,planRequiredResponse,requestUserId } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 type Audience={id:string;name:string;approximate_count?:number;time_updated?:number};

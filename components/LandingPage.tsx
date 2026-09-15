@@ -607,7 +607,7 @@ export function LandingPage() {
                 ["Gasto Meta", "R$ 4.820", "12 campanhas ativas"],
                 ["Vendas aprovadas", "312", "+18% em relação a ontem"],
                 ["ROAS", "3,8x", "R$ 18,4k faturados"],
-              ].map(([label, value, sub]) => (
+              ].map(([label, , sub]) => (
                 <div key={label} className="min-w-0 rounded-xl border border-white/10 bg-white/[.03] p-4">
                   <small className="block truncate text-xs text-[#C99AA4]">{label}</small>
                   <b className="mt-1 block truncate text-2xl text-[#FFF3F5] tabular-nums">{label === "Gasto Meta" ? <AnimatedMetric value={4820} prefix="R$ " /> : label === "Vendas aprovadas" ? <AnimatedMetric value={312} /> : <AnimatedMetric value={3.8} decimals={1} suffix="x" />}</b>

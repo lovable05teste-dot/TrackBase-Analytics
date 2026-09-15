@@ -2,10 +2,9 @@
 import {useEffect,useState} from "react";
 import {ChevronDown,ChevronRight,Loader2,Volume2} from "lucide-react";
 import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
-import {getSoundPrefs,previewSound,refreshSoundPrefs,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
+import {getSoundPrefs,previewSound,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
 import {Switch} from "@/components/ui/switch";
 
-const STORAGE="trackbase:notification";
 
 function useSoundPref(){
  const[pref,setPref]=useState<SoundPrefs>(getSoundPrefs);

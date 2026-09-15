@@ -37,14 +37,8 @@ import {
   Zap,
   Factory,
   TrendingUp,
-  ArrowUpRight,
-  Shield,
-  Search,
-  Layers,
-  Grid,
   FileText,
   HelpCircle,
-  ChevronDown,
 } from "lucide-react";
 
 export type NavItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }>; badge?: string };

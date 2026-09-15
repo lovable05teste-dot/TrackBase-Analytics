@@ -5,7 +5,7 @@ import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
 import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
-import {getSoundPrefs,playFromWorker,previewSound,refreshSoundPrefs,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
+import {getSoundPrefs,playFromWorker,previewSound,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -20,7 +20,8 @@ export function NotificationsBell(){
  const[sound,setSound]=useState<SoundPrefs>(getSoundPrefs());
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
  const known=useRef<Set<string>>(new Set());
- const prefsRef=useRef(prefs);prefsRef.current=prefs;
+ const prefsRef=useRef(prefs);
+ useEffect(()=>{prefsRef.current=prefs;},[prefs]);
  const interesting=(o:Order)=>o.status==="approved"?prefs.approved:o.status==="pending"?prefs.pending:false;
  const unread=orders.filter(o=>interesting(o)&&(o.updatedAt*1000>(seen||0))).length;
 
@@ -74,12 +75,12 @@ const fresh=list.filter(o=>!known.current.has(o.id));
 
  useEffect(()=>{const off=subscribeSoundPrefs(setSound);return off;},[]);
 
+ const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){playFromWorker(m.soundId,m.enabled);}};
+
  useEffect(()=>{
   try{if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",onSwMessage);}catch{}
   return()=>{try{if("serviceWorker" in navigator)navigator.serviceWorker.removeEventListener("message",onSwMessage);}catch{}};
  },[]);
-
- const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){playFromWorker(m.soundId,m.enabled);}};
 
  const markSeen=()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}};
  const toggle=()=>{if(!open)markSeen();setOpen(v=>!v);};

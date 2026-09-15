@@ -1,7 +1,8 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ChevronDown, LayoutDashboard, Lock } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { NAV_GROUPS } from "@/lib/nav";
 import { toolAllowed, toolPlanLabel } from "@/lib/plan-tools";
 import { usePlan } from "@/lib/plan-client";
@@ -20,9 +21,9 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <a href="/" className="flex items-center gap-3 px-2 py-2 mb-6" onClick={onNavigate}>
+      <Link href="/" className="flex items-center gap-3 px-2 py-2 mb-6" onClick={onNavigate}>
         <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[160px] shrink-0 object-contain" />
-      </a>
+      </Link>
       <nav className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 pr-1">
         {NAV_GROUPS.map((g) => {
           const expanded = open[g.title] ?? g.title === firstGroupTitle;

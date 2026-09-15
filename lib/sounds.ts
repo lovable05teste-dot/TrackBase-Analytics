@@ -4,12 +4,9 @@
 // `lib/sounds` (ex.: relatórios, componentes antigos). Novo código deve
 // importar de `lib/sound-prefs` + `lib/sale-sounds`.
 
-import {SALE_SOUNDS,mapLegacySound,type SaleSoundId} from "./sound-prefs";
+import {mapLegacySound} from "./sound-prefs";
 import {getSoundPrefs,previewSound,refreshSoundPrefs,setSoundPrefs,subscribeSoundPrefs} from "./sale-sounds";
 import type {SoundPrefs} from "./sound-prefs";
-
-// IDs do catálogo antigo -> novos arquivos WAV
-const LEGACY_IDS=["caixa-registradora","cha-ching","moedas","sino-venda","ka-ching"] as const;
 
 export type SoundFn=(ctx:AudioContext)=>void;
 

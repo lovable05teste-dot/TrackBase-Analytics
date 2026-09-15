@@ -7,7 +7,6 @@ import { desc, eq, and } from "drizzle-orm";
 // Funções centrais — backend é autoridade; frontend só reflete.
 
 export type WorkspaceRole = "owner" | "admin" | "analyst" | "viewer";
-const ROLE_RANK: Record<WorkspaceRole, number> = { viewer: 0, analyst: 1, admin: 2, owner: 3 };
 
 export async function workspaceIdForUser(userId: string): Promise<string> {
   return "ws_" + (await sha256(userId)).slice(0, 24);

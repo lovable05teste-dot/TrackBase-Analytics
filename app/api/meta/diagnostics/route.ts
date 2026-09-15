@@ -2,11 +2,16 @@ import { and,eq,gte,inArray } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { events,metaAccounts,metaLinked,projects } from "@/db/schema";
 import { metaJson } from "@/lib/meta";
-import { accountToken,adDailyInsights,adTotals,graph,isoDaysAgo,norm,num,rangeLast } from "@/lib/meta-lab";
+import { accountToken,adDailyInsights,adTotals,graph,norm,num,rangeLast } from "@/lib/meta-lab";
 import { requestUserId,sha256 } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 type Creative={id:string;name:string;creative?:{object_story_spec?:{link_data?:{link?:string}}}};
+type FatigueItem={accountName:string;adId:string;adName:string;campaignName:string;spend7:number;freqPrev:number;freqRecent:number;ctrPrev:number;ctrRecent:number;verdict:string};
+type QualityItem={accountName:string;adId:string;adName:string;campaignName:string;impressions:number;flags:string[]};
+type UtmIssueItem={accountName:string;adId:string;adName:string;problem:string};
+type CompareItem={accountName:string;campaignId:string;campaignName:string;metaPurchases:number;metaRevenue:number};
+type WinnerItem={accountRowId:string;accountName:string;adId:string;adName:string;campaignName:string;spend:number;revenue:number;roas:number};
 
 export async function GET(request:Request){
  try{
@@ -34,7 +39,7 @@ export async function GET(request:Request){
    ]);
    return {a,totals,daily,creatives:creatives.data||[]};
   }));
-  const fatigue:any[]=[],quality:any[]=[],utmIssues:any[]=[],compareMap=new Map<string,any>(),winners:any[]=[];
+  const fatigue:FatigueItem[]=[],quality:QualityItem[]=[],utmIssues:UtmIssueItem[]=[],compareMap=new Map<string,CompareItem>(),winners:WinnerItem[]=[];
   for(const s of settled){
    if(s.status!=="fulfilled")continue;
    const{a,totals,daily,creatives}=s.value;
@@ -51,7 +56,7 @@ export async function GET(request:Request){
      const freqUp=f0>0&&f1>f0*1.2,ctrDown=c0>0&&c1<c0*0.85;
      if(freqUp&&ctrDown)fatigue.push({accountName:a.accountName,adId:t.id,adName:t.name,campaignName:t.campaignName,spend7:Math.round(spend7*100)/100,freqPrev:Math.round(f0*10)/10,freqRecent:Math.round(f1*10)/10,ctrPrev:Math.round(c0*100)/100,ctrRecent:Math.round(c1*100)/100,verdict:"Frequência subindo e CTR caindo — criativo pode estar cansando."});
     }
-    const bad=[t.quality==="BELOW_AVERAGE"?"qualidade":null,t.engagement==="BELOW_AVERAGE"?"engajamento":null,t.conversion==="BELOW_AVERAGE"?"conversão":null].filter(Boolean);
+    const bad=[t.quality==="BELOW_AVERAGE"?"qualidade":null,t.engagement==="BELOW_AVERAGE"?"engajamento":null,t.conversion==="BELOW_AVERAGE"?"conversão":null].filter((x):x is string=>Boolean(x));
     if(bad.length&&t.impressions>1000)quality.push({accountName:a.accountName,adId:t.id,adName:t.name,campaignName:t.campaignName,impressions:t.impressions,flags:bad});
     const rev=t.revenue||tbByKey.get(norm(t.name))?.revenue||tbByKey.get(t.campaignId)?.revenue||0;
     const roas=t.spend>0?rev/t.spend:0;

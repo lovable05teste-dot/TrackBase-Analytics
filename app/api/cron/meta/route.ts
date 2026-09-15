@@ -1,9 +1,8 @@
-import { and,eq,inArray } from "drizzle-orm";
+import { eq,inArray } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
-import { automationRules,metaAccounts,metaLinked,notificationPrefs,orders,projects } from "@/db/schema";
-import { accountToken,graph,num } from "@/lib/meta-lab";
-import { evaluateWorkspace,logHistory } from "@/lib/meta-rules";
-import { metaJson } from "@/lib/meta";
+import { automationRules,notificationPrefs,orders,projects } from "@/db/schema";
+import { num } from "@/lib/meta-lab";
+import { evaluateWorkspace } from "@/lib/meta-rules";
 import { parsePrefs } from "@/lib/notify";
 import { pushToWorkspace } from "@/lib/push";
 
@@ -21,7 +20,7 @@ async function runRules(){
  await ensureDb();
  const db=getDb();
  const actives=await db.select().from(automationRules).where(eq(automationRules.active,1));
- const seen=new Set<string>(),out:any[]=[];
+ const seen=new Set<string>(),out:Record<string,unknown>[]=[];
  for(const r of actives){
   const key=`${r.workspaceId}:${r.userId}`;
   if(seen.has(key))continue;
@@ -36,7 +35,7 @@ async function runDigest(){
  await ensureDb();
  const db=getDb();
  const prefs=await db.select().from(notificationPrefs);
- const out:any[]=[];
+ const out:Record<string,unknown>[]=[];
  const yest=new Date();yest.setDate(yest.getDate()-1);yest.setHours(0,0,0,0);
  const y0=Math.floor(yest.getTime()/1000),y1=y0+86400;
  for(const p of prefs){

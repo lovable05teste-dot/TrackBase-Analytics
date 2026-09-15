@@ -50,7 +50,7 @@ export async function evaluateWorkspace(opts:{userId:string;workspaceId:string;e
   for(const k of [norm(o)])add(agg.ad,k,num(r.value));
   const mo=o.match(/\|(\d+)/);if(mo)add(agg.ad,mo[1],num(r.value));
  }
- const triggered:any[]=[],errors:string[]=[];
+ const triggered:{rule:string;item:string;level:string;metric:string;value:number;action:string;ok:boolean;detail?:string}[]=[],errors:string[]=[];
  let evaluated=0;
  for(const rule of rules){
   const level=rule.level as "campaign"|"adset"|"ad";

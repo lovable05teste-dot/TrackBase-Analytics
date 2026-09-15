@@ -43,6 +43,7 @@ async function drainCapiOutboxScheduled(env: Env) {
 }
 
 const worker = {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- _ctx é exigido pela assinatura do handler scheduled do Cloudflare Workers
   async scheduled(_event: unknown, env: Env, _ctx: ExecutionContext): Promise<void> {
     await drainCapiOutboxScheduled(env);
   },

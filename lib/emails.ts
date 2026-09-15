@@ -3,7 +3,7 @@ import { sendEmail, appBaseUrl } from "./email";
 function brandHtml(title: string, bodyHtml: string, cta?: { label: string; href: string }) {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#080b12;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;"><div style="max-width:560px;margin:0 auto;padding:24px;"><div style="background:linear-gradient(180deg,#101521 0%,#0b0e17 100%);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px;"><div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#ff4d5e;font-weight:800;">GhostScale</div><h1 style="margin:12px 0 8px;font-size:22px;color:#f1f5f9;">${title}</h1>${bodyHtml}${cta ? `<div style="margin-top:20px;"><a href="${cta.href}" style="display:inline-block;background:#ff0030;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:700;">${cta.label}</a></div>` : ""}</div><p style="margin:16px 0 0;text-align:center;font-size:12px;color:#475569;">GhostScale · rastreamento para quem domina o tráfego</p></div></body></html>`;
 }
-function shaMask(v: string) { return v.slice(0, 3) + "***"; }
+
 
 export async function emailWelcome(to: string) {
   const text = `Bem-vindo ao GhostScale!\n\nSua conta foi criada. Escolha um plano em /planos para liberar o painel completo.\nNo modo demonstração você já pode navegar por tudo.`;

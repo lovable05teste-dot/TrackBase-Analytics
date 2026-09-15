@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MobileMenu } from "@/components/MobileMenu";
@@ -19,7 +20,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
   return (
     <main className="min-h-screen bg-[#080b12] text-slate-100">
       <div className="mx-auto max-w-5xl px-5 py-8 lg:px-8">
-        <a href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white"><span className="inline-block h-3 w-3 rotate-180">→</span>Voltar ao dashboard</a>
+        <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white"><span className="inline-block h-3 w-3 rotate-180">→</span>Voltar ao dashboard</Link>
 
         <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -39,7 +40,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         {children}
 
         <footer className="mt-12 border-t border-white/7 pt-6 text-center text-xs text-slate-600">
-          GhostScale — Meta Ads Intelligence · <a href="/" className="hover:text-slate-300">Voltar ao painel</a>
+          GhostScale — Meta Ads Intelligence · <Link href="/" className="hover:text-slate-300">Voltar ao painel</Link>
         </footer>
       </div>
     </main>
