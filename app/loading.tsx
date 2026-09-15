@@ -1,1 +1,10 @@
-export default function Loading(){return <main className="grid min-h-screen place-items-center bg-slate-50 text-slate-500"><div className="text-center"><div className="mx-auto size-8 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"/><p className="mt-3 text-sm">Carregando seu workspace…</p></div></main>}
+export default function Loading() {
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#080b12] text-slate-100">
+      <div className="flex flex-col items-center gap-4" role="status" aria-live="polite">
+        <div className="size-9 animate-spin rounded-full border-2 border-white/15 border-t-red-500" />
+        <p className="text-sm text-slate-400">Carregando GhostScale…</p>
+      </div>
+    </main>
+  );
+}

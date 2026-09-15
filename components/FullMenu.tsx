@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { ChevronDown, Lock } from "lucide-react";
 import { NAV_GROUPS } from "@/lib/nav";
 import { toolAllowed, toolPlanLabel } from "@/lib/plan-tools";
@@ -48,7 +49,7 @@ export function FullMenu() {
                   const minLabel = toolPlanLabel(item.href);
                   const ItemIcon = item.icon;
                   return (
-                    <a
+                    <Link
                       key={item.href}
                       href={locked ? "/planos" : item.href}
                       title={locked ? `Incluso no plano ${minLabel} — ver planos` : undefined}
@@ -68,7 +69,7 @@ export function FullMenu() {
                       ) : item.badge ? (
                         <span className="ml-auto shrink-0 rounded-md bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-700">{item.badge}</span>
                       ) : null}
-                    </a>
+                    </Link>
                   );
                 })}
               </div>
@@ -77,12 +78,12 @@ export function FullMenu() {
         );
       })}
       {!loaded || plan === null ? (
-        <a
+        <Link
           href="/planos"
           className="mt-4 block rounded-xl bg-[#ff0030] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#d60029]"
         >
           Ver planos
-        </a>
+        </Link>
       ) : null}
     </div>
   );

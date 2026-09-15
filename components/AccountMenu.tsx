@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { CreditCard, LogOut, Moon, Sun, User, Volume2, Building2, Crown, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 export interface AccountData {
   userName: string;
@@ -16,7 +17,7 @@ export const EMPTY_ACCOUNT: AccountData = { userName: "Usuário", userEmail: "",
 
 export function AccountMenu({ data = EMPTY_ACCOUNT }: { data?: AccountData }) {
   const [open, setOpen] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   const [remoteAccount, setRemoteAccount] = useState<AccountData | null>(null);
   const account = data.userEmail ? data : remoteAccount ?? data;
   const ref = useRef<HTMLDivElement>(null);
@@ -34,7 +35,7 @@ export function AccountMenu({ data = EMPTY_ACCOUNT }: { data?: AccountData }) {
   useEffect(() => {
     let themeFrame: number | undefined;
     try {
-      const storedDark = document.documentElement.classList.contains("dark") || localStorage.getItem("tb_theme") === "dark";
+      const storedDark = (localStorage.getItem("tb_theme") || "dark") === "dark";
       themeFrame = window.requestAnimationFrame(() => setDark(storedDark));
     } catch {
       /* noop */
@@ -60,6 +61,7 @@ export function AccountMenu({ data = EMPTY_ACCOUNT }: { data?: AccountData }) {
     try {
       localStorage.setItem("tb_theme", next ? "dark" : "light");
       document.documentElement.classList.toggle("dark", next);
+      document.documentElement.style.colorScheme = next ? "dark" : "light";
     } catch {
       /* noop */
     }
@@ -120,22 +122,22 @@ export function AccountMenu({ data = EMPTY_ACCOUNT }: { data?: AccountData }) {
             </div>
           </div>
           <div className="p-2">
-            <a href="/conta/perfil" onClick={() => setOpen(false)} className={item}>
+            <Link href="/conta/perfil" onClick={() => setOpen(false)} className={item}>
               <User className="size-4 shrink-0 text-slate-400" />
               Meu perfil
-            </a>
-            <a href="/conta/assinatura" onClick={() => setOpen(false)} className={item}>
+            </Link>
+            <Link href="/conta/assinatura" onClick={() => setOpen(false)} className={item}>
               <CreditCard className="size-4 shrink-0 text-slate-400" />
               Assinatura
-            </a>
-            {account.isAdmin ? <a href="/equipe" onClick={() => setOpen(false)} className={item}>
+            </Link>
+            {account.isAdmin ? <Link href="/equipe" onClick={() => setOpen(false)} className={item}>
               <Building2 className="size-4 shrink-0 text-slate-400" />
               Workspace e equipe
-            </a> : null}
-            <a href="/configuracoes#som" onClick={() => setOpen(false)} className={item}>
+            </Link> : null}
+            <Link href="/configuracoes#som" onClick={() => setOpen(false)} className={item}>
               <Volume2 className="size-4 shrink-0 text-slate-400" />
               Sons de venda
-            </a>
+            </Link>
             <button type="button" onClick={toggleTheme} className={item}>
               {dark ? (
                 <Sun className="size-4 shrink-0 text-slate-400" />

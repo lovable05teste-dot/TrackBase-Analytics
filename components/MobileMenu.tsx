@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { FullMenu } from "./FullMenu";
+import Link from "next/link";
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -22,9 +23,9 @@ export function MobileMenu() {
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-card p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <a href="/" className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
                 <img src="/ghostscale-logo.png" alt="GhostScale" className="h-10 w-auto max-w-[200px] object-contain" />
-              </a>
+              </Link>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -42,12 +43,12 @@ export function MobileMenu() {
             >
               <FullMenu />
             </div>
-            <a
+            <Link
               href="/conta/assinatura"
               className="mt-2 block rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground"
             >
               Ver assinatura
-            </a>
+            </Link>
             <a
               href="/api/auth/logout"
               className="mt-2 block rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-red-600"

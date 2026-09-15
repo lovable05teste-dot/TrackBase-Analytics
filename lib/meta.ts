@@ -1,11 +1,9 @@
 type MetaEnv = { META_APP_ID?: string; META_APP_SECRET?: string; META_LOGIN_CONFIG_ID?: string; META_GRAPH_VERSION?: string };
 
 export function metaRedirectUri() {
-  const fallback = "https://www.ghostscale.com.br/api/meta/oauth/callback";
-  const configured = process.env.META_REDIRECT_URI?.trim();
-  const url = new URL(configured || (process.env.APP_URL?.trim() ? new URL("/api/meta/oauth/callback", process.env.APP_URL.trim()).href : fallback));
-  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash || url.pathname !== "/api/meta/oauth/callback") throw new Error("META_REDIRECT_INVALID");
-  return url.href;
+  // OAuth da Meta exige igualdade literal. Nunca derive do Host, preview,
+  // APP_URL, www/sem-www ou protocolo recebido pela requisição.
+  return "https://www.ghostscale.com.br/api/meta/oauth/callback";
 }
 
 export async function metaPages<T>(url: string): Promise<{ data: T[] }> {
@@ -25,7 +23,7 @@ export async function metaPages<T>(url: string): Promise<{ data: T[] }> {
 
 export function metaConfig() {
   const values=process.env as MetaEnv;
-  return {appId:values.META_APP_ID?.trim()||"",appSecret:values.META_APP_SECRET?.trim()||"",configId:values.META_LOGIN_CONFIG_ID?.trim()||"",version:values.META_GRAPH_VERSION?.trim()||"v25.0"};
+  return {appId:values.META_APP_ID?.trim()||"",appSecret:values.META_APP_SECRET?.trim()||"",configId:values.META_LOGIN_CONFIG_ID?.trim()||"",version:values.META_GRAPH_VERSION?.trim()||"v25.0",redirectUri:metaRedirectUri()};
 }
 
 export function requireMetaConfig() {
