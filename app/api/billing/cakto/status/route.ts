@@ -6,9 +6,21 @@ import { plansCatalog, getEffectivePlan, type PlanId } from "@/lib/plans";
 import { inArray } from "drizzle-orm";
 
 export async function GET(request: Request) {
-  await ensureDb();
+  const plans = plansCatalog().map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    price: plan.price,
+    priceLabel: plan.priceLabel,
+    sales: plan.limits.sales,
+    feats: plan.highlights,
+    hot: plan.badge === "Recomendado",
+    configured: plan.configured,
+  }));
+  const sdkClientId = Boolean((process.env.NEXT_PUBLIC_CAKTO_CLIENT_ID || "").trim());
+  try {
   const userId = await requestUserId(request);
-  if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
+  if (!userId) return Response.json({ error: "Sua sessão expirou.", code: "AUTH_REQUIRED", plans, sdkClientId }, { status: 401 });
+  await ensureDb();
   const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
   const db = getDb();
   const rows = await db.select().from(planSubscriptions).where(eq(planSubscriptions.workspaceId, workspaceId)).orderBy(desc(planSubscriptions.createdAt)).limit(10);
@@ -39,5 +51,10 @@ export async function GET(request: Request) {
         scheduledPlan: sub.scheduledPlan ?? null, updatedAt: sub.updatedAt,
       }
     : null;
-  return Response.json({ subscription: current, usage, plans: plansCatalog(), sdkClientId: (process.env.NEXT_PUBLIC_CAKTO_CLIENT_ID || "").trim() ? true : false });
+  return Response.json({ authenticated: true, subscription: current, usage, plans, sdkClientId }, { headers: { "cache-control": "no-store" } });
+  } catch (error) {
+    console.error("billing status", error);
+    // O catálogo continua disponível mesmo se o banco oscilar; a tela nunca cai.
+    return Response.json({ authenticated: true, subscription: null, usage: null, plans, sdkClientId, degraded: true, warning: "Não foi possível atualizar sua assinatura agora. Tente novamente." }, { headers: { "cache-control": "no-store" } });
+  }
 }

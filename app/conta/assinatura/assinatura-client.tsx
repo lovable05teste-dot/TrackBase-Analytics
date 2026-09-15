@@ -26,6 +26,13 @@ type CaktoSdk = {
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const GOOGLE_ADS_PURCHASE_DESTINATION = "AW-11244930106/e5LYCJub_fccELqIgPIp";
 
+async function readJson(response: Response) {
+  const text = await response.text();
+  if (!text) throw new Error(`A API não respondeu (${response.status}).`);
+  try { return JSON.parse(text) as Record<string, any>; }
+  catch { throw new Error(`Resposta inválida da API (${response.status}).`); }
+}
+
 function luhn(num: string) {
   const d = num.replace(/\D/g, "");
   if (d.length < 13 || d.length > 19) return false;
@@ -133,18 +140,25 @@ export function AssinaturaClient() {
   }
 
   async function load() {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 12000);
     try {
-      const r = await fetch("/api/billing/cakto/status");
-      const b = await r.json();
+      const r = await fetch("/api/billing/cakto/status", { cache: "no-store", credentials: "same-origin", signal: controller.signal });
+      const b = await readJson(r);
+      if (Array.isArray(b.plans)) setPlans(b.plans as Plan[]);
+      if (r.status === 401) {
+        window.location.assign(`/login?return_to=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
       if (!r.ok) throw new Error(b.error || "Falha ao carregar assinatura.");
-      setPlans(b.plans || []);
       setSub(b.subscription || null);
       setUsage(b.usage || null);
       setSdkOk(!!b.sdkClientId);
-      setLoadError("");
+      setLoadError(typeof b.warning === "string" ? b.warning : "");
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Falha ao carregar. Verifique sua conexão e recarregue.");
+      setLoadError(e instanceof DOMException && e.name === "AbortError" ? "A consulta demorou. Toque em tentar novamente." : e instanceof Error ? e.message : "Falha ao carregar. Verifique sua conexão e recarregue.");
     } finally {
+      window.clearTimeout(timer);
       setLoading(false);
     }
   }
@@ -374,7 +388,7 @@ export function AssinaturaClient() {
           <p className="mt-2 text-xs text-amber-600">Nenhum recurso pago está disponível até a confirmação.</p>
           <div className="mt-3 flex gap-2">
             <Button variant="outline" size="sm" onClick={load}>Verificar status</Button>
-            {activePlan && <Button variant="outline" size="sm" onClick={() => openCheckout(plans.find(p => p.id === activePlan!.plan)!)}>Tentar novamente</Button>}
+            {plans.some(p => p.id === activePlan?.plan) && <Button variant="outline" size="sm" onClick={() => { const plan = plans.find(p => p.id === activePlan?.plan); if (plan) openCheckout(plan); }}>Tentar novamente</Button>}
           </div>
         </div>
       ) : isActiveSubscription && activePlan ? (
@@ -422,23 +436,24 @@ export function AssinaturaClient() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((p) => {
           const isCurrent = activePlan?.plan === p.id;
           const canPay = p.configured && sdkOk;
+          const features = Array.isArray(p.feats) ? p.feats : [];
           return (
-            <div key={p.id} className={`metric-card rounded-xl p-6 ${p.hot ? "border-violet-400/40" : ""}`}>
+            <div key={p.id} className={`metric-card min-w-0 overflow-hidden rounded-xl p-4 sm:p-6 ${p.hot ? "border-violet-400/40" : ""}`}>
               {p.hot ? (
                 <span className="mb-3 inline-block rounded-full bg-violet-500/20 px-3 py-1 text-xs text-violet-700 dark:text-violet-200">
                   Mais popular
                 </span>
               ) : null}
               <h3 className="text-lg font-semibold">{p.name}</h3>
-              <p className="mt-1 text-2xl font-bold text-violet-700 dark:text-violet-200">{p.priceLabel}</p>
+              <p className="mt-1 break-words text-xl font-bold leading-tight text-violet-700 dark:text-violet-200 sm:text-2xl">{p.priceLabel}</p>
               <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                {p.feats.map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" /> {f}
+                {features.map((f) => (
+                  <li key={f} className="flex min-w-0 items-start gap-2 leading-relaxed">
+                    <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" /> <span className="min-w-0 break-words">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -549,7 +564,7 @@ export function AssinaturaClient() {
       ) : null}
 {modalPlan ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-5">
-          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-[#101521] p-6 text-slate-100 sm:rounded-3xl sm:p-8">
+          <div className="max-h-[92vh] w-full min-w-0 max-w-lg overflow-x-hidden overflow-y-auto rounded-t-3xl border border-white/10 bg-[#101521] p-4 text-slate-100 sm:rounded-3xl sm:p-8">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <img
@@ -558,7 +573,7 @@ export function AssinaturaClient() {
                   className="h-8 w-auto max-w-[160px] object-contain drop-shadow-[0_0_14px_rgba(255,48,80,.35)]"
                 />
                 <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-red-400">Checkout seguro</p>
-                <h3 className="mt-1 text-xl font-semibold">
+                <h3 className="mt-1 break-words text-lg font-semibold leading-tight sm:text-xl">
                   {modalPlan.name} · {modalPlan.priceLabel}
                 </h3>
                 <p className="mt-1 text-sm text-slate-400">
@@ -576,18 +591,18 @@ export function AssinaturaClient() {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-black/30 p-1">
+            <div className="mt-4 grid min-w-0 grid-cols-2 gap-1 rounded-xl bg-black/30 p-1 sm:gap-2">
               <button
                 type="button"
                 onClick={() => { setPayMethod("card"); setPayError(""); }}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "card" ? "bg-white text-black dark:bg-white dark:text-black" : "text-slate-400 hover:text-white"}`}
+                className={`min-w-0 rounded-lg px-2 py-2 text-xs font-semibold leading-tight transition sm:h-10 sm:text-sm ${payMethod === "card" ? "bg-white text-black dark:bg-white dark:text-black" : "text-slate-400 hover:text-white"}`}
               >
                 Cartão de crédito
               </button>
               <button
                 type="button"
                 onClick={() => { setPayMethod("pix"); setPayError(""); }}
-                className={`h-10 rounded-lg text-sm font-semibold transition ${payMethod === "pix" ? "bg-white text-black dark:bg-white dark:text-black" : "text-slate-400 hover:text-white"}`}
+                className={`min-w-0 rounded-lg px-2 py-2 text-xs font-semibold leading-tight transition sm:h-10 sm:text-sm ${payMethod === "pix" ? "bg-white text-black dark:bg-white dark:text-black" : "text-slate-400 hover:text-white"}`}
               >
                 Pix Automático
               </button>
@@ -751,8 +766,8 @@ export function AssinaturaClient() {
                   <span className="mb-1 block text-slate-300">Nome impresso no cartão</span>
                   <input value={holder} onChange={(e) => setHolder(e.target.value)} placeholder="COMO ESTÁ NO CARTÃO" autoComplete="cc-name" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 uppercase outline-none placeholder:text-slate-600 focus:border-red-500/60" />
                 </label>
-                <div className="grid grid-cols-3 gap-3">
-                  <label className="block text-sm">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <label className="col-span-2 block min-w-0 text-sm sm:col-span-1">
                     <span className="mb-1 block text-slate-300">Validade</span>
                     <input value={exp} onChange={(e) => setExp(formatExp(e.target.value))} inputMode="numeric" placeholder="MM/AA" autoComplete="cc-exp" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 outline-none placeholder:text-slate-600 focus:border-red-500/60" />
                   </label>
