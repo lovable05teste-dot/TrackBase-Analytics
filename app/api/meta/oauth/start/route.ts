@@ -15,7 +15,7 @@ function returnHost(request: Request, callbackOrigin: string) {
 
 export async function GET(request: Request) {
   const userId = await requestUserId(request);
-  if (!userId) return Response.redirect(new URL("/login", request.url), 302);
+  if (!userId) return Response.redirect(new URL("/login?return_to=%2Fapi%2Fmeta%2Foauth%2Fstart", request.url), 302);
 
   try {
     await ensureDb();
