@@ -6,7 +6,8 @@ import {
   clientIpFromRequest,
   decryptSecret,
   finalizePendingSession,
-  getSessionByToken,
+  pickSessionToken,
+  requestSessionTokens,
   hasConflictingOrigin,
   logAdminAccess,
   sessionCookie,
@@ -19,8 +20,9 @@ export async function POST(request: Request) {
   if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const body = (await request.json().catch(() => ({}))) as { code?: string };
   const ip = clientIpFromRequest(request);
-  const cookie = request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
-  const pending = await getSessionByToken(cookie);
+  const found = await pickSessionToken(requestSessionTokens(request), { pending: "only" });
+  const cookie = found?.token;
+  const pending = found?.session;
   if (!cookie || !pending || !pending.pending2fa)
     return Response.json({ error: "Sessão de verificação expirada. Entre de novo." }, { status: 401 });
   let ok = false;

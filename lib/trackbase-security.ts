@@ -151,6 +151,49 @@ export function clearSessionCookie() {
   return `tb_session=; Path=/; HttpOnly;${sessionCookieDomain()} Secure; SameSite=Lax; Max-Age=0`;
 }
 
+// Apaga as duas variantes: a do domínio compartilhado e a host-only (gravada
+// antes do Domain existir, ou em host sem APP_URL). Sem isso a variante velha
+// sobrevivia ao logout e era lida no lugar da nova.
+export function clearSessionCookies() {
+  const variants = [clearSessionCookie()];
+  if (sessionCookieDomain()) variants.push("tb_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
+  return variants;
+}
+
+// O navegador pode mandar VÁRIOS tb_session (host-only do www + o do domínio
+// ghostscale.com.br). Ler só o primeiro — como antes — pegava às vezes um
+// token velho/revogado e a pessoa "caía" do login sem motivo.
+export function sessionTokensFromCookieHeader(header: string | null | undefined) {
+  const tokens: string[] = [];
+  for (const part of (header || "").split(";")) {
+    const [name, ...rest] = part.trim().split("=");
+    const value = rest.join("=").trim();
+    if (name === "tb_session" && value && !tokens.includes(value)) tokens.push(value);
+  }
+  return tokens;
+}
+
+export function requestSessionTokens(request: Request) {
+  return sessionTokensFromCookieHeader(request.headers.get("cookie"));
+}
+
+// Para Server Components: `cookies().get()` do Next colapsa nomes repetidos,
+// então lê o header cru.
+export async function currentSessionTokens() {
+  const { headers } = await import("next/headers");
+  return sessionTokensFromCookieHeader((await headers()).get("cookie"));
+}
+
+// Primeiro token com sessão válida (opcionalmente aceitando 2FA pendente).
+export async function pickSessionToken(tokens: string[], opts: { pending?: "allow" | "only" } = {}) {
+  for (const token of tokens) {
+    const session = await getSessionByToken(token);
+    if (!session) continue;
+    if (opts.pending === "only" ? session.pending2fa : opts.pending === "allow" || !session.pending2fa) return { token, session };
+  }
+  return null;
+}
+
 // Compat: delega para lib/permissions (evita ciclo de import estático)
 export type PlanContext = { plan: string | null; status: string | null; hasActive: boolean; version?: number | null; sub?: unknown };
 export async function getPlanContext(userId: string | null | undefined): Promise<PlanContext> {
@@ -287,28 +330,28 @@ export async function revokeAllUserSessions(userId: string) {
 // primitive (full cross-account read/write). Headers remain usable for UI
 // display in chatgpt-auth.ts, never for data authorization.
 // ---------------------------------------------------------------------------
-function sessionTokenFromCookieHeader(request: Request) {
-  return request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
+export async function getUserIdFromSessionCookie(session: string | string[] | undefined | null) {
+  const tokens = (Array.isArray(session) ? session : [session]).filter((token): token is string => Boolean(token));
+  if (!tokens.length) return null;
+  // Pending-2FA sessions authenticate nothing until the code is verified.
+  const active = await pickSessionToken(tokens);
+  if (active) return active.session.userId;
+  return legacyUserIdFromTokens(tokens);
 }
 
-export async function getUserIdFromSessionCookie(session: string | undefined | null) {
-  if (!session) return null;
-  const active = await getSessionByToken(session);
-  // Pending-2FA sessions authenticate nothing until the code is verified.
-  if (active && !active.pending2fa) {
-    return active.userId;
-  }
+async function legacyUserIdFromTokens(tokens: string[]) {
   // Legacy fallback: deterministic pre-session tokens, so existing logins
   // survive the upgrade. New logins never mint these.
-  if (process.env.ADMIN_PASSWORD && timingSafeEqual(session, await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`)))
-    return "trackbase-owner";
+  const owner = process.env.ADMIN_PASSWORD ? await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`) : "";
+  if (owner && tokens.some(token => timingSafeEqual(token, owner))) return "trackbase-owner";
   try {
     const { ensureDb, getDb } = await import("@/db");
     const { users } = await import("@/db/schema");
     await ensureDb();
     const allUsers = await getDb().select({ id: users.id, passwordHash: users.passwordHash }).from(users);
     for (const u of allUsers) {
-      if (timingSafeEqual(session, await sha256(`trackbase:${u.passwordHash}`))) return u.id;
+      const legacy = await sha256(`trackbase:${u.passwordHash}`);
+      if (tokens.some(token => timingSafeEqual(token, legacy))) return u.id;
     }
   } catch (error) {
     console.error("session users lookup", error);
@@ -317,14 +360,14 @@ export async function getUserIdFromSessionCookie(session: string | undefined | n
 }
 
 export async function requestUserId(request: Request) {
-  return getUserIdFromSessionCookie(sessionTokenFromCookieHeader(request));
+  return getUserIdFromSessionCookie(requestSessionTokens(request));
 }
 
 // Aceita também sessões pendentes de 2FA — uso restrito aos endpoints de
 // ativação do 2FA (setup/confirm), para o fluxo de 2FA obrigatório.
 export async function requestUserIdAllowPending(request: Request) {
-  const active = await getSessionByToken(sessionTokenFromCookieHeader(request));
-  return active ? active.userId : null;
+  const active = await pickSessionToken(requestSessionTokens(request), { pending: "allow" });
+  return active ? active.session.userId : null;
 }
 
 // ---------------------------------------------------------------------------

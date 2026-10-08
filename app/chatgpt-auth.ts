@@ -1,6 +1,6 @@
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getUserIdFromSessionCookie } from "@/lib/trackbase-security";
+import { getUserIdFromSessionCookie, currentSessionTokens } from "@/lib/trackbase-security";
 
 export type ChatGPTUser = {
   displayName: string;
@@ -21,7 +21,7 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!email) {
-    const session=(await cookies()).get("tb_session")?.value;
+    const session=await currentSessionTokens();
     const userId=await getUserIdFromSessionCookie(session);
     if(!userId)return null;
     if(userId==="trackbase-owner")return {displayName:"Administrador",email:"admin@trackbase.local",fullName:"Administrador"};
