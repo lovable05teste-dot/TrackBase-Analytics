@@ -7,6 +7,7 @@ import { domainAllowed, parseProtection } from "@/lib/protection";
 import { parseBlockedIps, requestIp } from "@/lib/protection-ip";
 
 const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation","SecurityRecovery"]);
+const internalOnly = new Set(["AdClick","PageError"]);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST,OPTIONS" };
 export function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
 async function hash(value:unknown,phone=false){const raw=String(value||"").trim().toLocaleLowerCase(),normalized=phone?raw.replace(/\D/g,""):raw.replace(/\s+/g,"");if(!normalized)return undefined;const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));return Array.from(new Uint8Array(bytes)).map(byte=>byte.toString(16).padStart(2,"0")).join("")}
@@ -51,23 +52,33 @@ export async function POST(request: Request) {
     if (eventId.length > 200) return Response.json({ error: "Identificador de evento inválido" }, { status: 400, headers: cors });
     const attribution=(body.attribution&&typeof body.attribution==="object"?body.attribution:{}) as Record<string,unknown>;
     const utm=(name:string)=>u?.searchParams.get(name)||String(attribution[name]||"")||null;
+    // Horário vem do navegador: relógio errado gerava event_time no futuro ou
+    // >7 dias, que a Meta rejeita. Fora da janela aceitável, usa o do servidor.
+    const clientTime = Number(body.eventTime);
+    const eventTime = Number.isFinite(clientTime) && clientTime <= now + 300 && clientTime >= now - 86400 ? Math.floor(clientTime) : now;
     const value = Number(body.value || 0);
     if (!Number.isFinite(value) || value < 0) return Response.json({ error: "Valor inválido" }, { status: 400, headers: cors });
     const safeBody={...body,email:body.email?"[HASHED]":undefined,phone:body.phone?"[HASHED]":undefined};
     await getDb().insert(events).values({
       id: crypto.randomUUID(), projectId: project.id, eventId, eventName, source: "browser",
-      occurredAt: Number(body.eventTime || now), visitorId: String(body.visitorId || ""),
+      occurredAt: eventTime, visitorId: String(body.visitorId || ""),
       fbclid: String(body.fbclid || attribution.fbclid || ""), fbp: String(body.fbp || ""), fbc: String(body.fbc || ""),
       utmSource:utm("utm_source"),utmCampaign:utm("utm_campaign"),utmMedium:utm("utm_medium"),utmContent:utm("utm_content"),utmTerm:utm("utm_term"),
       value,currency:String(body.currency||"BRL"),payload:JSON.stringify(safeBody)
     }).onConflictDoNothing();
     let capi: unknown = null;
-    if (project.pixelId && project.metaTokenCipher && project.metaTokenIv) {
+    // AdClick/PageError são diagnósticos internos: o navegador já não os manda
+    // ao Pixel, e o servidor também não pode mandá-los à CAPI (poluía o pixel
+    // com eventos personalizados sem par para deduplicação).
+    if (!internalOnly.has(eventName) && project.pixelId && project.metaTokenCipher && project.metaTokenIv) try {
       const token = await decryptSecret(project.metaTokenCipher, project.metaTokenIv),config=parseTrackingConfig(project.trackingConfig);
-      const payload: Record<string, unknown> = { data: [{ event_name: eventName, event_time: Number(body.eventTime || now), event_id: eventId, action_source: "website", event_source_url: url, user_data: { client_ip_address: clientIp(request,config.ipMode), client_user_agent: request.headers.get("user-agent") || "", fbp: body.fbp || undefined, fbc: body.fbc || undefined, em:await hash(body.email),ph:await hash(body.phone,true) }, custom_data: { value, currency: String(body.currency || "BRL"), content_ids: body.contentIds || undefined, content_name: body.contentName || undefined, content_type: "product",order_id:body.externalId||undefined } }] };
+      const payload: Record<string, unknown> = { data: [{ event_name: eventName, event_time: eventTime, event_id: eventId, action_source: "website", event_source_url: url, user_data: { client_ip_address: clientIp(request,config.ipMode), client_user_agent: request.headers.get("user-agent") || "", fbp: body.fbp || undefined, fbc: body.fbc || undefined, em:await hash(body.email),ph:await hash(body.phone,true) }, custom_data: { value, currency: String(body.currency || "BRL"), content_ids: body.contentIds || undefined, content_name: body.contentName || undefined, content_type: "product",order_id:body.externalId||undefined } }] };
       if (project.metaTestCode) payload.test_event_code = project.metaTestCode;
-      const result = await fetch(`https://graph.facebook.com/v25.0/${project.pixelId}/events?access_token=${encodeURIComponent(token)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const result = await fetch(`https://graph.facebook.com/v25.0/${project.pixelId}/events?access_token=${encodeURIComponent(token)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000) });
       capi = { ok: result.ok, status: result.status };
+    } catch {
+      // O evento já foi gravado; falha/lentidão da Meta não vira erro p/ o site.
+      capi = { ok: false, status: 0 };
     }
     return Response.json({ received: true, eventId, capi }, { headers: cors });
   } catch {

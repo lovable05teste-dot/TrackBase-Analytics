@@ -106,7 +106,7 @@ export type OrderInput = {
 // o CAPI deve disparar (só em criação ou transição PARA approved).
 export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: boolean; prevStatus: string | null }> {
   const existing = await db
-    .select({ status: orders.status })
+    .select({ status: orders.status, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmContent: orders.utmContent, utmTerm: orders.utmTerm })
     .from(orders)
     .where(and(eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)))
     .limit(1);
@@ -128,11 +128,13 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
         status: input.status,
         value: input.value,
         currency: input.currency,
-        utmCampaign: input.utmCampaign,
-        utmSource: input.utmSource,
-        utmMedium: input.utmMedium,
-        utmContent: input.utmContent,
-        utmTerm: input.utmTerm,
+        // Webhook de transição (ex.: reembolso) muitas vezes vem sem tracking:
+        // mantém a atribuição já gravada em vez de zerá-la.
+        utmCampaign: input.utmCampaign || existing[0].utmCampaign,
+        utmSource: input.utmSource || existing[0].utmSource,
+        utmMedium: input.utmMedium || existing[0].utmMedium,
+        utmContent: input.utmContent || existing[0].utmContent,
+        utmTerm: input.utmTerm || existing[0].utmTerm,
         eventId: input.eventId,
         updatedAt: now,
       })
