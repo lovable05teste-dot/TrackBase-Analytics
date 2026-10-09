@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Check, Copy, Loader2, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, FlaskConical, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { copyText } from "@/lib/clipboard";
 import { apiFetch } from "@/lib/plan-client";
@@ -134,6 +134,15 @@ export function TrackingInstall() {
             </div>
           ))}
           {showForm ? form : <Button variant="outline" onClick={() => setShowForm(true)}><Plus />Novo projeto</Button>}
+          <div className="rounded-xl border border-amber-300/40 bg-amber-50 p-4 text-sm leading-6 text-slate-600">
+            <b className="flex items-center gap-2 text-foreground"><FlaskConical className="size-4 text-amber-600" />Vai testar a página? Use o modo teste</b>
+            <p className="mt-1">Abra sua página <b>uma vez</b> com <code className="rounded bg-white/60 px-1 text-amber-700">?gs_test=1</code> no fim do endereço, no celular ou navegador que você usa para testar. A partir daí, tudo o que você fizer nele (visitas, cliques, ICs, Pix e compras) fica <b>fora das métricas</b> e não vai para a Meta. Visitas que você já fez antes nesse aparelho também saem.</p>
+            {projects.filter((p) => p.domain).map((p) => {
+              const link = `https://${String(p.domain).replace(/^https?:\/\//, "").replace(/\/$/, "")}/?gs_test=1`;
+              return <div key={p.id} className="mt-2 flex flex-wrap items-center gap-2"><code className="min-w-0 break-all rounded-lg bg-white/60 px-2 py-1 text-xs text-amber-800">{link}</code><Button size="sm" variant="outline" onClick={async () => { if (await copyText(link)) { setCopied(`test-${p.id}`); setTimeout(() => setCopied(""), 1600); } }}>{copied === `test-${p.id}` ? <><Check />Copiado</> : <><Copy />Copiar</>}</Button></div>;
+            })}
+            <p className="mt-2 text-xs text-slate-500">Para voltar ao normal nesse aparelho, abra a página com <code>?gs_test=0</code>.</p>
+          </div>
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-slate-600">
             <b className="text-foreground">Como a venda é rastreada</b>
             <ol className="mt-1 list-decimal space-y-0.5 pl-5">

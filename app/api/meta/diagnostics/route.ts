@@ -4,6 +4,7 @@ import { events,metaAccounts,metaLinked,projects } from "@/db/schema";
 import { metaJson } from "@/lib/meta";
 import { accountToken,adDailyInsights,adTotals,graph,norm,num,rangeLast } from "@/lib/meta-lab";
 import { requestUserId,sha256 } from "@/lib/trackbase-security";
+import { isTestEvent, testVisitorIds } from "@/lib/test-traffic";
 
 export const dynamic="force-dynamic";
 type Creative={id:string;name:string;effective_status?:string;creative?:{url_tags?:string;object_story_spec?:{link_data?:{link?:string};video_data?:{call_to_action?:{value?:{link?:string}}}};asset_feed_spec?:{link_urls?:{website_url?:string}[]}}};
@@ -26,7 +27,7 @@ export async function GET(request:Request){
   const prows=await db.select({id:projects.id}).from(projects).where(eq(projects.workspaceId,workspaceId));
   const pids=prows.map(p=>p.id);
   const start7=Math.floor(Date.now()/1000)-6*86400;
-  const tbRows=pids.length?await db.select({utm:events.utmCampaign,value:events.value}).from(events).where(and(inArray(events.projectId,pids),eq(events.eventName,"Purchase"),gte(events.occurredAt,start7))):[];
+  const tbRowsAll=pids.length?await db.select({source:events.source,visitorId:events.visitorId,utm:events.utmCampaign,value:events.value}).from(events).where(and(inArray(events.projectId,pids),eq(events.eventName,"Purchase"),gte(events.occurredAt,start7))):[];const tvSet=await testVisitorIds(db,pids),tbRows=tbRowsAll.filter(r=>!isTestEvent(r,tvSet));
   const tbByKey=new Map<string,{sales:number;revenue:number}>();
   for(const r of tbRows){const raw=String(r.utm||"");const keys=[norm(raw)];const m=raw.match(/\|(\d+)/);if(m)keys.push(m[1]);for(const k of keys){if(!k)continue;const e=tbByKey.get(k)||{sales:0,revenue:0};e.sales+=1;e.revenue+=num(r.value);tbByKey.set(k,e);}}
   const {since,until}=rangeLast(14);
