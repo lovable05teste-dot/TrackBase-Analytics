@@ -26,7 +26,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
         <a href="/relatorios/utms" className="ml-auto rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">Ver por UTM →</a>
       </div>
       {!rows.length ? (
-        <div className="metric-card rounded-xl p-8 text-center text-slate-400">Nenhum projeto ainda. <a href="/projetos/novo" className="text-violet-300 underline">Criar projeto</a></div>
+        <div className="metric-card rounded-xl p-8 text-center text-slate-400">Nenhum projeto ainda. <a href="/integracoes#script" className="text-violet-300 underline">Criar projeto</a></div>
       ) : (
         <div className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

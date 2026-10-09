@@ -24,7 +24,7 @@ export default function PaginaDoc() {
 
       <Card className="metric-card"><CardContent className="space-y-5 p-6">
         <Step n={1} title="Crie um projeto">
-          <p className="text-sm leading-6 text-slate-400">Entre em <b className="text-slate-200">Integrações → aba UTMs</b> e crie um projeto informando nome e domínio da página. Cada projeto gera uma <b className="text-slate-200">publicKey</b> única que identifica seus eventos.</p>
+          <p className="text-sm leading-6 text-slate-400">Entre em <b className="text-slate-200">Integrações → etapa 1 (Instalar o script)</b> e crie um projeto informando nome e domínio da página. Cada projeto gera uma <b className="text-slate-200">publicKey</b> única que identifica seus eventos.</p>
         </Step>
 
         <Step n={2} title="Instale o script de rastreamento">

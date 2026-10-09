@@ -2,7 +2,7 @@ import { lt } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaOauthStates } from "@/db/schema";
 import { metaRedirectUri, requireMetaConfig } from "@/lib/meta";
-import { requestUserId, sessionCookie, sha256 } from "@/lib/trackbase-security";
+import { pickSessionToken, requestSessionTokens, requestUserId, sessionCookie, sha256 } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +45,9 @@ export async function GET(request: Request) {
     if (config.configId) url.searchParams.set("config_id", config.configId);
 
     const headers = new Headers({ Location: url.toString(), "Cache-Control": "no-store, no-cache, must-revalidate", "Referrer-Policy": "no-referrer" });
-    const token = request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
+    // Regrava o token que está VÁLIDO (não o primeiro do header, que pode
+    // ser uma sobra antiga) para a sessão sobreviver ao retorno da Meta.
+    const token = (await pickSessionToken(requestSessionTokens(request)))?.token;
     if (token) headers.set("Set-Cookie", sessionCookie(token));
     return new Response(null, { status: 302, headers });
   } catch (error) {

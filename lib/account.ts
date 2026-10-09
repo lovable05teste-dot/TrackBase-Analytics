@@ -1,9 +1,8 @@
 import { desc, eq } from "drizzle-orm";
-import { cookies } from "next/headers";
 import { ensureDb, getDb } from "@/db";
 import { planSubscriptions, users, workspaces } from "@/db/schema";
 import { getEffectivePlan, type PlanId } from "@/lib/plans";
-import { getUserIdFromSessionCookie, sha256 } from "@/lib/trackbase-security";
+import { getUserIdFromSessionCookie, sha256, currentSessionTokens } from "@/lib/trackbase-security";
 
 export type AccountData = {
   userName: string;
@@ -118,7 +117,7 @@ export async function getAccountData(userId: string | null | undefined): Promise
 }
 
 export async function getCurrentAccountData(identity?: { displayName?: string | null; email?: string | null }): Promise<AccountData> {
-  const token = (await cookies()).get("tb_session")?.value;
+  const token = await currentSessionTokens();
   const account = await getAccountData(await getUserIdFromSessionCookie(token));
   return account.userEmail || !identity ? account : accountDataFromIdentity(identity);
 }

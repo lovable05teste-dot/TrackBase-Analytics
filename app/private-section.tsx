@@ -1,8 +1,7 @@
 import { FeatureGuide } from "@/components/FeatureGuide";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { requireChatGPTUser } from "./chatgpt-auth";
-import { getPlanContext, getUserIdFromSessionCookie } from "@/lib/trackbase-security";
+import { getPlanContext, getUserIdFromSessionCookie, currentSessionTokens } from "@/lib/trackbase-security";
 import { accountDataFromIdentity, getAccountData } from "@/lib/account";
 import { PlanBanner } from "@/components/PlanBanner";
 import {ThemeToggle} from "./theme-toggle";
@@ -16,7 +15,7 @@ import {LogOut,Volume2} from "lucide-react";
 
 export async function PrivateSection({title,description,children}:{title:string;description:string;children?:React.ReactNode}){
   const authUser = await requireChatGPTUser("/");
-  const session=(await cookies()).get("tb_session")?.value;
+  const session=await currentSessionTokens();
   const userId=await getUserIdFromSessionCookie(session);
   // Modo visualização: logado navega em tudo; criar/editar é barrado nas APIs (402).
   // Sem plano ativo mostra a faixa "Ver planos" em vez de expulsar para /planos.

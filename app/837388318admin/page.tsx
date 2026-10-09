@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { adminPanelPath, getUserIdFromSessionCookie, isAdminUserId, logAdminAccess } from "@/lib/trackbase-security";
+import { adminPanelPath, getUserIdFromSessionCookie, isAdminUserId, logAdminAccess, currentSessionTokens } from "@/lib/trackbase-security";
 import { AdminLoginForm } from "./admin-form";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +20,7 @@ export default async function SecretAdmin() {
     logAdminAccess("path-mismatch", {});
     notFound();
   }
-  const session = (await cookies()).get("tb_session")?.value;
+  const session = await currentSessionTokens();
   const userId = await getUserIdFromSessionCookie(session);
   if (userId && (await isAdminUserId(userId))) redirect("/");
   logAdminAccess("page-view", {});

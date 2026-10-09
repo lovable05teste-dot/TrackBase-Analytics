@@ -12,7 +12,7 @@ const faqs: { q: string; a: React.ReactNode }[] = [
   {
     q: "Como conecto meu gateway de pagamento?",
     a: (
-      <span>Entre em <b>Integrações → aba Gateways</b>, crie uma credencial (escolha o gateway — FortPay, FlevoPay, Hotmart, Kiwify, Utmify ou “Outro gateway”) e copie a <b>URL do webhook</b> e o <b>token</b>. Cole-os na configuração de webhooks da sua plataforma de pagamento. Veja o <a href="/docs/gateways" className="text-violet-300 underline underline-offset-2">guia completo de gateways</a>.</span>
+      <span>Entre em <b>Integrações → etapa 4 (Gateway de pagamento)</b>, crie uma credencial (escolha o gateway — FortPay, FlevoPay, Hotmart, Kiwify, Utmify ou “Outro gateway”) e copie a <b>URL do webhook</b> e o <b>token</b>. Cole-os na configuração de webhooks da sua plataforma de pagamento. Veja o <a href="/docs/gateways" className="text-violet-300 underline underline-offset-2">guia completo de gateways</a>.</span>
     ),
   },
   {

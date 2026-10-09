@@ -1,4 +1,4 @@
-import { and,eq } from "drizzle-orm";
+import { and,eq,inArray,max } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../db";
 import { apiCredentials,events,members,orders,projects,workspaces } from "../../../db/schema";
 import { hasActivePlan, hasConflictingOrigin, planRequiredResponse, requestUserId, sha256 } from "../../../lib/trackbase-security";
@@ -13,7 +13,18 @@ export async function GET(request: Request) {
     publicKey: projects.publicKey, pixelId: projects.pixelId,
     metaConnectedAt: projects.metaConnectedAt
   }).from(projects).where(eq(projects.workspaceId, workspaceId));
-  return Response.json({ projects: rows });
+  // Última visita do script por projeto: mostra na tela se a instalação está
+  // funcionando. Best-effort — sem isso a lista continua aparecendo.
+  let last = new Map<string, number>();
+  if (rows.length) {
+    try {
+      const seen = await getDb().select({ projectId: events.projectId, at: max(events.occurredAt) }).from(events).where(and(inArray(events.projectId, rows.map((p) => p.id)), eq(events.source, "browser"))).groupBy(events.projectId);
+      last = new Map(seen.map((r) => [r.projectId, Number(r.at)]));
+    } catch (error) {
+      console.error("projects last visit", error);
+    }
+  }
+  return Response.json({ projects: rows.map((p) => ({ ...p, lastVisitAt: last.get(p.id) ?? null })) });
 }
 
 export async function POST(request: Request) {

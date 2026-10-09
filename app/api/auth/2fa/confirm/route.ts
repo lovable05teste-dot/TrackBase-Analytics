@@ -25,10 +25,10 @@ export async function POST(request: Request) {
     const ok = await verifyTotpCode(await decryptSecret(user.totpSecretCipher, user.totpIv), String(body.code || ""));
     if (!ok) return Response.json({ error: "Código inválido. Confira o app autenticador." }, { status: 401 });
     await getDb().update(users).set({ totpEnabled: 1 }).where(eq(users.id, userId));
-    const cookie = request.headers.get("cookie")?.match(/(?:^|;\s*)tb_session=([^;]+)/)?.[1];
-    const { getSessionByToken } = await import("@/lib/trackbase-security");
-    const pending = await getSessionByToken(cookie);
-    if (cookie && pending?.pending2fa) {
+    const { pickSessionToken, requestSessionTokens } = await import("@/lib/trackbase-security");
+    const found = await pickSessionToken(requestSessionTokens(request), { pending: "only" });
+    const cookie = found?.token;
+    if (cookie && found.session.userId === userId) {
       await finalizePendingSession(cookie);
       return Response.json({ enabled: true }, { headers: { "set-cookie": sessionCookie(cookie, SESSION_TTL_SECONDS) } });
     }

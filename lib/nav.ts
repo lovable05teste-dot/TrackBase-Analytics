@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  PlusSquare,
   Megaphone,
   FlaskConical,
   ShoppingCart,
@@ -23,8 +22,6 @@ import {
   Plug,
   Landmark,
   Beaker,
-  ContactRound,
-  Radio,
   Link,
   Calculator,
   Network,
@@ -48,19 +45,21 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Visão geral",
     items: [
+      // Uso diário. "Novo Projeto" virou a etapa 1 de Integrações (a página
+      // segue acessível); Meta Lab e Eventos foram para Análise.
       { label: "Dashboard", href: "/", icon: LayoutDashboard },
-      { label: "Novo Projeto", href: "/projetos/novo", icon: PlusSquare },
-      { label: "Campanhas", href: "/campanhas", icon: Megaphone },
-      { label: "Meta Lab", href: "/meta-lab", icon: FlaskConical },
       { label: "Vendas", href: "/vendas", icon: ShoppingCart },
-      { label: "Eventos", href: "/eventos", icon: Activity },
+      { label: "Campanhas", href: "/campanhas", icon: Megaphone },
+      { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
+      { label: "Integrações", href: "/integracoes", icon: Plug },
     ],
   },
   {
     title: "Análise e Otimização",
     items: [
-      { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
       { label: "Relatórios de UTMs", href: "/relatorios/utms", icon: Tags },
+      { label: "Eventos", href: "/eventos", icon: Activity },
+      { label: "Meta Lab", href: "/meta-lab", icon: FlaskConical },
       { label: "Análise de Funil", href: "/funil", icon: Filter },
       { label: "Heatmaps", href: "/heatmaps", icon: Flame },
       { label: "Predict (IA)", href: "/predict", icon: Sparkles, badge: "IA" },
@@ -78,13 +77,13 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Integrações",
+    title: "Vendas e webhooks",
     items: [
-      { label: "Integrações", href: "/integracoes", icon: Plug },
-      { label: "Gateways", href: "/integracoes/gateways", icon: Landmark },
+      // Conta Meta, Pixel & CAPI, script e gateways são etapas da central
+      // /integracoes (passo a passo). As páginas antigas seguem acessíveis.
+      { label: "Pedidos por gateway", href: "/integracoes/gateways", icon: Landmark },
+      { label: "Testar webhook", href: "/webhooks", icon: Webhook },
       { label: "Offer Lab", href: "/offer-lab", icon: Beaker },
-      { label: "Contas Meta", href: "/contas-meta", icon: ContactRound },
-      { label: "Pixel & CAPI", href: "/pixel-capi", icon: Radio },
     ],
   },
   {
@@ -97,7 +96,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Mapa de Links", href: "/ferramentas/mapa-links", icon: Network },
       { label: "Checklist Campanha", href: "/ferramentas/checklist", icon: ListChecks },
       { label: "Ativador Pixel TikTok", href: "/ferramentas/ativador-tiktok", icon: Zap },
-      { label: "Webhooks", href: "/webhooks", icon: Webhook },
     ],
   },
   {

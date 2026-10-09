@@ -17,7 +17,7 @@ export default function Docs(){
      <p>Regra de ouro: <b>compra aprovada só entra pelo webhook do gateway</b>. O endpoint de eventos do navegador recusa <code>Purchase</code> de propósito, para o número oficial sempre bater com o dinheiro real.</p>
     </Sec>
     <Sec id="script" n="Parte 2" title="Script na página de vendas">
-     <p>Cole antes do fechamento do <code>&lt;/head&gt;</code> da página de vendas e do checkout. Troque <code>SUA_PUBLIC_KEY</code> pela chave do projeto (aba UTMs → Script de vendas):</p>
+     <p>Cole antes do fechamento do <code>&lt;/head&gt;</code> da página de vendas e do checkout. Troque <code>SUA_PUBLIC_KEY</code> pela chave do projeto (Integrações → etapa 1, Instalar o script):</p>
      <Code>{`<script async src="${H}/tracker.js?key=SUA_PUBLIC_KEY"></script>`}</Code>
      <p>O que ele faz sozinho: guarda <code>utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid</code> por 90 dias, envia <code>PageView</code> e <code>ViewContent</code>, repassa os parâmetros nos links/botões até o checkout e dispara o Pixel da Meta se houver um conectado.</p>
      <p>Botão de checkout (opcional, marca o início da compra):</p>
@@ -28,7 +28,7 @@ export default function Docs(){
     <Sec id="webhook" n="Parte 3" title="Webhook de vendas">
      <p>Envie um <code>POST</code> com JSON para:</p>
      <Code>{`POST ${H}/api/webhooks/gateway`}</Code>
-     <p>Autenticação — use UMA das 3 formas (o token é gerado na aba Gateways do SaaS, um por gateway):</p>
+     <p>Autenticação — use UMA das 3 formas (o token é gerado em Integrações → etapa 4 do painel, um por gateway):</p>
      <Code>{`Authorization: Bearer SEU_TOKEN\n// ou\nx-trackbase-key: SEU_TOKEN\n// ou\nPOST ${H}/api/webhooks/gateway?token=SEU_TOKEN`}</Code>
      <p>Exemplo mínimo (venda aprovada):</p>
      <Code>{`{\n  "id": "PEDIDO_123",\n  "status": "paid",\n  "amount": 69.90,\n  "currency": "BRL"\n}`}</Code>
@@ -61,10 +61,10 @@ export default function Docs(){
      <p>Qualquer origem pode chamar (CORS liberado). Em caso de instabilidade, reenvie: o processamento é idempotente pelo ID da venda.</p>
     </Sec>
     <Sec id="testes" n="Parte 10" title="Testando a integração">
-     <p>1. Crie a credencial na aba Gateways e copie o token. 2. Envie uma venda de teste com status pendente e depois aprovada usando o mesmo ID. 3. Confira em Vendas (painel) e na lista de credenciais (coluna de último uso). 4. Para apagar o teste, exclua o projeto de teste na aba UTMs — eventos, vendas e credenciais dele são removidos juntos.</p>
+     <p>1. Crie a credencial em Integrações → etapa 4 e copie o token. 2. Envie uma venda de teste com status pendente e depois aprovada usando o mesmo ID. 3. Confira em Vendas (painel) e na lista de credenciais (coluna de último uso). 4. Para apagar o teste, exclua o projeto de teste em Integrações → etapa 1 — eventos, vendas e credenciais dele são removidos juntos.</p>
     </Sec>
     <Sec id="seguranca" n="Parte 11" title="Segurança">
-     <p>Um token por gateway (nunca reutilize entre plataformas). O token aparece uma única vez na criação — guarde em segredo. Para revogar, apague a credencial na aba Gateways: o webhook passa a responder 401 na hora. E-mail e telefone são gravados com hash SHA-256 antes de ir à Meta.</p>
+     <p>Um token por gateway (nunca reutilize entre plataformas). O token aparece uma única vez na criação — guarde em segredo. Para revogar, apague a credencial em Integrações → etapa 4: o webhook passa a responder 401 na hora. E-mail e telefone são gravados com hash SHA-256 antes de ir à Meta.</p>
     </Sec>
     <Sec id="faq" n="Parte 12" title="Perguntas frequentes">
      <p><b>Preciso enviar todos os campos?</b> Não — só ID, status e valor. O resto melhora atribuição e CAPI.<br/><b>E se meu gateway usa outros nomes?</b> A tabela da parte 4 cobre os mais comuns, incluindo objetos aninhados (<code>data.*</code>). Faltou algum? Fale com a equipe GhostScale que adicionamos.<br/><b>O Purchase do navegador basta?</b> Não — a venda oficial sempre vem do webhook. O navegador é apoio de atribuição.<br/><b>Quem cria o Pixel da Meta?</b> O dono da operação, dentro do SaaS (aba Pixel &amp; CAPI) — não é tarefa do gateway.</p>
