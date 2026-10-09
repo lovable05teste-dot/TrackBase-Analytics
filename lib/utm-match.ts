@@ -36,7 +36,8 @@ export function buildUtmIndex<T>(events: T[], keysOf: (event: T) => unknown[]) {
     // `items` = todas as linhas da tela. Casamento por nome (UTM sem ID) só
     // vale quando UM único item tem aquele nome: campanhas duplicadas com o
     // mesmo nome recebiam os mesmos acessos/ICs, inclusive as que não rodaram.
-    matchAll<I extends { id: string; name: string }>(items: I[]): Map<string, { events: T[]; byName: number }> {
+    // idOnly: só conta evento cujo UTM traz o ID do Meta do item (sem nome).
+    matchAll<I extends { id: string; name: string }>(items: I[], opts: { idOnly?: boolean } = {}): Map<string, { events: T[]; byName: number }> {
       const nameCount = new Map<string, number>();
       for (const item of items) {
         const key = item.name.trim().toLocaleLowerCase();
@@ -47,10 +48,19 @@ export function buildUtmIndex<T>(events: T[], keysOf: (event: T) => unknown[]) {
         const found = new Set<T>(byId.get(item.id) ?? []);
         const key = item.name.trim().toLocaleLowerCase();
         let byNameCount = 0;
-        if (nameCount.get(key) === 1) for (const event of byName.get(key) ?? []) if (!found.has(event)) { found.add(event); byNameCount++; }
+        if (!opts.idOnly && nameCount.get(key) === 1) for (const event of byName.get(key) ?? []) if (!found.has(event)) { found.add(event); byNameCount++; }
         out.set(item.id, { events: [...found], byName: byNameCount });
       }
       return out;
     },
   };
+}
+
+// Tráfego vindo do Meta: fbclid, utm_source do Facebook/Instagram/Meta (com
+// ou sem sufixo de rastreamento) ou utm_campaign com ID de campanha.
+const META_SOURCE = /^(facebook|fb|ig|instagram|meta|an|messenger|msg)(?=$|[^a-z]|jlj)/i;
+export function isMetaTraffic(event: { fbclid?: string | null; utmSource?: string | null; utmCampaign?: string | null }) {
+  if (String(event.fbclid ?? "").trim()) return true;
+  if (META_SOURCE.test(String(event.utmSource ?? "").trim())) return true;
+  return parseUtm(event.utmCampaign).id !== null;
 }
