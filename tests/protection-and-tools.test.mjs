@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { defaultProtection, validateProtection, normalizeDomain, evaluateProtection, protectionScript } from "../lib/protection.ts";
 import { normalizeIp } from "../lib/protection-ip.ts";
 import { trackerScript } from "../lib/tracker-script.ts";
+import { BOT_UA_SOURCE } from "../lib/bot-filter.ts";
 import { parseTrackingConfig } from "../lib/tracking-config.ts";
 import { parsePrice, TOOL_SCHEMAS } from "../lib/tool-state.ts";
 
@@ -130,6 +131,19 @@ test("tracker: sem campanha nova mantém a atribuição salva, mas descarta {{ma
   const attribution = b.context.TrackBase.attribution();
   assert.equal(attribution.utm_source, "facebook");
   assert.equal(attribution.utm_term, undefined);
+});
+
+test("tracker: robô e navegador automatizado não geram acesso nem clique", () => {
+  for (const nav of [{ userAgent: "facebookexternalhit/1.1" }, { userAgent: "Mozilla/5.0 Chrome/126.0", webdriver: true }]) {
+    const b = browser("https://site.com/?utm_source=facebook&utm_campaign=x");
+    Object.assign(b.context.navigator, nav);
+    vm.runInContext(trackerScript("p1", "https://app.com/api/events", "", parseTrackingConfig(null), BOT_UA_SOURCE), b.context);
+    assert.equal(b.requests.length, 0, JSON.stringify(nav));
+  }
+  const human = browser("https://site.com/?utm_source=facebook&utm_campaign=x");
+  Object.assign(human.context.navigator, { userAgent: "Mozilla/5.0 (iPhone) [FBAN/FBIOS;FBAV/470.0]" });
+  vm.runInContext(trackerScript("p1", "https://app.com/api/events", "", parseTrackingConfig(null), BOT_UA_SOURCE), human.context);
+  assert.ok(human.requests.length > 0, "visita real continua rastreada");
 });
 
 test("proteção interrompe tracker antes de Pixel e PageView em domínio copiado", () => {
