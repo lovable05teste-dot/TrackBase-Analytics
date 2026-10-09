@@ -7,6 +7,13 @@ export const TOOL_SCHEMAS = {
   checklist: z.record(z.boolean()).refine(v => Object.keys(v).length <= 100 && Object.keys(v).every(k => k.length < 300)),
   monitoramento: z.array(z.object({ id, url: webUrl, status: z.string().max(80), ms: z.number().nonnegative().finite().nullable(), checkedAt: z.string().max(100).nullable() })).max(30),
   offer_lab: z.array(z.object({ id, name: z.string().min(1).max(80), price: z.number().positive().finite().max(100000000), hook: z.string().max(140), status: z.enum(["em teste", "vencedora"]) })).max(200),
+  custos: z.object({
+    productCostPct: z.number().min(0).max(100).default(0),
+    gatewayFeePct: z.number().min(0).max(100).default(0),
+    gatewayFeeFixed: z.number().min(0).max(1000).default(0),
+    taxPct: z.number().min(0).max(100).default(0),
+    otherMonthly: z.number().min(0).max(100000000).default(0),
+  }),
   agent_hub: z.array(z.object({ id, name: z.string().min(1).max(120), condition: z.string().max(300), action: z.string().max(300), active: z.boolean() })).max(100),
 };
 export type ToolKey = keyof typeof TOOL_SCHEMAS;

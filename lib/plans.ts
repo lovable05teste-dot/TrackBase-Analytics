@@ -181,7 +181,8 @@ export type FeatureKey =
   | "webhook_saida"
   | "api_gestao"
   | "automacoes"
-  | "agent_hub";
+  | "agent_hub"
+  | "custos";
 
 // Plano → features (true = incluso)
 const FEATURES: Record<FeatureKey, PlanId> = {
@@ -222,6 +223,7 @@ const FEATURES: Record<FeatureKey, PlanId> = {
   api_gestao: "black",
   automacoes: "black",
   agent_hub: "scale",
+  custos: "start",
 };
 
 export function featureMinPlan(feature: FeatureKey): PlanId {

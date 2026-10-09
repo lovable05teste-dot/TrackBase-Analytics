@@ -30,9 +30,9 @@
 .gs-metric-icon {width:32px;height:32px;display:grid;place-items:center;border:1px solid #ffffff09;border-radius:9px;color:#f28a9d;background:#ef526d0d;flex-shrink:0}
 .gs-metric-value {margin-top:18px;font-size:clamp(19px,2.05vw,29px);font-weight:650;letter-spacing:-.045em;font-variant-numeric:tabular-nums;line-height:1.25;overflow-wrap:anywhere;animation:gs-value 220ms}
 .gs-metric-caption {margin-top:16px;color:#a7a5af;font-size:10px;display:flex;gap:6px;align-items:center}
-.gs-metric-caption span {width:4px;height:4px;border-radius:50%;background:#77717e}
-.gs-metric[data-tone="green"] .gs-metric-caption span {background:#6ee7b7}
-.gs-metric[data-tone="red"] .gs-metric-caption span {background:#fb7185}
+.gs-metric-caption>span {width:4px;height:4px;border-radius:50%;background:#77717e}
+.gs-metric[data-tone="green"] .gs-metric-caption>span {background:#6ee7b7}
+.gs-metric[data-tone="red"] .gs-metric-caption>span {background:#fb7185}
 .gs-metric[data-tone="green"] .gs-metric-value {color:#c3f6df}
 .gs-metric[data-tone="red"] .gs-metric-value {color:#f5b0bc}
 .gs-funnel-card {background:radial-gradient(520px 220px at 65% 55%,#7e26351c,transparent 72%),var(--card)!important}

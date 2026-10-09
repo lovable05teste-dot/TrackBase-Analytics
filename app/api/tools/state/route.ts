@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   try {
     const ctx = await context(request); if (ctx.error) return ctx.error;
     const [row] = await getDb().select().from(toolStates).where(and(eq(toolStates.id, ctx.id), eq(toolStates.workspaceId, ctx.workspaceId))).limit(1);
-    return json({ data: row ? JSON.parse(row.data) : ctx.tool === "checklist" ? {} : [], revision: row?.revision ?? 0, canEdit: await requireFeature(ctx.userId, ctx.tool) });
+    return json({ data: row ? JSON.parse(row.data) : ctx.tool === "checklist" || ctx.tool === "custos" ? {} : [], revision: row?.revision ?? 0, canEdit: await requireFeature(ctx.userId, ctx.tool) });
   } catch { return json({ error: "Não foi possível carregar. Tente novamente." }, 503); }
 }
 export async function PUT(request: Request) {
@@ -32,7 +32,7 @@ export async function PUT(request: Request) {
     const parsed = TOOL_SCHEMAS[ctx.tool].safeParse(body.data);
     if (!parsed.success) return json({ error: "Confira os campos e os limites da ferramenta.", detail: parsed.error.issues[0]?.message }, 400);
     const db = getDb(), now = Math.floor(Date.now() / 1000);
-    await db.insert(toolStates).values({ id: ctx.id, workspaceId: ctx.workspaceId, tool: ctx.tool, data: ctx.tool === "checklist" ? "{}" : "[]", revision: 0, updatedAt: now }).onConflictDoNothing();
+    await db.insert(toolStates).values({ id: ctx.id, workspaceId: ctx.workspaceId, tool: ctx.tool, data: ctx.tool === "checklist" || ctx.tool === "custos" ? "{}" : "[]", revision: 0, updatedAt: now }).onConflictDoNothing();
     const [saved] = await db.update(toolStates).set({ data: JSON.stringify(parsed.data), revision: body.revision + 1, updatedAt: now }).where(and(eq(toolStates.id, ctx.id), eq(toolStates.workspaceId, ctx.workspaceId), eq(toolStates.revision, body.revision))).returning({ revision: toolStates.revision });
     if (!saved) return json({ error: "Outra aba salvou alterações. Recarregue antes de continuar." }, 409);
     return json({ saved: true, data: parsed.data, revision: saved.revision });
