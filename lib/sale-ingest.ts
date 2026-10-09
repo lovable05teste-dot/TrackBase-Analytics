@@ -42,6 +42,14 @@ export function resolveStatus(value: unknown): { status: string; known: boolean 
   return { status: "pending", known: false };
 }
 
+// Alguns checkouts grudam um ID de rastreamento no utm_source
+// ("facebookjLj6ac59377..."). Sem tirar, cada venda vira uma "origem"
+// diferente nos relatórios.
+export function cleanUtmSource(value: string | null | undefined) {
+  const clean = String(value || "").replace(/jLj[0-9a-f]{12,}$/i, "").trim();
+  return clean || null;
+}
+
 export function eventNameFor(status: string) {
   return status === "approved"
     ? "Purchase"
