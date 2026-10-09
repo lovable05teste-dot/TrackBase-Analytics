@@ -33,10 +33,24 @@ export function buildUtmIndex<T>(events: T[], keysOf: (event: T) => unknown[]) {
     }
   }
   return {
-    match(item: { id: string; name: string }): T[] {
-      const found = new Set<T>(byId.get(item.id) ?? []);
-      for (const event of byName.get(item.name.trim().toLocaleLowerCase()) ?? []) found.add(event);
-      return [...found];
+    // `items` = todas as linhas da tela. Casamento por nome (UTM sem ID) só
+    // vale quando UM único item tem aquele nome: campanhas duplicadas com o
+    // mesmo nome recebiam os mesmos acessos/ICs, inclusive as que não rodaram.
+    matchAll<I extends { id: string; name: string }>(items: I[]): Map<string, { events: T[]; byName: number }> {
+      const nameCount = new Map<string, number>();
+      for (const item of items) {
+        const key = item.name.trim().toLocaleLowerCase();
+        nameCount.set(key, (nameCount.get(key) ?? 0) + 1);
+      }
+      const out = new Map<string, { events: T[]; byName: number }>();
+      for (const item of items) {
+        const found = new Set<T>(byId.get(item.id) ?? []);
+        const key = item.name.trim().toLocaleLowerCase();
+        let byNameCount = 0;
+        if (nameCount.get(key) === 1) for (const event of byName.get(key) ?? []) if (!found.has(event)) { found.add(event); byNameCount++; }
+        out.set(item.id, { events: [...found], byName: byNameCount });
+      }
+      return out;
     },
   };
 }
