@@ -1,3 +1,4 @@
+import { cache } from "react";
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
@@ -255,7 +256,7 @@ export async function createSession(opts: {
   return token;
 }
 
-export async function getSessionByToken(token: string | undefined | null): Promise<SessionRow | null> {
+async function getSessionByTokenUncached(token: string | undefined | null): Promise<SessionRow | null> {
   if (!token) return null;
   const tokenHash = await sha256(token);
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -281,6 +282,10 @@ export async function getSessionByToken(token: string | undefined | null): Promi
   }
   return null;
 }
+
+// Uma página chamava a mesma sessão 2–3 vezes em sequência (layout, menu,
+// plano). `cache` do React memoriza só durante a requisição atual.
+export const getSessionByToken = cache(getSessionByTokenUncached);
 
 export async function finalizePendingSession(token: string, ttlSeconds = SESSION_TTL_SECONDS) {
   try {

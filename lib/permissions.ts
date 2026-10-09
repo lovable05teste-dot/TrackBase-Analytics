@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { ensureDb, getDb } from "@/db";
 import { auditLogs, members, planSubscriptions, usageCounters } from "@/db/schema";
 import { sha256 } from "./trackbase-security";
@@ -12,7 +13,7 @@ export async function workspaceIdForUser(userId: string): Promise<string> {
   return "ws_" + (await sha256(userId)).slice(0, 24);
 }
 
-export async function getPlanContext(userId: string | null | undefined) {
+async function getPlanContextUncached(userId: string | null | undefined) {
   if (!userId) return { plan: null as PlanId | null, status: null as string | null, hasActive: false, version: null as number | null, sub: null };
   if (userId === "trackbase-owner") return { plan: "scale" as PlanId, status: "active", hasActive: true, version: PLAN_VERSION_CURRENT, sub: null as never };
   try {
@@ -25,6 +26,8 @@ export async function getPlanContext(userId: string | null | undefined) {
     return { plan: row.plan as PlanId, status: row.status, hasActive, version: (row as { planVersion?: number | null }).planVersion ?? 1, sub: row };
   } catch { return { plan: null as PlanId | null, status: "unavailable", hasActive: false, version: null as number | null, sub: null }; }
 }
+// Plano lido uma vez por requisição (antes: 2x por página).
+export const getPlanContext = cache(getPlanContextUncached);
 export async function hasActivePlan(userId: string | null | undefined): Promise<boolean> {
   return (await getPlanContext(userId)).hasActive;
 }
