@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { apiCredentials, notificationPrefs, projects } from "@/db/schema";
 import { parsePrefs } from "@/lib/notify";
-import { pushToWorkspace } from "@/lib/push";
+import { notifySale, recordSaleEvent } from "@/lib/push";
 import { decryptSecret, sha256 } from "@/lib/trackbase-security";
 import { parseTrackingConfig } from "@/lib/tracking-config";
 import {
@@ -125,6 +125,7 @@ export async function POST(request: Request) {
       eventId,
     });
     const eventName = eventNameFor(status);
+    await recordSaleEvent(credential.workspaceId, "sale.received", externalId, { status, raw: String(rawStatus ?? "").slice(0, 40), provider: "utmify", dedup });
     if (dedup) {
       await drainCapiOutbox(db, { workspaceId: credential.workspaceId, limit: 3 });
       return Response.json({ received: true, orderId: externalId, status, event: eventName, dedup: true }, { headers: cors });
@@ -207,6 +208,7 @@ export async function POST(request: Request) {
       const [prefRow] = await db.select().from(notificationPrefs).where(eq(notificationPrefs.workspaceId, credential.workspaceId)).limit(1);
       const prefs = parsePrefs(prefRow?.prefs);
       const allowed = status === "approved" ? prefs.approved : prefs.pending;
+      if (!allowed) await recordSaleEvent(credential.workspaceId, "push.sale", externalId, { status, skipped: "desativado no sino" });
       if (allowed) {
         const money = `R$ ${value.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
         const title = `${status === "approved" ? "Venda aprovada" : "Venda pendente"}${prefs.showValue ? ` · ${money}` : ""}`;
@@ -223,15 +225,12 @@ export async function POST(request: Request) {
           const campaign = String(pick(body, ["utm_campaign", "tracking.utm_campaign", "trackingParameters.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || "").split("|")[0].trim();
           if (campaign) parts.push(campaign);
         }
-        await Promise.race([
-          pushToWorkspace(credential.workspaceId, {
+        await notifySale(credential.workspaceId, externalId, status, {
             title,
             body: parts.join(" · ") || (status === "approved" ? "Toque para ver a venda aprovada" : "Toque para ver o Pix pendente"),
             url: "/vendas",
             tag: `tb-${status}-${externalId}`,
-          }),
-          new Promise(resolve => setTimeout(resolve, 8000)),
-        ]).catch(() => {});
+          });
       }
     }
     await drainCapiOutbox(db, { workspaceId: credential.workspaceId, limit: 3 });

@@ -48,3 +48,20 @@ export async function pushToWorkspace(workspaceId:string,payload:{title:string;b
  }catch(e){console.error("push",e);result.errors.push(e instanceof Error?e.message.slice(0,160):"erro desconhecido");}
  return result;
 }
+
+// Diagnóstico de notificações de venda: cada venda recebida pelos webhooks e
+// o resultado do push ficam em audit_logs ("sale.received" / "push.sale"),
+// mostrados no sino. Best-effort: nunca derruba o webhook.
+export async function recordSaleEvent(workspaceId:string,action:"sale.received"|"push.sale",externalId:string,detail:Record<string,unknown>){
+ try{
+  const { auditLogs }=await import("@/db/schema");
+  await getDb().insert(auditLogs).values({id:crypto.randomUUID(),workspaceId,action,targetType:"order",targetId:externalId.slice(0,120),detail:JSON.stringify(detail).slice(0,1000),createdAt:Math.floor(Date.now()/1000)});
+ }catch(e){console.error("sale log",e);}
+}
+
+// Envia o push da venda e registra o resultado (inclusive timeout).
+export async function notifySale(workspaceId:string,externalId:string,status:string,payload:{title:string;body:string;url?:string;tag?:string}){
+ const result=await Promise.race([pushToWorkspace(workspaceId,payload),new Promise<null>(r=>setTimeout(()=>r(null),8000))]).catch(e=>({configured:true,subscriptions:0,sent:0,failed:1,errors:[e instanceof Error?e.message:"erro"]} as PushResult));
+ await recordSaleEvent(workspaceId,"push.sale",externalId,result?{status,...result}:{status,timeout:true});
+ return result;
+}
