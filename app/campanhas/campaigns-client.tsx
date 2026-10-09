@@ -44,7 +44,7 @@ const METRICS:Metric[]=[
  {key:"cpa",label:"CPA",group:"Vendas",fmt:"money",value:r=>div(r.spend,r.sales),def:true},
  {key:"ticket",label:"Ticket médio",group:"Vendas",fmt:"money",value:r=>div(r.revenue,r.sales)},
  {key:"pendingRevenue",label:"Valor pendente",group:"Vendas",fmt:"money",value:r=>r.pendingRevenue??0},
- {key:"impressions",label:"Impressões",group:"Anúncio",fmt:"int",value:r=>r.impressions},
+ {key:"impressions",label:"Impressões",group:"Anúncio",fmt:"int",value:r=>r.impressions,def:true},
  {key:"reach",label:"Alcance",group:"Anúncio",fmt:"int",value:r=>r.reach??0},
  {key:"frequency",label:"Frequência",group:"Anúncio",fmt:"dec",value:r=>r.frequency??div(r.impressions,r.reach??0)},
  {key:"cpm",label:"CPM",group:"Anúncio",fmt:"money",value:r=>r.impressions?r.spend/r.impressions*1000:null},
@@ -52,8 +52,8 @@ const METRICS:Metric[]=[
  {key:"linkClicks",label:"Cliques no link",group:"Anúncio",fmt:"int",value:r=>r.linkClicks??0,def:true},
  {key:"ctr",label:"CTR",group:"Anúncio",fmt:"pct",value:r=>r.impressions?r.clicks/r.impressions*100:null,def:true},
  {key:"cpc",label:"CPC",group:"Anúncio",fmt:"money",value:r=>div(r.spend,r.linkClicks||r.clicks),def:true},
- {key:"pageViews",label:"Acessos",group:"Página",fmt:"int",value:r=>r.pageViews,def:true},
- {key:"connect",label:"Taxa de conexão",group:"Página",fmt:"pct",value:r=>(r.linkClicks||r.clicks)?r.pageViews/(r.linkClicks||r.clicks)*100:null,good:"up",def:true},
+ {key:"pageViews",label:"Acessos",group:"Página",fmt:"int",value:r=>r.pageViews},
+ {key:"connect",label:"Taxa de conexão",group:"Página",fmt:"pct",value:r=>(r.linkClicks||r.clicks)?r.pageViews/(r.linkClicks||r.clicks)*100:null,good:"up"},
  {key:"costPageView",label:"Custo por acesso",group:"Página",fmt:"money",value:r=>div(r.spend,r.pageViews)},
  {key:"checkouts",label:"ICs",group:"Página",fmt:"int",value:r=>r.checkouts,def:true},
  {key:"costCheckout",label:"Custo por IC",group:"Página",fmt:"money",value:r=>div(r.spend,r.checkouts),def:true},
@@ -63,7 +63,10 @@ const METRICS:Metric[]=[
  {key:"account",label:"Conta de anúncio",group:"Outros",fmt:"text",value:()=>null},
 ];
 const DEFAULT_COLUMNS=METRICS.filter(m=>m.def).map(m=>m.key);
-const COLUMNS_KEY="gs_campaign_columns";
+const COLUMNS_KEY="gs_campaign_columns_v2";
+// Escolhas salvas antes da troca "Acessos" → "Impressões": tira Acessos e
+// Taxa de conexão e põe Impressões no lugar, mantendo o resto do usuário.
+function migrateColumns():string[]|null{try{const old=JSON.parse(localStorage.getItem("gs_campaign_columns")||"null");if(!Array.isArray(old)||!old.length)return null;const keys=old.filter((k:string)=>k!=="pageViews"&&k!=="connect");if(!keys.includes("impressions"))keys.splice(Math.max(0,keys.indexOf("linkClicks")),0,"impressions");localStorage.setItem(COLUMNS_KEY,JSON.stringify(keys));localStorage.removeItem("gs_campaign_columns");return keys}catch{return null}}
 function show(m:Metric,v:number|null,currency:string){if(v==null||!Number.isFinite(v))return "—";if(m.fmt==="money")return money(v,currency);if(m.fmt==="int")return Math.round(v).toLocaleString("pt-BR");if(m.fmt==="pct")return `${v.toLocaleString("pt-BR",{maximumFractionDigits:2})}%`;if(m.fmt==="x")return `${v.toFixed(2)}x`;return v.toLocaleString("pt-BR",{maximumFractionDigits:2})}
 function tone(m:Metric,r:Row){if(m.key==="roas"){const v=m.value(r);return v==null?"":v>=1?"text-emerald-500":"text-red-500"}if(!m.good)return "";const v=m.value(r);return v==null||v===0?"":v>0?"text-emerald-500":"text-red-500"}
 
@@ -102,7 +105,7 @@ const STICKY_CELL="md:sticky z-10 bg-card";
 export function CampaignsClient(){
  const[rows,setRows]=useState<Row[]>([]),[daily,setDaily]=useState<Daily[]>([]),[level,setLevel]=useState<Level>("campaign"),[period,setPeriod]=useState("last_7d"),[start,setStart]=useState(""),[end,setEnd]=useState(""),[loading,setLoading]=useState(true),[acting,setActing]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[updated,setUpdated]=useState(""),[search,setSearch]=useState(""),[status,setStatus]=useState("all"),[account,setAccount]=useState("all"),[selected,setSelected]=useState<Set<string>>(new Set()),[menu,setMenu]=useState(false),[compare,setCompare]=useState(false);
  const[columns,setColumns]=useState<string[]>(DEFAULT_COLUMNS);
- useEffect(()=>{const t=window.setTimeout(()=>{try{const saved=JSON.parse(localStorage.getItem(COLUMNS_KEY)||"null");if(Array.isArray(saved)&&saved.length)setColumns(saved.filter((k:string)=>METRICS.some(m=>m.key===k)))}catch{}},0);return()=>window.clearTimeout(t)},[]);
+ useEffect(()=>{const t=window.setTimeout(()=>{try{const saved=JSON.parse(localStorage.getItem(COLUMNS_KEY)||"null")??migrateColumns();if(Array.isArray(saved)&&saved.length)setColumns(saved.filter((k:string)=>METRICS.some(m=>m.key===k)))}catch{}},0);return()=>window.clearTimeout(t)},[]);
  const saveColumns=(keys:string[])=>{setColumns(keys);try{localStorage.setItem(COLUMNS_KEY,JSON.stringify(keys))}catch{}};
  const visibleMetrics=METRICS.filter(m=>columns.includes(m.key));
  // Lucro real por linha: desconta produto, gateway e impostos (custos do Dashboard).
