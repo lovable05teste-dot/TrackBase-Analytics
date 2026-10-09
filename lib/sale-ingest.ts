@@ -116,7 +116,7 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
   const existing = await db
     .select({ status: orders.status, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmContent: orders.utmContent, utmTerm: orders.utmTerm })
     .from(orders)
-    .where(and(eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)))
+    .where(and(eq(orders.projectId, input.projectId), eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)))
     .limit(1);
   const prev = existing[0]?.status ?? null;
   if (prev === input.status) return { dedup: true, prevStatus: prev };
@@ -126,7 +126,7 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
       .insert(orders)
       .values({ id: crypto.randomUUID(), ...input, createdAt: now, updatedAt: now })
       .onConflictDoUpdate({
-        target: [orders.provider, orders.externalId],
+        target: [orders.projectId, orders.provider, orders.externalId],
         set: { status: input.status, value: input.value, currency: input.currency, eventId: input.eventId, updatedAt: now },
       });
   } else {
@@ -146,7 +146,7 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
         eventId: input.eventId,
         updatedAt: now,
       })
-      .where(and(eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)));
+      .where(and(eq(orders.projectId, input.projectId), eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)));
   }
   return { dedup: false, prevStatus: prev };
 }

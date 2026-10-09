@@ -82,8 +82,9 @@ export async function POST(request: Request) {
   const fortpay =
     Boolean(pick(body, ["transaction_hash"])) ||
     credential.provider === "fortpay" ||
-    String(pick(body, ["platform"]) || "").toLowerCase() === "fortpay" ||
-    pick(body, ["transaction.amount"]) !== undefined;
+    // Antes qualquer payload com transaction.amount era tratado como FortPay
+    // (centavos) e R$ 97,00 de outro gateway virava R$ 0,97.
+    String(pick(body, ["platform"]) || "").toLowerCase() === "fortpay";
   const itemsList = Array.isArray((body as { items?: unknown }).items) ? (body as { items: Array<Record<string, unknown>> }).items : [];
   const centsValue = fortpay
     ? pick(body, ["amount", "data.amount", "transaction.amount", "offer.price"])
