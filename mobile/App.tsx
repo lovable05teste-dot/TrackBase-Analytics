@@ -47,15 +47,17 @@ async function createAndroidChannels() {
   }
 }
 
-async function getPushToken(): Promise<string | null> {
-  if (!Device.isDevice) return null;
+type PushSetup = { token: string | null; status: "pending" | "denied" | "unavailable" };
+
+async function getPushToken(): Promise<PushSetup> {
+  if (!Device.isDevice) return { token: null, status: "unavailable" };
   const current = await Notifications.getPermissionsAsync();
   let granted = current.granted;
   if (!granted) granted = (await Notifications.requestPermissionsAsync()).granted;
-  if (!granted) return null;
+  if (!granted) return { token: null, status: "denied" };
   const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
-  if (!projectId) return null;
-  return (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  if (!projectId) return { token: null, status: "unavailable" };
+  return { token: (await Notifications.getExpoPushTokenAsync({ projectId })).data, status: "pending" };
 }
 
 function isInternal(url: string) {
@@ -75,6 +77,8 @@ function urlFromResponse(response: Notifications.NotificationResponse | null | u
 export default function App() {
   const webRef = useRef<WebView>(null);
   const tokenRef = useRef<string | null>(null);
+  const statusRef = useRef<string>("pending");
+  const loggingOut = useRef(false);
   const canGoBack = useRef(false);
   const [startUrl] = useState(`${SITE}/`);
   const [failed, setFailed] = useState(false);
@@ -82,21 +86,32 @@ export default function App() {
 
   // Registra o aparelho na conta logada. Roda a cada página carregada: antes
   // do login dá 401 e é ignorado; depois do login o aparelho fica salvo.
+  // O sino do painel lê window.__gsNativePush para mostrar se as
+  // notificações do app estão mesmo ativas (ok/denied/unavailable/error).
   const registerDevice = useCallback(() => {
     const token = tokenRef.current;
-    if (!token) return;
+    const status = statusRef.current;
+    const report = (value: string) => `window.__gsNativePush=${JSON.stringify(value)};window.dispatchEvent(new Event("gs-native-push"));`;
+    if (!token) {
+      webRef.current?.injectJavaScript(`${report(status)}true;`);
+      return;
+    }
     const body = JSON.stringify({ token, platform: Platform.OS });
-    webRef.current?.injectJavaScript(`fetch("/api/push/native",{method:"POST",credentials:"include",headers:{"content-type":"application/json"},body:${JSON.stringify(body)}}).catch(function(){});true;`);
+    webRef.current?.injectJavaScript(`fetch("/api/push/native",{method:"POST",credentials:"include",headers:{"content-type":"application/json"},body:${JSON.stringify(body)}}).then(function(r){window.__gsNativePush=r.ok?"ok":r.status===401?"pending":"error";window.dispatchEvent(new Event("gs-native-push"));}).catch(function(){${report("error")}});true;`);
   }, []);
 
   useEffect(() => {
     createAndroidChannels()
       .then(getPushToken)
-      .then((token) => {
-        tokenRef.current = token;
+      .then((setup) => {
+        tokenRef.current = setup.token;
+        statusRef.current = setup.status;
         registerDevice();
       })
-      .catch(() => {});
+      .catch(() => {
+        statusRef.current = "error";
+        registerDevice();
+      });
   }, [registerDevice]);
 
   // Tocar na notificação abre a tela certa (ex.: Vendas).
@@ -120,6 +135,15 @@ export default function App() {
   // Links de fora (Meta, gateways, WhatsApp) abrem no navegador do celular.
   const onShouldStart = (req: { url: string }) => {
     if (req.url.startsWith("about:") || req.url.startsWith("blob:") || req.url.startsWith("data:")) return true;
+    // Ao sair da conta, desvincula o aparelho ANTES de a sessão acabar; senão
+    // ele continuaria recebendo as vendas da conta anterior.
+    if (isInternal(req.url) && req.url.includes("/api/auth/logout") && tokenRef.current && !loggingOut.current) {
+      loggingOut.current = true;
+      const del = `/api/push/native?token=${encodeURIComponent(tokenRef.current)}`;
+      webRef.current?.injectJavaScript(`fetch(${JSON.stringify(del)},{method:"DELETE",credentials:"include"}).catch(function(){}).then(function(){location.href=${JSON.stringify(req.url)};});true;`);
+      setTimeout(() => { loggingOut.current = false; }, 5000);
+      return false;
+    }
     if (isInternal(req.url)) return true;
     Linking.openURL(req.url).catch(() => {});
     return false;

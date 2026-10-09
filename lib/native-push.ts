@@ -25,7 +25,9 @@ export async function sendNativePush(workspaceId: string, payload: { title: stri
   result.tokens = rows.length;
   if (!rows.length) return result;
   const [pref] = await db.select().from(soundPrefs).where(eq(soundPrefs.workspaceId, workspaceId)).limit(1);
-  const sound = nativeSound(parseSoundPrefs(pref?.prefs).selected);
+  const sp = parseSoundPrefs(pref?.prefs);
+  // Som desligado no painel = som padrão do celular (não silencioso).
+  const sound = sp.enabled ? nativeSound(sp.selected) : null;
   const messages = rows.map((r) => ({
     to: r.token,
     title: payload.title,
@@ -36,25 +38,29 @@ export async function sendNativePush(workspaceId: string, payload: { title: stri
     sound: sound ? `${sound}.wav` : "default",
     channelId: sound ? `venda_${sound}` : "vendas",
   }));
-  try {
-    const response = await fetch(EXPO_PUSH_URL, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(messages), signal: AbortSignal.timeout(8000) });
-    const body = (await response.json().catch(() => ({}))) as { data?: ExpoTicket[]; errors?: { message?: string }[] };
-    if (!response.ok || !Array.isArray(body.data)) {
-      result.failed = rows.length;
-      result.errors.push(body.errors?.[0]?.message || `HTTP ${response.status}`);
-      return result;
+  // A Expo aceita no máximo 100 mensagens por requisição.
+  const dead: string[] = [];
+  for (let i = 0; i < messages.length; i += 100) {
+    const batch = messages.slice(i, i + 100);
+    try {
+      const response = await fetch(EXPO_PUSH_URL, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(batch), signal: AbortSignal.timeout(8000) });
+      const body = (await response.json().catch(() => ({}))) as { data?: ExpoTicket[]; errors?: { message?: string }[] };
+      if (!response.ok || !Array.isArray(body.data)) {
+        result.failed += batch.length;
+        result.errors.push(body.errors?.[0]?.message || `HTTP ${response.status}`);
+        continue;
+      }
+      body.data.forEach((ticket, j) => {
+        if (ticket.status === "ok") return void result.sent++;
+        result.failed++;
+        result.errors.push(ticket.details?.error || ticket.message || "erro");
+        if (ticket.details?.error === "DeviceNotRegistered") dead.push(batch[j].to);
+      });
+    } catch (e) {
+      result.failed += batch.length;
+      result.errors.push(e instanceof Error ? e.message.slice(0, 120) : "erro");
     }
-    const dead: string[] = [];
-    body.data.forEach((ticket, i) => {
-      if (ticket.status === "ok") return void result.sent++;
-      result.failed++;
-      result.errors.push(ticket.details?.error || ticket.message || "erro");
-      if (ticket.details?.error === "DeviceNotRegistered") dead.push(rows[i].token);
-    });
-    if (dead.length) await db.delete(nativePushTokens).where(inArray(nativePushTokens.token, dead));
-  } catch (e) {
-    result.failed = rows.length;
-    result.errors.push(e instanceof Error ? e.message.slice(0, 120) : "erro");
   }
+  if (dead.length) await db.delete(nativePushTokens).where(inArray(nativePushTokens.token, dead)).catch(() => {});
   return result;
 }
