@@ -4,7 +4,6 @@ import { BookOpen, Menu, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "./AppSidebar";
 import { AccountMenu } from "./AccountMenu";
-import { FeatureGuide } from "./FeatureGuide";
 
 export function AppShell({
   title,
@@ -65,7 +64,7 @@ export function AppShell({
             <AccountMenu />
           </div>
         </header>
-        <div className="mx-auto max-w-[1500px] p-5 lg:p-8"><FeatureGuide />{children}</div>
+        <div className="mx-auto max-w-[1500px] p-5 lg:p-8">{children}</div>
       </section>
     </main>
   );
