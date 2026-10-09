@@ -1,8 +1,9 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
-import {Loader2,Search} from "lucide-react";
+import {Loader2,Search,Trash2} from "lucide-react";
+import {apiFetch} from "@/lib/plan-client";
 
-type Ev={id:string;eventName:string;source:string;occurredAt:number;projectName:string;utmCampaign?:string|null;utmSource?:string|null;value:number|null;currency:string|null};
+type Ev={id:string;eventName:string;source:string;occurredAt:number;projectName:string;projectId?:string;visitorId?:string|null;utmCampaign?:string|null;utmSource?:string|null;value:number|null;currency:string|null};
 const NAMES=["","AdClick","PageView","ViewContent","InitiateCheckout","AddToCart","Lead","Purchase","PageError"];
 function when(ts:number){
   if(!Number.isFinite(Number(ts))||Number(ts)<=0)return "—";
@@ -14,6 +15,16 @@ export function EventsClient(){
   const [rows,setRows]=useState<Ev[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
   const [name,setName]=useState(""),[search,setSearch]=useState("");
   useEffect(()=>{let alive=true;setLoading(true);fetch("/api/events",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.events)?v.events:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar eventos.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
+  const [marking,setMarking]=useState("");
+  // Marca o evento (e tudo do mesmo visitante) como teste: sai das métricas.
+  const markTest=async(r:Ev)=>{
+    if(!confirm("Remover das métricas? Use para visitas e ICs de teste (seus). Tudo desse mesmo visitante (visitas, ICs, Pix) deixa de contar."))return;
+    setMarking(r.id);
+    try{const res=await apiFetch("/api/events",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id:r.id})});const b=await res.json().catch(()=>({}));if(!res.ok)throw new Error(b.error||"Não foi possível remover.");setRows(list=>list.map(x=>x.id===r.id||(b.visitorId&&x.visitorId===b.visitorId&&x.projectId===b.projectId)?{...x,source:"test"}:x))}
+    catch(e){alert(e instanceof Error?e.message:"Não foi possível remover.")}
+    finally{setMarking("")}
+  };
+  const action=(r:Ev)=>r.source==="test"?<span className="text-xs text-amber-600">teste · fora das métricas</span>:<button type="button" disabled={marking===r.id} onClick={()=>markTest(r)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-white/10 dark:hover:bg-red-500/10">{marking===r.id?<Loader2 className="size-3 animate-spin"/>:<Trash2 className="size-3"/>}Remover (era teste)</button>;
   const filtered=useMemo(()=>{const q=search.trim().toLocaleLowerCase();return rows.filter(r=>(!name||r.eventName===name)&&(!q||`${r.utmCampaign||""} ${r.projectName||""}`.toLocaleLowerCase().includes(q)))},[rows,name,search]);
   if(error)return <p role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-300">{error}</p>;
   return <div className="space-y-4">
@@ -23,8 +34,8 @@ export function EventsClient(){
     </div>
     <p className="text-xs text-slate-500" role="status">{loading?"Carregando eventos...":`${filtered.length} evento(s) · mais recentes primeiro`}</p>
     {loading?<div className="flex items-center gap-2 rounded-xl border border-slate-200 p-10 text-sm text-slate-500 dark:border-white/10"><Loader2 className="size-4 animate-spin"/>Carregando eventos...</div>:filtered.length===0?<div className="rounded-xl border border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-white/10">{rows.length?"Nada encontrado com esses filtros.":"Nenhum evento recebido ainda."}</div>:<>
-    <div className="hidden overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10 md:block"><table className="w-full min-w-[760px] text-left text-sm"><thead><tr>{["Evento","Origem","Campanha","Projeto","Quando"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{filtered.map(r=><tr key={r.id} className="border-t border-slate-200 dark:border-white/10"><td className="p-3 font-medium">{r.eventName}</td><td className="p-3 text-slate-500">{r.source}</td><td className="max-w-[240px] truncate p-3">{r.utmCampaign||"—"}</td><td className="max-w-[180px] truncate p-3">{r.projectName||"—"}</td><td className="whitespace-nowrap p-3 text-slate-500">{when(r.occurredAt)}</td></tr>)}</tbody></table></div>
-    <div className="grid gap-3 md:hidden">{filtered.map(r=><div key={r.id} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[.03]"><div className="flex items-center justify-between gap-2"><b>{r.eventName}</b><span className="text-xs text-slate-500">{when(r.occurredAt)}</span></div><p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">{r.utmCampaign||"Sem campanha"} · {r.source}</p></div>)}</div>
+    <div className="hidden overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10 md:block"><table className="w-full min-w-[760px] text-left text-sm"><thead><tr>{["Evento","Origem","Campanha","Projeto","Quando",""].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{filtered.map(r=><tr key={r.id} className="border-t border-slate-200 dark:border-white/10"><td className="p-3 font-medium">{r.eventName}</td><td className="p-3 text-slate-500">{r.source}</td><td className="max-w-[240px] truncate p-3">{r.utmCampaign||"—"}</td><td className="max-w-[180px] truncate p-3">{r.projectName||"—"}</td><td className="whitespace-nowrap p-3 text-slate-500">{when(r.occurredAt)}</td><td className="whitespace-nowrap p-3 text-right">{action(r)}</td></tr>)}</tbody></table></div>
+    <div className="grid gap-3 md:hidden">{filtered.map(r=><div key={r.id} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[.03]"><div className="flex items-center justify-between gap-2"><b>{r.eventName}</b><span className="text-xs text-slate-500">{when(r.occurredAt)}</span></div><p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">{r.utmCampaign||"Sem campanha"} · {r.source}</p><div className="mt-2">{action(r)}</div></div>)}</div>
     </>}
   </div>;
 }
