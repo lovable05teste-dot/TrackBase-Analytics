@@ -87,20 +87,32 @@ const fresh=list.filter(o=>!known.current.has(o.id));
 
  const markSeen=()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}};
  const toggle=()=>{if(!open)markSeen();setOpen(v=>!v);};
+ // iPhone: a chave VAPID é buscada antes, para o subscribe acontecer logo
+ // depois da permissão (o Safari pode recusar se houver espera no meio).
+ const vapidRef=useRef("");
+ const[pushError,setPushError]=useState("");
+ const[iosTab,setIosTab]=useState(false);
+ useEffect(()=>{
+  const t=window.setTimeout(()=>{
+   try{const ua=navigator.userAgent;const ios=/iPhone|iPad|iPod/.test(ua)||(ua.includes("Mac")&&navigator.maxTouchPoints>1);const standalone=window.matchMedia("(display-mode: standalone)").matches||(navigator as unknown as {standalone?:boolean}).standalone===true;setIosTab(ios&&!standalone)}catch{}
+   fetch("/api/push/subscribe",{cache:"no-store"}).then(r=>r.json()).then((c:{configured?:boolean;publicKey?:string})=>{if(c.configured&&c.publicKey)vapidRef.current=c.publicKey}).catch(()=>{});
+  },0);
+  return()=>window.clearTimeout(t);
+ },[]);
  const enablePush=async()=>{
-  setPush("loading");
+  setPush("loading");setPushError("");
   try{
    const perm=await Notification.requestPermission();
    if(perm!=="granted"){setPush("denied");return;}
-   const config=await fetch("/api/push/subscribe",{cache:"no-store"});
-   const cfg=await config.json() as {configured?:boolean;publicKey?:string};
-   if(!config.ok||!cfg.configured||!cfg.publicKey){setPush("off");return;}
+   let key=vapidRef.current;
+   if(!key){const c=await fetch("/api/push/subscribe",{cache:"no-store"}).then(r=>r.json()) as {configured?:boolean;publicKey?:string};key=c.configured&&c.publicKey?c.publicKey:""}
+   if(!key){setPush("off");setPushError("O servidor está sem as chaves de push (VAPID).");return;}
    const reg=await navigator.serviceWorker.ready;
-   const existing=await reg.pushManager.getSubscription();
-   const sub=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidKey(cfg.publicKey)});
+   const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidKey(key)});
    const r=await fetch("/api/push/subscribe",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({endpoint:sub.endpoint,keys:{p256dh:bufToB64(sub.getKey("p256dh")),auth:bufToB64(sub.getKey("auth"))}})});
-   setPush(r.ok?"on":"off");
-  }catch{setPush("off");}
+   if(!r.ok){setPush("off");setPushError(`Não foi possível salvar a inscrição (${r.status}).`);return;}
+   setPush("on");
+  }catch(e){setPush("off");setPushError(`Falha ao ativar: ${e instanceof Error?e.message:"erro desconhecido"}`);}
  };
  const recent=orders.slice(0,12);
  return <div className="relative">
@@ -117,10 +129,12 @@ const fresh=list.filter(o=>!known.current.has(o.id));
      {recent.map(o=><div key={o.id} className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 last:border-0"><span className={`size-2.5 shrink-0 rounded-full ${o.status==="approved"?"bg-emerald-500":"bg-amber-400"}`}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{o.status==="approved"?"Venda aprovada":"Venda pendente"} · {money(o.value,o.currency)}</p><p className="truncate text-xs text-slate-500">{o.utmCampaign||o.projectName} · {ago(o.updatedAt)}</p></div></div>)}
     </div>
     <div className="space-y-2 border-t border-slate-200 p-3">
+     {iosTab&&push!=="on"&&<div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-800"><b>No iPhone, a notificação só funciona pelo app da Tela de Início.</b><ol className="mt-1 list-decimal pl-4"><li>Toque em Compartilhar (quadrado com seta) no Safari.</li><li>Escolha “Adicionar à Tela de Início”.</li><li>Abra a GhostScale pelo ícone novo e ative aqui.</li></ol></div>}
+     {pushError&&<p role="alert" className="text-center text-xs text-red-600">{pushError}</p>}
      {(push==="off"||push==="unknown")&&<Button variant="outline" size="sm" className="w-full" onClick={enablePush} disabled={push==="unknown"}><Smartphone/>{push==="unknown"?"Verificando notificações…":"Ativar notificação no celular"}</Button>}
      {push==="loading"&&<p className="text-center text-xs text-slate-500">Ativando… confirme no navegador.</p>}
      {push==="denied"&&<p className="text-center text-xs text-slate-500">Notificação bloqueada no navegador — libere nas configurações do site.</p>}
-     {push==="unsupported"&&<p className="text-center text-xs text-slate-500">Este navegador não aceita notificações push. No iPhone, adicione o GhostScale à Tela de Início e abra pelo ícone.</p>}
+     {push==="unsupported"&&!iosTab&&<p className="text-center text-xs text-slate-500">Este navegador não aceita notificações push. No iPhone, adicione o GhostScale à Tela de Início e abra pelo ícone.</p>}
      {push==="on"&&<><p className="text-center text-xs text-emerald-600">Notificações no celular ativas ✓</p><Button variant="outline" size="sm" className="w-full" disabled={testing} onClick={sendTest}><BellRing/>{testing?"Enviando…":"Enviar venda de teste"}</Button>{testMsg&&<p className="text-center text-xs text-slate-500">{testMsg}</p>}</>}
     </div>
     <div className="space-y-2.5 border-t border-slate-200 p-3">
