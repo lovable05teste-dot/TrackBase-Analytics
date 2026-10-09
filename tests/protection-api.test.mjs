@@ -53,7 +53,7 @@ function paid(user = "a", plan = "start", expired = false) {
   sqlite.prepare("INSERT INTO plan_subscriptions(id,workspace_id,user_id,plan,plan_version,status,current_period_end,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)").run("sub-" + user, ws(user), user, plan, 2, "active", now + (expired ? -10 : 86400), now, now);
 }
 function request(path, user = "a", method = "GET", body, origin = "https://app.com") {
-  return new Request("https://app.com" + path, { method, headers: { ...(user ? { "x-test-user": user } : {}), "content-type": "application/json", origin }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+  return new Request("https://app.com" + path, { method, headers: { ...(user ? { "x-test-user": user } : {}), "content-type": "application/json", origin, "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 [FBAN/FBIOS;FBAV/470.0]" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
 }
 const config = () => ({ ...defaultProtection("site.com"), enabled: true, mode: "block" });
 
@@ -98,6 +98,10 @@ test("ingestão bloqueia domínio copiado, separa diagnósticos e preserva métr
   for (let n = 0; n < 2; n++) assert.equal((await eventRoute.POST(request("/api/events", null, "POST", report, "https://site.com"))).status, 200);
   assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM protection_reports").get().n, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM events").get().n, 1);
+  const crawler = request("/api/events", null, "POST", { ...event, eventId: "bot-1" }, "https://site.com");
+  crawler.headers.set("user-agent", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)");
+  assert.equal((await (await eventRoute.POST(crawler)).json()).reason, "bot");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM events").get().n, 1, "robô da Meta não vira acesso");
   assert.equal((await eventRoute.POST(request("/api/events", null, "POST", { ...event, eventName: "Purchase" }))).status, 400);
 });
 

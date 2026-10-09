@@ -46,13 +46,13 @@ export async function POST(request: Request) {
       await getDb().insert(protectionReports).values({ id: reportId, projectId: project.id, eventName: reportedName, occurredAt: now, payload: JSON.stringify({ host, reason, mode: reportMode }) }).onConflictDoNothing();
       return Response.json({ received: true }, { headers: cors });
     }
-    // Robôs (prévia/revisão da Meta, buscadores, automação) não viram acesso,
-    // clique nem evento na CAPI.
-    if (isBotUserAgent(request.headers.get("user-agent"))) return Response.json({ received: false, ignored: true, reason: "bot" }, { headers: cors });
     if (protection.enabled && protection.mode === "block") {
       const origin = request.headers.get("origin");
       if (!domainAllowed(u.hostname, protection) || (origin && (origin === "null" || !domainAllowed(new URL(origin).hostname, protection)))) return Response.json({ error: "Domínio não autorizado para este projeto" }, { status: 403, headers: cors });
     }
+    // Robôs (prévia/revisão da Meta, buscadores, automação) não viram acesso,
+    // clique nem evento na CAPI. Depois da proteção: clone continua 403.
+    if (isBotUserAgent(request.headers.get("user-agent"))) return Response.json({ received: false, ignored: true, reason: "bot" }, { headers: cors });
     if (eventId.length > 200) return Response.json({ error: "Identificador de evento inválido" }, { status: 400, headers: cors });
     const attribution=(body.attribution&&typeof body.attribution==="object"?body.attribution:{}) as Record<string,unknown>;
     const utm=(name:string)=>u?.searchParams.get(name)||String(attribution[name]||"")||null;
