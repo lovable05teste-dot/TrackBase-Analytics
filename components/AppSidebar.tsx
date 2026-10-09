@@ -7,9 +7,16 @@ import { NAV_GROUPS } from "@/lib/nav";
 import { toolAllowed, toolPlanLabel } from "@/lib/plan-tools";
 import { usePlan } from "@/lib/plan-client";
 
-function isActive(pathname: string, href: string) {
+function matches(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(href + "/");
+}
+
+// Marca só o item mais específico: em /integracoes/gateways fica ativo
+// "Pedidos por gateway", não também "Integrações".
+const ALL_HREFS = NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+function isActive(pathname: string, href: string) {
+  return matches(pathname, href) && !ALL_HREFS.some((other) => other.length > href.length && matches(pathname, other));
 }
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -26,7 +33,9 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </Link>
       <nav className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 pr-1">
         {NAV_GROUPS.map((g) => {
-          const expanded = open[g.title] ?? g.title === firstGroupTitle;
+          // Abre o primeiro grupo e também o grupo da página atual, para a pessoa
+          // sempre ver onde está no menu.
+          const expanded = open[g.title] ?? (g.title === firstGroupTitle || g.items.some((item) => isActive(pathname, item.href)));
           const IconComponent = g.items[0]?.icon || ChevronDown;
           return (
             <div key={g.title} className="mb-3">

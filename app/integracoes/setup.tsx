@@ -7,17 +7,8 @@ import { MetaAccountsClient } from "../contas-meta/accounts-client";
 import { TrackingInstall } from "./tracking-install";
 import { GatewayConnect, PixelConnect } from "./connections";
 import { copyText } from "@/lib/clipboard";
+import type { SetupStatus } from "@/lib/setup-status";
 
-export type SetupStatus = {
-  projects: number;
-  receivingVisits: boolean;
-  metaLogins: number;
-  metaLinked: number;
-  pixelConnected: boolean;
-  gateways: number;
-  sales: number;
-  utmVisits: boolean;
-};
 
 type State = "done" | "progress" | "todo";
 type Step = { id: string; title: string; summary: string; icon: React.ComponentType<{ className?: string }>; state: State; hint: string; body: React.ReactNode };
