@@ -21,7 +21,7 @@ Content-Type: application/json`}</Code>
       </CardContent></Card>
 
       <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2 text-base"><KeyRound className="size-5 text-violet-300" />Onde o cliente obtém a credencial</CardTitle></CardHeader><CardContent className="space-y-4">
-        <p className="text-sm leading-6 text-slate-400">No painel, em <b className="text-slate-200">Integrações → aba Gateways</b>, o cliente cria uma credencial por gateway e recebe o token <code className="rounded bg-black/30 px-1 text-violet-300">tb_live_...</code> — exibido <b className="text-amber-300">uma única vez</b>.</p>
+        <p className="text-sm leading-6 text-slate-400">No painel, em <b className="text-slate-200">Integrações → etapa 4 (Gateway de pagamento)</b>, o cliente cria uma credencial por gateway e recebe o token <code className="rounded bg-black/30 px-1 text-violet-300">tb_live_...</code> — exibido <b className="text-amber-300">uma única vez</b>.</p>
         <Table head={["Valor", "Exemplo", "Uso"]} rows={[
           [["URL do webhook"], [`${BASE_URL}/api/webhooks/gateway`], "Endpoint para enviar os pedidos"],
           [["Token"], ["tb_live_<64 hex>"], "Enviado como Authorization Bearer"],

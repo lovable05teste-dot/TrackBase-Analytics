@@ -7,7 +7,9 @@ import { requestUserId, sha256 } from "@/lib/trackbase-security";
 export async function getWorkspace() {
   const forwarded = new Headers();
   for (const [key, value] of (await headers()).entries()) forwarded.set(key, value);
-  const cookieValue = (await cookies()).toString();
+  // O header cru já veio acima e preserva tb_session repetidos; cookies()
+  // colapsa nomes iguais, então só serve de fallback.
+  const cookieValue = forwarded.get("cookie") ? "" : (await cookies()).toString();
   if (cookieValue) forwarded.set("cookie", cookieValue);
   const userId = await requestUserId(new Request("http://trackbase.local", { headers: forwarded }));
   const workspaceId = userId ? "ws_" + (await sha256(userId)).slice(0, 24) : null;

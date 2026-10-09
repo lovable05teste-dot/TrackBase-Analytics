@@ -23,8 +23,6 @@ import {
   Plug,
   Landmark,
   Beaker,
-  ContactRound,
-  Radio,
   Link,
   Calculator,
   Network,
@@ -80,11 +78,12 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Integrações",
     items: [
-      { label: "Integrações", href: "/integracoes", icon: Plug },
-      { label: "Gateways", href: "/integracoes/gateways", icon: Landmark },
+      // Conta Meta, Pixel & CAPI, script e gateways são etapas da central
+      // /integracoes (passo a passo). As páginas antigas seguem acessíveis.
+      { label: "Configurar integrações", href: "/integracoes", icon: Plug },
+      { label: "Pedidos por gateway", href: "/integracoes/gateways", icon: Landmark },
+      { label: "Testar webhook", href: "/webhooks", icon: Webhook },
       { label: "Offer Lab", href: "/offer-lab", icon: Beaker },
-      { label: "Contas Meta", href: "/contas-meta", icon: ContactRound },
-      { label: "Pixel & CAPI", href: "/pixel-capi", icon: Radio },
     ],
   },
   {
@@ -97,7 +96,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Mapa de Links", href: "/ferramentas/mapa-links", icon: Network },
       { label: "Checklist Campanha", href: "/ferramentas/checklist", icon: ListChecks },
       { label: "Ativador Pixel TikTok", href: "/ferramentas/ativador-tiktok", icon: Zap },
-      { label: "Webhooks", href: "/webhooks", icon: Webhook },
     ],
   },
   {

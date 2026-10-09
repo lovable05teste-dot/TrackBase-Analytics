@@ -24,7 +24,7 @@ O **`{BASE_URL}`** é o domínio onde a GhostScale está publicada (ex.: `https:
 
 ## 2. Como o cliente obtém a credencial
 
-O dono da conta, no painel **Integrações → aba "Gateways"**, cria uma credencial por gateway e recebe:
+O dono da conta, no painel **Integrações → etapa 4 "Conectar o gateway de pagamento"**, cria uma credencial por gateway e recebe:
 
 - **URL do webhook** → `{BASE_URL}/api/webhooks/gateway`
 - **Token** → `tb_live_<64 caracteres hex>`
