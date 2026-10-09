@@ -1,18 +1,14 @@
-import { purchaseUserData } from "@/lib/capi-user-data";
-import { eq } from "drizzle-orm";
+import { queuePurchaseCapi } from "@/lib/purchase-capi";
+import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { apiCredentials, notificationPrefs, projects } from "@/db/schema";
+import { apiCredentials, events, notificationPrefs, projects } from "@/db/schema";
 import { parsePrefs } from "@/lib/notify";
 import { notifySale, recordSaleEvent } from "@/lib/push";
-import { decryptSecret, sha256 } from "@/lib/trackbase-security";
-import { parseTrackingConfig } from "@/lib/tracking-config";
+import { sha256 } from "@/lib/trackbase-security";
 import {
   alertUnknownStatus,
   cleanUtmSource,
-  visitorContext,
-  dispatchCapi,
   drainCapiOutbox,
-  enqueueCapiOutbox,
   eventIdFor,
   eventNameFor,
   insertEventOnce,
@@ -20,6 +16,8 @@ import {
   resolveStatus,
   upsertOrder,
 } from "@/lib/sale-ingest";
+
+export const maxDuration = 60;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -111,7 +109,7 @@ export async function POST(request: Request) {
     };
 
     // Dedup: redelivery do mesmo status = 200 sem reinserir nem re-disparar.
-    const { dedup, prevStatus } = await upsertOrder(db, {
+    const { dedup } = await upsertOrder(db, {
       projectId: credential.projectId,
       externalId,
       provider: "utmify",
@@ -127,7 +125,7 @@ export async function POST(request: Request) {
     });
     const eventName = eventNameFor(status);
     await recordSaleEvent(credential.workspaceId, "sale.received", externalId, { status, raw: String(rawStatus ?? "").slice(0, 40), provider: "utmify", dedup });
-    if (dedup) {
+    if (dedup && status !== "approved") {
       await drainCapiOutbox(db, { workspaceId: credential.workspaceId, limit: 3 });
       return Response.json({ received: true, orderId: externalId, status, event: eventName, dedup: true }, { headers: cors });
     }
@@ -137,7 +135,7 @@ export async function POST(request: Request) {
     const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "trackingParameters.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
     const visitorId = String(pick(body, ["tb_vid", "tracking.tb_vid", "trackingParameters.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || "");
 
-    const eventCreated = await insertEventOnce(
+    await insertEventOnce(
       db,
       {
         projectId: credential.projectId,
@@ -160,46 +158,20 @@ export async function POST(request: Request) {
       "utmify",
     );
 
-    // CAPI só em criação ou transição PARA approved, e só se ESTA chamada
-    // criou o evento. Falha → outbox (nunca perde p/ a Meta).
-    if (status === "approved" && prevStatus !== "approved" && eventCreated) {
-      const [project] = await db.select().from(projects).where(eq(projects.id, credential.projectId)).limit(1);
-      if (project?.pixelId && project.metaTokenCipher && project.metaTokenIv) {
-        try {
-          const accessToken = await decryptSecret(project.metaTokenCipher, project.metaTokenIv);
-          const config = parseTrackingConfig(project.trackingConfig);
-          const email = pick(body, ["email", "customer.email", "data.customer.email", "buyer.email", "customer_email"]);
-          const phone = pick(body, ["phone", "customer.phone", "data.customer.phone", "buyer.phone", "customer_phone"]);
-          const sourceUrl = String(pick(body, ["url", "checkout_url", "tracking.url", "metadata.url"]) || "");
-          const name = pick(body, ["name", "customer.name", "data.customer.name", "buyer.name", "customer_name"]);
-          const buyerIp = String(pick(body, ["ip", "customer.ip", "data.customer.ip", "client_ip", "buyer.ip", "tracking.ip"]) || "");
-          const buyerUa = String(pick(body, ["user_agent", "customer.user_agent", "data.customer.user_agent", "tracking.user_agent"]) || "");
-          const visitor = await visitorContext(db, credential.projectId, { visitorId, fbclid });
-          const capi: { data: unknown[]; test_event_code?: string } = {
-            data: [
-              {
-                event_name: "Purchase",
-                event_time: now,
-                event_id: eventId,
-                action_source: "website",
-                event_source_url: sourceUrl || visitor.url || undefined,
-                user_data: await purchaseUserData({ email, phone, name, visitorId, ip: config.ipMode === "disabled" ? undefined : visitor.ip || buyerIp || undefined, ua: visitor.ua || buyerUa || undefined, fbc: fbc || visitor.fbc, fbp: fbp || visitor.fbp, fallbackUa: request.headers.get("user-agent") || undefined }),
-                custom_data: {
-                  value: config.purchase.valueSource === "fixed" ? config.purchase.fixedValue : value,
-                  currency,
-                  order_id: externalId,
-                },
-              },
-            ],
-          };
-          if (project.metaTestCode) capi.test_event_code = project.metaTestCode;
-          const sent = await dispatchCapi(project.pixelId, accessToken, capi);
-          if (!sent.ok)
-            await enqueueCapiOutbox(db, { workspaceId: credential.workspaceId, projectId: credential.projectId, pixelId: project.pixelId, eventName, eventId, payload: capi });
-        } catch (error) {
-          console.error("Utmify CAPI", error);
-        }
+    // Repeated approvals can repair an interrupted enqueue. The delivery
+    // receipt and Meta event_id prevent sending the same purchase twice.
+    let capiStatus: string | undefined;
+    if (status === "approved") {
+      const [saved] = await db.select({ occurredAt: events.occurredAt, eventName: events.eventName }).from(events)
+        .where(and(eq(events.projectId, credential.projectId), eq(events.eventId, eventId))).limit(1);
+      // Never replay historical purchases beyond Meta's 48h deduplication window.
+      if (saved?.eventName === "Purchase" && (!dedup || now - saved.occurredAt < 47 * 3600)) {
+        capiStatus = await queuePurchaseCapi(db, { workspaceId: credential.workspaceId, projectId: credential.projectId,
+          eventId, externalId, occurredAt: saved.occurredAt, value, currency, body, visitorId, fbclid, fbc, fbp });
       }
+    }
+    if (dedup) {
+      return Response.json({ received: true, orderId: externalId, status, event: eventName, dedup: true, capi: capiStatus }, { headers: cors });
     }
 
     await db.update(apiCredentials).set({ lastUsedAt: new Date().toISOString() }).where(eq(apiCredentials.id, credential.id));
@@ -233,7 +205,7 @@ export async function POST(request: Request) {
       }
     }
     await drainCapiOutbox(db, { workspaceId: credential.workspaceId, limit: 3 });
-    return Response.json({ received: true, orderId: externalId, status, event: eventName }, { headers: cors });
+    return Response.json({ received: true, orderId: externalId, status, event: eventName, capi: capiStatus }, { headers: cors });
   } catch (error) {
     console.error("Utmify webhook error", error);
     return Response.json({ error: "Não foi possível processar o webhook" }, { status: 400, headers: cors });
