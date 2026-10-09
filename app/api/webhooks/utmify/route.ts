@@ -230,7 +230,7 @@ export async function POST(request: Request) {
             url: "/vendas",
             tag: `tb-${status}-${externalId}`,
           }),
-          new Promise(resolve => setTimeout(resolve, 3000)),
+          new Promise(resolve => setTimeout(resolve, 8000)),
         ]).catch(() => {});
       }
     }
