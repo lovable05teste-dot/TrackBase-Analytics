@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
-  await pushToWorkspace(workspaceId, { title: "Venda aprovada · R$ 97,00", body: "Notificação de teste da GhostScale", url: "/vendas", tag: `tb-test-${Date.now()}` });
-  return Response.json({ ok: true });
+  const result = await pushToWorkspace(workspaceId, { title: "Venda aprovada · R$ 97,00", body: "Notificação de teste da GhostScale", url: "/vendas", tag: `tb-test-${Date.now()}` });
+  // Diagnóstico para a tela: inscrições, enviados e erros do serviço de push.
+  return Response.json(result);
 }

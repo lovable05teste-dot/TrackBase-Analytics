@@ -21,7 +21,7 @@ export function NotificationsBell(){
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
  const[testing,setTesting]=useState(false);const[testMsg,setTestMsg]=useState("");
  // Dispara um push real de teste: confere se a notificação e o som chegam no celular.
- const sendTest=async()=>{setTesting(true);setTestMsg("");try{const r=await fetch("/api/push/test",{method:"POST",credentials:"same-origin"});setTestMsg(r.ok?"Enviada. Deve tocar em alguns segundos, mesmo com a tela bloqueada.":"Não foi possível enviar o teste.")}catch{setTestMsg("Não foi possível enviar o teste.")}finally{setTesting(false)}};
+ const sendTest=async()=>{setTesting(true);setTestMsg("");try{const r=await fetch("/api/push/test",{method:"POST",credentials:"same-origin"});const b=await r.json().catch(()=>({})) as {configured?:boolean;subscriptions?:number;sent?:number;failed?:number;errors?:string[]};if(!r.ok)setTestMsg("Não foi possível enviar o teste.");else if(!b.configured)setTestMsg("O servidor está sem as chaves de push (VAPID). Avise o suporte.");else if(!b.subscriptions)setTestMsg("Nenhum celular inscrito. Toque em “Ativar notificação no celular” neste aparelho.");else if(b.sent)setTestMsg(`Enviada para ${b.sent} aparelho(s). Bloqueie a tela: deve tocar em alguns segundos.${b.failed?` ${b.failed} falhou(aram): ${(b.errors||[]).join(", ")}.`:""}`);else setTestMsg(`O serviço de push recusou: ${(b.errors||[]).join(", ")||"erro desconhecido"}. Desative e ative a notificação de novo.`)}catch{setTestMsg("Não foi possível enviar o teste.")}finally{setTesting(false)}};
  const known=useRef<Set<string>>(new Set());
  const prefsRef=useRef(prefs);
  useEffect(()=>{prefsRef.current=prefs;},[prefs]);
