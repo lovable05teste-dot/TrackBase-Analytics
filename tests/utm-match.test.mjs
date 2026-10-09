@@ -17,18 +17,26 @@ test("campanha não pega eventos de outra com nome parecido", () => {
     { e: "PV", utm: "produto x" },
   ];
   const index = buildUtmIndex(events, (ev) => [ev.utm]);
-  assert.deepEqual(index.match({ id: "111111111", name: "Produto X" }).map((ev) => ev.utm), ["Produto X|111111111", "produto x"]);
-  assert.equal(index.match({ id: "999999999", name: "Campanha que nunca rodou" }).length, 0);
-  assert.equal(index.match({ id: "333333333", name: "Produto" }).length, 0, "nome parcial não casa");
+  assert.deepEqual(index.matchAll([{ id: "111111111", name: "Produto X" }]).get("111111111").events.map((ev) => ev.utm), ["Produto X|111111111", "produto x"]);
+  assert.equal(index.matchAll([{ id: "999999999", name: "Campanha que nunca rodou" }]).get("999999999").events.length, 0);
+  assert.equal(index.matchAll([{ id: "333333333", name: "Produto" }]).get("333333333").events.length, 0, "nome parcial não casa");
 });
 
 test("ID no UTM manda: nome igual com ID diferente não casa", () => {
   const index = buildUtmIndex([{ utm: "Produto X|222222222" }], (ev) => [ev.utm]);
-  assert.equal(index.match({ id: "111111111", name: "Produto X" }).length, 0);
+  assert.equal(index.matchAll([{ id: "111111111", name: "Produto X" }]).get("111111111").events.length, 0);
 });
 
 test("conjunto casa por utm_term ou utm_medium sem contar duas vezes", () => {
   const ev = { term: "Conjunto A|444444444", medium: "Conjunto A|444444444" };
   const index = buildUtmIndex([ev], (e) => [e.term, e.medium]);
-  assert.equal(index.match({ id: "444444444", name: "Conjunto A" }).length, 1);
+  assert.equal(index.matchAll([{ id: "444444444", name: "Conjunto A" }]).get("444444444").events.length, 1);
+});
+
+test("nome repetido em várias campanhas: UTM sem ID não é atribuído a nenhuma", () => {
+  const index = buildUtmIndex([{ utm: "Produto X" }, { utm: "Produto X" }, { utm: "Produto X|111111111" }], (ev) => [ev.utm]);
+  const result = index.matchAll([{ id: "111111111", name: "Produto X" }, { id: "222222222", name: "Produto X" }, { id: "333333333", name: "Produto X" }]);
+  assert.equal(result.get("111111111").events.length, 1, "só o evento com o ID dela");
+  assert.equal(result.get("222222222").events.length, 0);
+  assert.equal(result.get("333333333").events.length, 0, "duplicada que não rodou fica zerada");
 });
