@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { protectionReports, projects, siteProtections } from "@/db/schema";
 import { audit, requireFeature, workspaceIdForUser } from "@/lib/permissions";
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const ctx = await context(request);
     if (ctx.error) return ctx.error;
     const [row] = await getDb().select().from(siteProtections).where(and(eq(siteProtections.projectId, ctx.project.id), eq(siteProtections.workspaceId, ctx.workspaceId))).limit(1);
-    const reports = await getDb().select({ eventName: protectionReports.eventName, occurredAt: protectionReports.occurredAt, payload: protectionReports.payload }).from(protectionReports).where(eq(protectionReports.projectId, ctx.project.id)).orderBy(desc(protectionReports.occurredAt)).limit(20);
+    const reports = await getDb().select({ eventName: protectionReports.eventName, occurredAt: protectionReports.occurredAt, payload: protectionReports.payload }).from(protectionReports).where(and(eq(protectionReports.projectId, ctx.project.id), ne(protectionReports.eventName, "CloneAlert"))).orderBy(desc(protectionReports.occurredAt)).limit(20);
     return json({ project: ctx.project, config: parseProtection(row?.config, ctx.project.domain), blockedIps: parseBlockedIps(row?.blockedIps), revision: row?.revision ?? 0, reports: reports.map(r => { let data: Record<string, unknown> = {}; try { data = JSON.parse(r.payload || "{}"); } catch {} return { eventName: r.eventName, occurredAt: r.occurredAt, host: String(data.host || ""), reason: String(data.reason || ""), mode: String(data.mode || "") }; }) });
   } catch { return json({ error: "Não foi possível carregar a proteção. Tente novamente." }, 503); }
 }

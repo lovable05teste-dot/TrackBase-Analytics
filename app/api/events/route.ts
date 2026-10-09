@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { after } from "next/server";
 import { ensureDb, getDb } from "../../../db";
 import { events, projects, siteProtections, protectionReports } from "../../../db/schema";
 import { decryptSecret, requestUserId, sha256 } from "../../../lib/trackbase-security";
@@ -44,6 +45,16 @@ export async function POST(request: Request) {
       const reportMode = reportedName === "SecurityRecovery" ? "recover" : protection.mode;
       const reportId = "security_" + await sha256(`${project.id}:${host}:${reason}:${reportMode}:${Math.floor(now / 3600)}`);
       await getDb().insert(protectionReports).values({ id: reportId, projectId: project.id, eventName: reportedName, occurredAt: now, payload: JSON.stringify({ host, reason, mode: reportMode }) }).onConflictDoNothing();
+      // Clone detectado (domínio fora da lista): avisa no celular 1x por dia
+      // por domínio. O id determinístico garante que só a 1ª visita do dia avisa.
+      if (reason === "domain") {
+        const alertId = "clonealert_" + await sha256(`${project.id}:${host}:${Math.floor(now / 86400)}`);
+        const fresh = await getDb().insert(protectionReports).values({ id: alertId, projectId: project.id, eventName: "CloneAlert", occurredAt: now, payload: JSON.stringify({ host }) }).onConflictDoNothing().returning({ id: protectionReports.id });
+        if (fresh.length) {
+          const { pushToWorkspace } = await import("@/lib/push");
+          await pushToWorkspace(project.workspaceId, { title: "⚠️ Clone da sua página detectado", body: `${host} está usando a sua página (${project.name}). ${protection.mode === "block" ? "Visitas bloqueadas." : protection.recoveryEnabled ? "Visitas enviadas para a página oficial." : "Ative o bloqueio em Anti-clone."}`, url: "/seguranca/anti-clone", tag: `tb-clone-${host}` }).catch(() => null);
+        }
+      }
       return Response.json({ received: true }, { headers: cors });
     }
     if (protection.enabled && protection.mode === "block") {
@@ -87,6 +98,8 @@ export async function POST(request: Request) {
       // O evento já foi gravado; falha/lentidão da Meta não vira erro p/ o site.
       capi = { ok: false, status: 0 };
     }
+    // Monitoramento "de carona" depois de responder; nunca afeta o evento.
+    try { after(async () => { const { maybeRunDueMonitors } = await import("@/lib/site-monitor"); await maybeRunDueMonitors(); }); } catch { /* fora do contexto do Next (testes) */ }
     return Response.json({ received: true, eventId, capi }, { headers: cors });
   } catch {
     return Response.json({ error: "Não foi possível registrar o evento" }, { status: 400, headers: cors });

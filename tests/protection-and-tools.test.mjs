@@ -161,3 +161,13 @@ test("ferramentas: preços BR/decimal, URLs inseguras, limites e campos validado
   assert.equal(TOOL_SCHEMAS.checklist.safeParse({ item: true }).success, true);
   assert.equal(TOOL_SCHEMAS.offer_lab.safeParse([{ id: "1", name: "x", price: Infinity, hook: "", status: "em teste" }]).success, false);
 });
+
+test("trecho de trava só libera a página nos domínios autorizados", async () => {
+  const { guardSnippet } = await import("../lib/protection.ts");
+  const c = { ...defaultProtection("site.com"), enabled: true, includeSubdomains: true };
+  const html = guardSnippet(c);
+  assert.match(html, /<style id="gs-guard">html\{visibility:hidden!important\}<\/style>/);
+  assert.match(html, /\["site\.com"\]/);
+  assert.match(html, /h\.endsWith/);
+  assert.doesNotMatch(guardSnippet({ ...c, includeSubdomains: false }), /endsWith/);
+});

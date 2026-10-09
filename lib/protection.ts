@@ -9,6 +9,10 @@ export type ProtectionConfig = {
   recoveryEnabled: boolean;
   recoveryUrl: string;
   preserveAttribution: boolean;
+  // Dificulta copiar a página oficial (botão direito, seleção, Ctrl+U/S/P/C, F12).
+  blockCopy: boolean;
+  // No clone, qualquer clique em link leva para a página oficial (recoveryUrl).
+  rewriteCloneLinks: boolean;
 };
 
 export function normalizeRecoveryUrl(input: string): string {
@@ -34,7 +38,7 @@ export function defaultProtection(domain?: string | null): ProtectionConfig {
   let allowedDomains: string[] = [];
   try { if (domain) allowedDomains = [normalizeDomain(domain)]; } catch { /* O usuário pode corrigir o domínio antes de ativar. */ }
   const recoveryUrl = allowedDomains[0] ? `https://${allowedDomains[0]}/` : "";
-  return { enabled: false, mode: "monitor", allowedDomains, includeSubdomains: false, framePolicy: "same-origin", preventImageDrag: false, message: "Esta página não está autorizada neste endereço.", recoveryEnabled: false, recoveryUrl, preserveAttribution: true };
+  return { enabled: false, mode: "monitor", allowedDomains, includeSubdomains: false, framePolicy: "same-origin", preventImageDrag: false, message: "Esta página não está autorizada neste endereço.", recoveryEnabled: false, recoveryUrl, preserveAttribution: true, blockCopy: false, rewriteCloneLinks: false };
 }
 
 export function validateProtection(raw: unknown): ProtectionConfig {
@@ -54,7 +58,7 @@ export function validateProtection(raw: unknown): ProtectionConfig {
   const recoveryHost = recoveryUrl ? new URL(recoveryUrl).hostname.toLowerCase().replace(/\.$/, "") : "";
   const recoveryAllowed = allowedDomains.some(d => recoveryHost === d || (v.includeSubdomains && recoveryHost.endsWith(`.${d}`)));
   if (recoveryEnabled && !recoveryAllowed) throw new Error("A URL de recuperação precisa usar um domínio autorizado.");
-  return { enabled: v.enabled, mode: v.mode, allowedDomains, includeSubdomains: v.includeSubdomains, framePolicy: v.framePolicy, preventImageDrag: v.preventImageDrag, message: v.message.trim(), recoveryEnabled, recoveryUrl, preserveAttribution };
+  return { enabled: v.enabled, mode: v.mode, allowedDomains, includeSubdomains: v.includeSubdomains, framePolicy: v.framePolicy, preventImageDrag: v.preventImageDrag, message: v.message.trim(), recoveryEnabled, recoveryUrl, preserveAttribution, blockCopy: v.blockCopy === true, rewriteCloneLinks: v.rewriteCloneLinks === true && Boolean(recoveryUrl) };
 }
 
 export function parseProtection(raw: string | null | undefined, domain?: string | null): ProtectionConfig {
@@ -78,7 +82,8 @@ export function protectionScript(config: ProtectionConfig, projectKey: string, e
   return `(function(){
     var C=${JSON.stringify(config)},K=${JSON.stringify(projectKey)},E=${JSON.stringify(endpoint)};
     window.__gsProtections=window.__gsProtections||{};if(window.__gsProtections[K])return;window.__gsProtections[K]=true;
-    if(!C.enabled)return;
+    function reveal(){try{var g=document.getElementById("gs-guard");if(g)g.remove()}catch(e){}}
+    if(!C.enabled){reveal();return;}
     var host=location.hostname.toLowerCase().replace(/\\.$/,""),embedded=window.top!==window.self,same=false;
     try{same=window.top.location.origin===location.origin}catch(e){}
     var domain=C.allowedDomains.some(function(d){return host===d||(C.includeSubdomains&&host.endsWith("."+d))});
@@ -88,6 +93,15 @@ export function protectionScript(config: ProtectionConfig, projectKey: string, e
     window.__gsProtectionResult={reason:reason,blocked:blocked,recovered:!!recover,mode:C.mode};
     var data=JSON.stringify({projectKey:K,eventName:recover?"SecurityRecovery":reason==="allowed"?"SecurityCheck":"SecurityViolation",url:location.origin,reason:reason,mode:recover?"recover":C.mode});
     try{if(!navigator.sendBeacon||!navigator.sendBeacon(E,new Blob([data],{type:"text/plain"})))fetch(E,{method:"POST",headers:{"content-type":"text/plain"},body:data,keepalive:true,credentials:"omit"}).catch(function(){})}catch(e){}
+    if(reason==="allowed"){reveal();if(C.blockCopy)guardCopy();}
+    if(reason==="domain"&&C.rewriteCloneLinks&&C.recoveryUrl&&!recover){document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a,button,[role=button],input[type=submit]");if(!a)return;e.preventDefault();e.stopPropagation();location.href=C.recoveryUrl},true);document.addEventListener("submit",function(e){e.preventDefault();location.href=C.recoveryUrl},true);}
+    function guardCopy(){
+      var css=document.createElement("style");css.textContent="html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}img{-webkit-user-drag:none;user-drag:none}";(document.head||document.documentElement).appendChild(css);
+      var editable=function(t){return t&&(t.closest&&t.closest("input,textarea,[contenteditable]"))};
+      document.addEventListener("contextmenu",function(e){if(!editable(e.target))e.preventDefault()},true);
+      ["copy","cut","dragstart","selectstart"].forEach(function(n){document.addEventListener(n,function(e){if(!editable(e.target))e.preventDefault()},true)});
+      document.addEventListener("keydown",function(e){var k=(e.key||"").toLowerCase(),mod=e.ctrlKey||e.metaKey;if(k==="f12"||(mod&&["u","s","p"].indexOf(k)>=0)||(mod&&e.shiftKey&&["i","j","c"].indexOf(k)>=0)||(mod&&e.altKey&&["i","j","u"].indexOf(k)>=0)||(mod&&["c","a"].indexOf(k)>=0&&!editable(e.target))){e.preventDefault();e.stopPropagation()}},true);
+    }
     if(recover){
       try{var target=new URL(C.recoveryUrl);if(C.preserveAttribution){var keep=["utm_source","utm_medium","utm_campaign","utm_content","utm_term","fbclid","gclid","ttclid","src","sck","tb_vid"];keep.forEach(function(k){var value=new URLSearchParams(location.search).get(k);if(value&&!target.searchParams.has(k))target.searchParams.set(k,value)})}location.replace(target.toString())}catch(e){}
     }else if(blocked){
@@ -98,4 +112,14 @@ export function protectionScript(config: ProtectionConfig, projectKey: string, e
       if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",block,{once:true});else block();
     }else if(C.preventImageDrag){document.addEventListener("dragstart",function(e){if(e.target&&e.target.tagName==="IMG")e.preventDefault()})}
   })();`;
+}
+
+// Trava extra contra clone: a página começa invisível e só aparece quando o
+// script confirma o domínio. Quem copiar o HTML e tirar o script fica com a
+// página em branco. Se o servidor da GhostScale falhar, o próprio trecho
+// libera a página após 2,5 s, mas SÓ nos domínios autorizados.
+export function guardSnippet(config: ProtectionConfig): string {
+  const list = JSON.stringify(config.allowedDomains);
+  const sub = config.includeSubdomains ? "||h.endsWith(\".\"+d)" : "";
+  return `<style id="gs-guard">html{visibility:hidden!important}</style><script>setTimeout(function(){var h=location.hostname.toLowerCase();if(${list}.some(function(d){return h===d${sub}})){var g=document.getElementById("gs-guard");if(g)g.remove()}},2500)</script>`;
 }
