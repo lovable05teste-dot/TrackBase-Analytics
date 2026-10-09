@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildUtmIndex, parseUtm } from "../lib/utm-match.ts";
+import { buildUtmIndex, isMetaTraffic, parseUtm } from "../lib/utm-match.ts";
 
 test("parseUtm separa nome e ID e ignora macros", () => {
   assert.deepEqual(parseUtm("Produto X|120211234567890"), { id: "120211234567890", name: "produto x" });
@@ -39,4 +39,22 @@ test("nome repetido em várias campanhas: UTM sem ID não é atribuído a nenhum
   assert.equal(result.get("111111111").events.length, 1, "só o evento com o ID dela");
   assert.equal(result.get("222222222").events.length, 0);
   assert.equal(result.get("333333333").events.length, 0, "duplicada que não rodou fica zerada");
+});
+
+test("idOnly: evento sem ID do Meta não conta para campanha nenhuma", () => {
+  const index = buildUtmIndex([{ utm: "Produto X" }, { utm: "Produto X|111111111" }, { utm: "teste123" }], (ev) => [ev.utm]);
+  const result = index.matchAll([{ id: "111111111", name: "Produto X" }, { id: "999999999", name: "teste123" }], { idOnly: true });
+  assert.deepEqual(result.get("111111111").events.map((e) => e.utm), ["Produto X|111111111"]);
+  assert.equal(result.get("999999999").events.length, 0);
+});
+
+test("isMetaTraffic reconhece tráfego do Meta e ignora o resto", () => {
+  assert.equal(isMetaTraffic({ fbclid: "abc" }), true);
+  assert.equal(isMetaTraffic({ utmSource: "FB" }), true);
+  assert.equal(isMetaTraffic({ utmSource: "facebookjLj6ac59377" }), true);
+  assert.equal(isMetaTraffic({ utmSource: "ig" }), true);
+  assert.equal(isMetaTraffic({ utmCampaign: "Produto|120211234567890" }), true);
+  assert.equal(isMetaTraffic({ utmSource: "google", utmCampaign: "brand" }), false);
+  assert.equal(isMetaTraffic({ utmSource: "teste", utmCampaign: "teste123" }), false);
+  assert.equal(isMetaTraffic({}), false);
 });
