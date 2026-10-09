@@ -64,3 +64,12 @@ export function isMetaTraffic(event: { fbclid?: string | null; utmSource?: strin
   if (META_SOURCE.test(String(event.utmSource ?? "").trim())) return true;
   return parseUtm(event.utmCampaign).id !== null;
 }
+
+// Clique real num anúncio: a Meta põe `fbclid` em todo clique de anúncio, e o
+// script/Pixel guardam o `_fbc` (fb.1.<tempo>.<fbclid>). Quem abre o link
+// digitando as UTMs à mão (teste) não tem nenhum dos dois, então visitas e
+// checkouts de teste não entram nas métricas das campanhas.
+export function isAdClick(event: { fbclid?: string | null; fbc?: string | null }) {
+  if (String(event.fbclid ?? "").trim()) return true;
+  return /^fb\.\d+\.\d+\.\S+/.test(String(event.fbc ?? "").trim());
+}
