@@ -5,6 +5,7 @@ import { decryptSecret, requestUserId, sha256 } from "../../../lib/trackbase-sec
 import {parseTrackingConfig} from "../../../lib/tracking-config";
 import { domainAllowed, parseProtection } from "@/lib/protection";
 import { parseBlockedIps, requestIp } from "@/lib/protection-ip";
+import { isBotUserAgent } from "@/lib/bot-filter";
 
 const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation","SecurityRecovery"]);
 const internalOnly = new Set(["AdClick","PageError"]);
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
       const origin = request.headers.get("origin");
       if (!domainAllowed(u.hostname, protection) || (origin && (origin === "null" || !domainAllowed(new URL(origin).hostname, protection)))) return Response.json({ error: "Domínio não autorizado para este projeto" }, { status: 403, headers: cors });
     }
+    // Robôs (prévia/revisão da Meta, buscadores, automação) não viram acesso,
+    // clique nem evento na CAPI. Depois da proteção: clone continua 403.
+    if (isBotUserAgent(request.headers.get("user-agent"))) return Response.json({ received: false, ignored: true, reason: "bot" }, { headers: cors });
     if (eventId.length > 200) return Response.json({ error: "Identificador de evento inválido" }, { status: 400, headers: cors });
     const attribution=(body.attribution&&typeof body.attribution==="object"?body.attribution:{}) as Record<string,unknown>;
     const utm=(name:string)=>u?.searchParams.get(name)||String(attribution[name]||"")||null;
