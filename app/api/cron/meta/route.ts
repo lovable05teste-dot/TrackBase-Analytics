@@ -1,4 +1,4 @@
-import { eq,inArray } from "drizzle-orm";
+import { and,eq,gte,inArray,lt } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { automationRules,notificationPrefs,orders,projects } from "@/db/schema";
 import { num } from "@/lib/meta-lab";
@@ -36,21 +36,23 @@ async function runDigest(){
  const db=getDb();
  const prefs=await db.select().from(notificationPrefs);
  const out:Record<string,unknown>[]=[];
- const yest=new Date();yest.setDate(yest.getDate()-1);yest.setHours(0,0,0,0);
- const y0=Math.floor(yest.getTime()/1000),y1=y0+86400;
+ // Resumo do dia em Brasília (UTC-3, sem horário de verão). O cron roda às
+ // 00:00 UTC = 21h em Brasília, então resume o dia atual até agora.
+ const BRT=3*3600,now=Math.floor(Date.now()/1000);
+ const y0=Math.floor((now-BRT)/86400)*86400+BRT,y1=now;
  for(const p of prefs){
   const parsed=parsePrefs(p.prefs);
   if(!parsed.dailyDigest)continue;
   try{
    const prows=await db.select({id:projects.id,name:projects.name}).from(projects).where(eq(projects.workspaceId,p.workspaceId));
    const pids=prows.map(x=>x.id);
-   const ords=await (pids.length?db.select().from(orders).where(inArray(orders.projectId,pids)):[]);
-   const day=ords.filter(o=>o.updatedAt>=y0&&o.updatedAt<y1);
+   const day=await (pids.length?db.select().from(orders).where(and(inArray(orders.projectId,pids),gte(orders.updatedAt,y0),lt(orders.updatedAt,y1+1))):[]);
    const appr=day.filter(o=>o.status==="approved");
+   const pend=day.filter(o=>o.status==="pending").length;
    const val=appr.reduce((s,o)=>s+num(o.value),0);
    const money=`R$ ${val.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}`;
-   await pushToWorkspace(p.workspaceId,{title:`Resumo de ontem · ${money}`,body:`${appr.length} aprovada(s) · ${day.length} movimento(s) · toque para abrir`,url:"/",tag:`tb-digest-${y0}`});
-   out.push({workspace:p.workspaceId,sales:day.length,approved:appr.length,value:val});
+   await pushToWorkspace(p.workspaceId,{title:`Resumo de hoje · ${money}`,body:`${appr.length} venda(s) aprovada(s) · ${pend} pendente(s) · toque para ver o dashboard`,url:"/",tag:`tb-digest-${y0}`});
+   out.push({workspace:p.workspaceId,sales:day.length,approved:appr.length,pending:pend,value:val});
   }catch(e){out.push({workspace:p.workspaceId,error:e instanceof Error?e.message:"falha"});}
  }
  return {digests:out.length,results:out};

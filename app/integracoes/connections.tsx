@@ -19,6 +19,23 @@ function ProjectSelect({projects,value,onChange}:{projects:Project[];value:strin
 }
 const NeedProject=()=> <p className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-800"><b>Falta o projeto.</b> Conclua a etapa 1 (<a href="#script" className="underline">Instalar o script</a>) e volte aqui.</p>;
 
+type Quality={total:number;email:number;phone:number;fbc:number;fbp:number;score:number;label:string;tips:string[]};
+// Indicador de qualidade da CAPI: % das compras (7 dias) com cada dado que a
+// Meta usa para casar a venda com o anúncio.
+function CapiQualityCard({projectId}:{projectId:string}){
+ const[q,setQ]=useState<Quality|null>(null);
+ useEffect(()=>{let alive=true;fetch(`/api/meta/pixel/quality?projectId=${encodeURIComponent(projectId)}`,{cache:"no-store"}).then(r=>r.json()).then(b=>{if(alive)setQ(b.quality||null)}).catch(()=>{});return()=>{alive=false}},[projectId]);
+ if(!q)return null;
+ const pct=(n:number)=>q.total?Math.round(n/q.total*100):0;
+ const tone=q.score>=8?"text-emerald-600":q.score>=6?"text-blue-600":q.score>=4?"text-amber-600":"text-red-600";
+ return <div className="rounded-xl border border-slate-200 p-4">
+  <div className="flex flex-wrap items-baseline justify-between gap-2"><b className="text-sm">Qualidade dos dados enviados à Meta</b><span className={`text-sm font-semibold ${tone}`}>{q.total?`${q.score.toLocaleString("pt-BR")}/10 · ${q.label}`:"Sem compras nos últimos 7 dias"}</span></div>
+  {q.total>0&&<><div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{([["E-mail",q.email],["Telefone",q.phone],["fbc (clique)",q.fbc],["fbp (navegador)",q.fbp]] as const).map(([label,n])=><div key={label}><p className="text-xs text-slate-500">{label}</p><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${pct(n)>=70?"bg-emerald-500":pct(n)>=40?"bg-amber-500":"bg-red-500"}`} style={{width:`${pct(n)}%`}}/></div><p className="mt-1 text-xs font-semibold tabular-nums">{pct(n)}%</p></div>)}</div>
+  <p className="mt-2 text-xs text-slate-500">{q.total} compra(s) nos últimos 7 dias.</p>
+  {q.tips.length>0&&<ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-slate-600">{q.tips.map(t=><li key={t}>{t}</li>)}</ul>}</>}
+ </div>;
+}
+
 export function PixelConnect(){const[projects,setProjects]=useState<Project[]>([]),[projectId,setProjectId]=useState(""),[pixelId,setPixelId]=useState(""),[token,setToken]=useState(""),[testCode,setTestCode]=useState(""),[pixelName,setPixelName]=useState("Pixel GhostScale"),[busy,setBusy]=useState(false),[creating,setCreating]=useState(false),[deleting,setDeleting]=useState(false),[mode,setMode]=useState<"create"|"existing">("existing"),[message,setMessage]=useState(""),[loaded,setLoaded]=useState(false);
  const loadProjects=async()=>{try{const b=await fetch("/api/projects",{cache:"no-store"}).then(r=>r.json());setProjects(b.projects||[]);setProjectId(id=>id||b.projects?.[0]?.id||"")}catch{/* mantém lista atual */}finally{setLoaded(true)}};
  useEffect(()=>{const timer=window.setTimeout(()=>{void loadProjects()},0);return()=>window.clearTimeout(timer)},[]);
@@ -31,8 +48,9 @@ export function PixelConnect(){const[projects,setProjects]=useState<Project[]>([
  const ok=/conectado|criado|ativo/i.test(message)&&!/desconectado/i.test(message);
  return <div className="space-y-5">
   <ProjectSelect projects={projects} value={projectId} onChange={id=>{setProjectId(id);setMessage("")}}/>
-  {current?.pixelId?
+  {current?.pixelId?<>
    <div className="flex flex-col gap-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="flex items-center gap-2 font-semibold text-emerald-600"><CheckCircle2 className="size-5"/>Pixel conectado</p><p className="mt-1 break-all text-sm text-slate-600">Pixel {current.pixelId} · navegador + API de Conversões</p></div><Button type="button" variant="outline" className="h-11 w-full text-red-600 sm:w-auto" disabled={deleting} onClick={disconnect}>{deleting?<Loader2 className="animate-spin"/>:<Trash2/>}Desconectar</Button></div>
+   <CapiQualityCard projectId={current.id}/></>
   :<>
    <div role="tablist" aria-label="Como conectar o Pixel" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-medium">
     {([["existing","Já tenho um Pixel"],["create","Criar um Pixel novo"]] as const).map(([value,label])=><button key={value} type="button" role="tab" aria-selected={mode===value} onClick={()=>setMode(value)} className={`min-h-11 rounded-lg px-3 transition ${mode===value?"bg-white text-slate-900 shadow-sm":"text-slate-500 hover:text-slate-700"}`}>{label}</button>)}
