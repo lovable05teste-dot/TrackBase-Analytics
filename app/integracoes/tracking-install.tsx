@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { copyText } from "@/lib/clipboard";
 import { apiFetch } from "@/lib/plan-client";
 
-type Project = { id: string; name: string; domain?: string; publicKey?: string; pixelId?: string };
+type Project = { id: string; name: string; domain?: string; publicKey?: string; pixelId?: string; lastVisitAt?: number | null };
+
+function ago(seconds: number) {
+  const diff = Math.max(0, Math.floor(Date.now() / 1000) - seconds);
+  if (diff < 60) return "agora há pouco";
+  if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `há ${Math.floor(diff / 3600)} h`;
+  return `há ${Math.floor(diff / 86400)} dia(s)`;
+}
 
 // Etapa 1 do passo a passo: projeto + script. O Pixel tem etapa própria
 // (antes era conectável aqui e na aba Pixel, o que confundia).
@@ -111,6 +119,9 @@ export function TrackingInstall() {
                 <div className="min-w-0">
                   <b className="break-words">{p.name}</b>
                   {p.domain && <span className="ml-2 text-xs text-slate-500">{p.domain}</span>}
+                  <p className={`mt-1 text-xs ${p.lastVisitAt ? "text-emerald-600" : "text-amber-600"}`}>
+                    {p.lastVisitAt ? `● Script funcionando · última visita ${ago(p.lastVisitAt)}` : "○ Ainda sem visitas. Instale o código e abra a página uma vez."}
+                  </p>
                 </div>
                 <Button variant="ghost" size="sm" className="text-red-600" disabled={deleting === p.id} onClick={() => remove(p)}>
                   {deleting === p.id ? <Loader2 className="animate-spin" /> : <Trash2 />}Apagar
@@ -123,6 +134,15 @@ export function TrackingInstall() {
             </div>
           ))}
           {showForm ? form : <Button variant="outline" onClick={() => setShowForm(true)}><Plus />Novo projeto</Button>}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-slate-600">
+            <b className="text-foreground">Como a venda é rastreada</b>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+              <li>O visitante chega pelo anúncio e o script guarda a campanha (UTMs).</li>
+              <li>Ao clicar para comprar, o script coloca essas UTMs no link do checkout, sozinho.</li>
+              <li>O gateway confirma o pagamento pelo webhook (etapa 4) e a venda aparece com a campanha certa.</li>
+            </ol>
+            <p className="mt-2 text-xs text-slate-500">Só um código por site. Não precisa de script na página de obrigado nem no checkout. Se o botão de compra abrir o checkout por JavaScript em vez de link, peça ao desenvolvedor para usar um link normal.</p>
+          </div>
           <details className="rounded-xl border border-slate-200 bg-slate-50 text-sm">
             <summary className="flex min-h-11 cursor-pointer items-center px-4 font-medium text-slate-600">Para desenvolvedores: eventos manuais</summary>
             <div className="grid gap-3 border-t border-slate-200 p-4 md:grid-cols-2">
