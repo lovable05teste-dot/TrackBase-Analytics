@@ -8,8 +8,8 @@ import { domainAllowed, parseProtection } from "@/lib/protection";
 import { parseBlockedIps, requestIp } from "@/lib/protection-ip";
 import { isBotUserAgent } from "@/lib/bot-filter";
 
-const allowed = new Set(["AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation","SecurityRecovery"]);
-const internalOnly = new Set(["AdClick","PageError"]);
+const allowed = new Set(["TestMode","AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation","SecurityRecovery"]);
+const internalOnly = new Set(["AdClick","PageError","TestMode"]);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST,OPTIONS" };
 export function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
 async function hash(value:unknown,phone=false){const raw=String(value||"").trim().toLocaleLowerCase(),normalized=phone?raw.replace(/\D/g,""):raw.replace(/\s+/g,"");if(!normalized)return undefined;const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(normalized));return Array.from(new Uint8Array(bytes)).map(byte=>byte.toString(16).padStart(2,"0")).join("")}
@@ -76,9 +76,17 @@ export async function POST(request: Request) {
     // _ip/_ua guardam o IP e o navegador REAIS do visitante: a venda chega
     // depois pelo webhook (servidor do gateway) e usa estes dados na CAPI.
     const ipMode=parseTrackingConfig(project.trackingConfig).ipMode;
+    // Modo teste (?gs_test=1 na página): eventos ficam fora das métricas e
+    // não vão para a Meta. Ao ligar, as visitas anteriores deste navegador
+    // também viram teste (some o que o dono testou antes).
+    const isTest = body.test === true || eventName === "TestMode";
+    const testVisitor = String(body.visitorId || "").slice(0, 120);
+    if (eventName === "TestMode" && testVisitor) {
+      await getDb().update(events).set({ source: "test" }).where(and(eq(events.projectId, project.id), eq(events.visitorId, testVisitor)));
+    }
     const safeBody={...body,email:body.email?"[HASHED]":undefined,phone:body.phone?"[HASHED]":undefined,_ip:clientIp(request,ipMode),_ua:(request.headers.get("user-agent")||"").slice(0,400)||undefined};
     await getDb().insert(events).values({
-      id: crypto.randomUUID(), projectId: project.id, eventId, eventName, source: "browser",
+      id: crypto.randomUUID(), projectId: project.id, eventId, eventName, source: isTest ? "test" : "browser",
       occurredAt: eventTime, visitorId: String(body.visitorId || ""),
       fbclid: String(body.fbclid || attribution.fbclid || ""), fbp: String(body.fbp || ""), fbc: String(body.fbc || ""),
       utmSource:utm("utm_source"),utmCampaign:utm("utm_campaign"),utmMedium:utm("utm_medium"),utmContent:utm("utm_content"),utmTerm:utm("utm_term"),
@@ -88,7 +96,7 @@ export async function POST(request: Request) {
     // AdClick/PageError são diagnósticos internos: o navegador já não os manda
     // ao Pixel, e o servidor também não pode mandá-los à CAPI (poluía o pixel
     // com eventos personalizados sem par para deduplicação).
-    if (!internalOnly.has(eventName) && project.pixelId && project.metaTokenCipher && project.metaTokenIv) try {
+    if (!isTest && !internalOnly.has(eventName) && project.pixelId && project.metaTokenCipher && project.metaTokenIv) try {
       const token = await decryptSecret(project.metaTokenCipher, project.metaTokenIv),config=parseTrackingConfig(project.trackingConfig);
       const payload: Record<string, unknown> = { data: [{ event_name: eventName, event_time: eventTime, event_id: eventId, action_source: "website", event_source_url: url, user_data: { client_ip_address: clientIp(request,config.ipMode), client_user_agent: request.headers.get("user-agent") || "", fbp: body.fbp || undefined, fbc: body.fbc || undefined, em:await hash(body.email),ph:await hash(body.phone,true) }, custom_data: { value, currency: String(body.currency || "BRL"), content_ids: body.contentIds || undefined, content_name: body.contentName || undefined, content_type: "product",order_id:body.externalId||undefined } }] };
       if (project.metaTestCode) payload.test_event_code = project.metaTestCode;

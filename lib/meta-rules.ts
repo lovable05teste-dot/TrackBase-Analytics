@@ -4,6 +4,7 @@ import { actionHistory,automationRules,events,metaAccounts,metaLinked,projects }
 import { metaJson } from "./meta";
 import { accountToken,graph,norm,num } from "./meta-lab";
 import { pushToWorkspace } from "./push";
+import { isTestEvent, testVisitorIds } from "@/lib/test-traffic";
 
 export type RuleRow=typeof automationRules.$inferSelect;
 type LevelTotals={id:string;name:string;spend:number;impressions:number;clicks:number;reach:number};
@@ -37,7 +38,7 @@ export async function evaluateWorkspace(opts:{userId:string;workspaceId:string;e
  const winStart=now-maxWindow*86400;
  const prows=await db.select({id:projects.id}).from(projects).where(eq(projects.workspaceId,opts.workspaceId));
  const pids=prows.map(p=>p.id);
- const tbRows=pids.length?await db.select({utmCampaign:events.utmCampaign,utmContent:events.utmContent,utmTerm:events.utmTerm,value:events.value}).from(events).where(and(inArray(events.projectId,pids),eq(events.eventName,"Purchase"),gte(events.occurredAt,winStart))):[];
+ const tbRowsAll=pids.length?await db.select({source:events.source,visitorId:events.visitorId,utmCampaign:events.utmCampaign,utmContent:events.utmContent,utmTerm:events.utmTerm,value:events.value}).from(events).where(and(inArray(events.projectId,pids),eq(events.eventName,"Purchase"),gte(events.occurredAt,winStart))):[];const tvSet=await testVisitorIds(db,pids),tbRows=tbRowsAll.filter(r=>!isTestEvent(r,tvSet));
  type Agg={sales:number;revenue:number};
  const agg={campaign:new Map<string,Agg>(),adset:new Map<string,Agg>(),ad:new Map<string,Agg>()};
  const add=(m:Map<string,Agg>,k:string,v:number)=>{if(!k)return;const e=m.get(k)||{sales:0,revenue:0};e.sales+=1;e.revenue+=v;m.set(k,e);};

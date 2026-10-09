@@ -171,3 +171,14 @@ test("trecho de trava só libera a página nos domínios autorizados", async () 
   assert.match(html, /h\.endsWith/);
   assert.doesNotMatch(guardSnippet({ ...c, includeSubdomains: false }), /endsWith/);
 });
+
+test("modo teste (?gs_test=1): avisa o servidor e marca os eventos como teste", () => {
+  const b = browser("https://site.com/?gs_test=1&fbclid=abc");
+  vm.runInContext(trackerScript("project1", "https://app.com/api/events", "", parseTrackingConfig({})), b.context);
+  const bodies = b.requests.map(r => JSON.parse(r.body));
+  assert.equal(bodies[0].eventName, "TestMode");
+  assert.ok(bodies.length > 1 && bodies.every(x => x.test === true), "todos os eventos vão com test:true");
+  const normal = browser("https://site.com/?fbclid=abc");
+  vm.runInContext(trackerScript("project1", "https://app.com/api/events", "", parseTrackingConfig({})), normal.context);
+  assert.ok(normal.requests.map(r => JSON.parse(r.body)).every(x => x.test === undefined && x.eventName !== "TestMode"));
+});

@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { ensureDb, getDb } from "@/db";
 import { events, orders, projects } from "@/db/schema";
 import { requestUserId, sha256 } from "@/lib/trackbase-security";
+import { isTestEvent, testVisitorIds } from "@/lib/test-traffic";
 
 export async function getWorkspace() {
   const forwarded = new Headers();
@@ -62,10 +63,13 @@ export async function getEvents(ids: string[], since: number | null): Promise<Tr
         utmMedium: events.utmMedium,
         utmContent: events.utmContent,
         utmTerm: events.utmTerm,
+        source: events.source,
       })
       .from(events)
       .where(and(...conds));
-    return rows.map((r) => ({ ...r, value: Number(r.value ?? 0) }));
+    // Navegadores em modo teste ficam fora dos relatórios.
+    const tv = await testVisitorIds(getDb(), ids);
+    return rows.filter((r) => !isTestEvent(r, tv)).map((r) => ({ ...r, value: Number(r.value ?? 0) }));
   } catch (error) {
     console.error("events lookup", error);
     return [];
