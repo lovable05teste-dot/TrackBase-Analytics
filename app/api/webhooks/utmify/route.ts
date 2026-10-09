@@ -1,3 +1,4 @@
+import { purchaseUserData } from "@/lib/capi-user-data";
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { apiCredentials, notificationPrefs, projects } from "@/db/schema";
@@ -8,7 +9,7 @@ import { parseTrackingConfig } from "@/lib/tracking-config";
 import {
   alertUnknownStatus,
   cleanUtmSource,
-  clientIpFromHeaders,
+  visitorContext,
   dispatchCapi,
   drainCapiOutbox,
   enqueueCapiOutbox,
@@ -134,6 +135,7 @@ export async function POST(request: Request) {
     const fbc = String(pick(body, ["fbc", "tracking.fbc", "trackingParameters.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
     const fbp = String(pick(body, ["fbp", "tracking.fbp", "trackingParameters.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
     const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "trackingParameters.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
+    const visitorId = String(pick(body, ["tb_vid", "tracking.tb_vid", "trackingParameters.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || "");
 
     const eventCreated = await insertEventOnce(
       db,
@@ -144,7 +146,7 @@ export async function POST(request: Request) {
         occurredAt: now,
         value,
         currency,
-        visitorId: String(pick(body, ["tb_vid", "tracking.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || ""),
+        visitorId,
         fbclid,
         fbc,
         fbp,
@@ -169,6 +171,10 @@ export async function POST(request: Request) {
           const email = pick(body, ["email", "customer.email", "data.customer.email", "buyer.email", "customer_email"]);
           const phone = pick(body, ["phone", "customer.phone", "data.customer.phone", "buyer.phone", "customer_phone"]);
           const sourceUrl = String(pick(body, ["url", "checkout_url", "tracking.url", "metadata.url"]) || "");
+          const name = pick(body, ["name", "customer.name", "data.customer.name", "buyer.name", "customer_name"]);
+          const buyerIp = String(pick(body, ["ip", "customer.ip", "data.customer.ip", "client_ip", "buyer.ip", "tracking.ip"]) || "");
+          const buyerUa = String(pick(body, ["user_agent", "customer.user_agent", "data.customer.user_agent", "tracking.user_agent"]) || "");
+          const visitor = await visitorContext(db, credential.projectId, { visitorId, fbclid });
           const capi: { data: unknown[]; test_event_code?: string } = {
             data: [
               {
@@ -176,15 +182,8 @@ export async function POST(request: Request) {
                 event_time: now,
                 event_id: eventId,
                 action_source: "website",
-                event_source_url: sourceUrl || undefined,
-                user_data: {
-                  client_ip_address: clientIpFromHeaders(request.headers, config.ipMode),
-                  client_user_agent: request.headers.get("user-agent") || undefined,
-                  em: await hashContact(email),
-                  ph: await hashContact(phone, true),
-                  fbc: fbc || undefined,
-                  fbp: fbp || undefined,
-                },
+                event_source_url: sourceUrl || visitor.url || undefined,
+                user_data: await purchaseUserData({ email, phone, name, visitorId, ip: config.ipMode === "disabled" ? undefined : visitor.ip || buyerIp || undefined, ua: visitor.ua || buyerUa || undefined, fbc: fbc || visitor.fbc, fbp: fbp || visitor.fbp, fallbackUa: request.headers.get("user-agent") || undefined }),
                 custom_data: {
                   value: config.purchase.valueSource === "fixed" ? config.purchase.fixedValue : value,
                   currency,

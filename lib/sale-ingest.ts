@@ -8,7 +8,7 @@
 // - status desconhecido vira `pending` + alerta (nunca 400 que dropa venda).
 // O `db` vem por parâmetro tipado via `import type` (apagado em runtime) e o
 // push é dinâmico — este módulo segue importável em testes unitários puros.
-import { and, asc, eq, lte, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lte, lt, or } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
 import type { getDb } from "@/db";
@@ -84,6 +84,39 @@ export function clientIpFromHeaders(headers: Headers, mode: "auto" | "ipv4" | "d
     .map(v => v.trim())
     .filter(Boolean);
   return mode === "ipv4" ? values.find(v => /^\d{1,3}(\.\d{1,3}){3}$/.test(v)) : values[0];
+}
+
+// Dados do comprador para a CAPI. O webhook vem do SERVIDOR do gateway: o IP
+// e o navegador da requisição são do gateway, não do cliente, e atrapalham a
+// Meta a casar a venda com quem clicou no anúncio. Então buscamos a última
+// visita da mesma pessoa (tb_vid ou fbclid) registrada pelo script.
+export type VisitorContext = { ip?: string; ua?: string; fbc?: string; fbp?: string; url?: string };
+
+export async function visitorContext(db: Db, projectId: string, keys: { visitorId?: string; fbclid?: string }): Promise<VisitorContext> {
+  const conds = [keys.visitorId ? eq(events.visitorId, keys.visitorId) : null, keys.fbclid ? eq(events.fbclid, keys.fbclid) : null].filter((c): c is NonNullable<typeof c> => Boolean(c));
+  if (!conds.length) return {};
+  try {
+    const rows = await db
+      .select({ fbc: events.fbc, fbp: events.fbp, payload: events.payload })
+      .from(events)
+      .where(and(eq(events.projectId, projectId), eq(events.source, "browser"), conds.length > 1 ? or(...conds) : conds[0]))
+      .orderBy(desc(events.occurredAt))
+      .limit(5);
+    const out: VisitorContext = {};
+    for (const r of rows) {
+      let p: Record<string, unknown> = {};
+      try { p = JSON.parse(r.payload || "{}"); } catch {}
+      out.ip ||= typeof p._ip === "string" ? p._ip : undefined;
+      out.ua ||= typeof p._ua === "string" ? p._ua : undefined;
+      out.url ||= typeof p.url === "string" ? p.url : undefined;
+      out.fbc ||= r.fbc || undefined;
+      out.fbp ||= r.fbp || undefined;
+    }
+    return out;
+  } catch (error) {
+    console.error("visitor context", error);
+    return {};
+  }
 }
 
 async function alertWorkspace(workspaceId: string, title: string, body: string, tag: string) {

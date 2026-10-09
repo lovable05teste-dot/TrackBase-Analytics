@@ -62,7 +62,10 @@ export async function POST(request: Request) {
     const eventTime = Number.isFinite(clientTime) && clientTime <= now + 300 && clientTime >= now - 86400 ? Math.floor(clientTime) : now;
     const value = Number(body.value || 0);
     if (!Number.isFinite(value) || value < 0) return Response.json({ error: "Valor inválido" }, { status: 400, headers: cors });
-    const safeBody={...body,email:body.email?"[HASHED]":undefined,phone:body.phone?"[HASHED]":undefined};
+    // _ip/_ua guardam o IP e o navegador REAIS do visitante: a venda chega
+    // depois pelo webhook (servidor do gateway) e usa estes dados na CAPI.
+    const ipMode=parseTrackingConfig(project.trackingConfig).ipMode;
+    const safeBody={...body,email:body.email?"[HASHED]":undefined,phone:body.phone?"[HASHED]":undefined,_ip:clientIp(request,ipMode),_ua:(request.headers.get("user-agent")||"").slice(0,400)||undefined};
     await getDb().insert(events).values({
       id: crypto.randomUUID(), projectId: project.id, eventId, eventName, source: "browser",
       occurredAt: eventTime, visitorId: String(body.visitorId || ""),
