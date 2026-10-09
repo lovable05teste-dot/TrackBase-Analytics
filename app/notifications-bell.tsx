@@ -19,6 +19,7 @@ export function NotificationsBell(){
  const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
  const[sound,setSound]=useState<SoundPrefs>(getSoundPrefs());
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
+ const[nativeApp,setNativeApp]=useState(false);
  type LogEntry={action:string;order:string;at:number;detail:{status?:string;raw?:string;provider?:string;dedup?:boolean;sent?:number;failed?:number;subscriptions?:number;configured?:boolean;errors?:string[];skipped?:string;timeout?:boolean}};
  const[log,setLog]=useState<LogEntry[]|null>(null);
  const loadLog=async()=>{try{const r=await fetch("/api/push/log",{cache:"no-store"});const b=await r.json();setLog(r.ok?b.entries||[]:[])}catch{setLog([])}};
@@ -65,6 +66,8 @@ const fresh=list.filter(o=>!known.current.has(o.id));
  useEffect(()=>{
   let alive=true;
   const detect=async()=>{
+   // Dentro do app nativo o push é do próprio app (registrado por ele).
+   if(/GhostScaleApp/.test(navigator.userAgent)){if(alive){setNativeApp(true);setPush("on");}return;}
    if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){if(alive)setPush("unsupported");return;}
    if(Notification.permission==="denied"){if(alive)setPush("denied");return;}
    try{
@@ -140,7 +143,7 @@ const fresh=list.filter(o=>!known.current.has(o.id));
      {push==="loading"&&<p className="text-center text-xs text-slate-500">Ativando… confirme no navegador.</p>}
      {push==="denied"&&<p className="text-center text-xs text-slate-500">Notificação bloqueada no navegador — libere nas configurações do site.</p>}
      {push==="unsupported"&&!iosTab&&<p className="text-center text-xs text-slate-500">Este navegador não aceita notificações push. No iPhone, adicione o GhostScale à Tela de Início e abra pelo ícone.</p>}
-     {push==="on"&&<><p className="text-center text-xs text-emerald-600">Notificações no celular ativas ✓</p><Button variant="outline" size="sm" className="w-full" disabled={testing} onClick={sendTest}><BellRing/>{testing?"Enviando…":"Enviar venda de teste"}</Button>{testMsg&&<p className="text-center text-xs text-slate-500">{testMsg}</p>}</>}
+     {push==="on"&&<><p className="text-center text-xs text-emerald-600">{nativeApp?"Notificações do app ativas ✓ O som escolhido toca mesmo com o app fechado.":"Notificações no celular ativas ✓"}</p><Button variant="outline" size="sm" className="w-full" disabled={testing} onClick={sendTest}><BellRing/>{testing?"Enviando…":"Enviar venda de teste"}</Button>{testMsg&&<p className="text-center text-xs text-slate-500">{testMsg}</p>}</>}
      <details className="text-xs" onToggle={e=>{if((e.currentTarget as HTMLDetailsElement).open)void loadLog()}}><summary className="cursor-pointer text-center text-slate-500">Ver últimas vendas e notificações</summary>{log===null?<p className="mt-2 text-center text-slate-500">Carregando…</p>:log.length===0?<p className="mt-2 text-center text-slate-500">Nenhuma venda recebida pelo webhook desde esta atualização.</p>:<ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">{log.map((e,i)=><li key={i} className="rounded-md bg-muted/50 px-2 py-1.5"><span className="text-slate-500">{new Date(e.at*1000).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · </span>{describe(e)}</li>)}</ul>}</details>
     </div>
     <div className="space-y-2.5 border-t border-slate-200 p-3">

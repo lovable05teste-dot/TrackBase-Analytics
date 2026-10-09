@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "GhostScale",
+    "slug": "ghostscale",
+    "scheme": "ghostscale",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0f1a",
+    "ios": {
+      "bundleIdentifier": "br.com.ghostscale.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "br.com.ghostscale.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0b0f1a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#2563eb",
+          "defaultChannel": "vendas",
+          "sounds": [
+            "./assets/sounds/fortpay_caixa_registradora.wav",
+            "./assets/sounds/fortpay_moedas_caindo.wav",
+            "./assets/sounds/fortpay_registradora.wav",
+            "./assets/sounds/fortpay_caixa_quiet.wav",
+            "./assets/sounds/fortpay_moeda_meia_coroa.wav",
+            "./assets/sounds/fortpay_moeda.wav"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0b0f1a",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "extra": {
+      "siteUrl": "https://www.ghostscale.com.br",
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}

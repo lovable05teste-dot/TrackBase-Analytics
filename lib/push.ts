@@ -26,14 +26,13 @@ function vapid(){
 
 export async function pushToWorkspace(workspaceId:string,payload:{title:string;body:string;url?:string;tag?:string}):Promise<PushResult>{
  const result:PushResult={configured:false,subscriptions:0,sent:0,failed:0,errors:[]};
+ // App nativo (som de venda com o app fechado) em paralelo ao push web.
+ const native=import("@/lib/native-push").then(m=>m.sendNativePush(workspaceId,payload)).catch(e=>({tokens:0,sent:0,failed:1,errors:[e instanceof Error?e.message:"erro"]}));
  try{
-  if(!vapid())return result;
-  result.configured=true;
-  const subs=await getDb().select().from(pushSubscriptions).where(eq(pushSubscriptions.workspaceId,workspaceId));
-  result.subscriptions=subs.length;
-  if(!subs.length)return result;
+  const subs=vapid()?await getDb().select().from(pushSubscriptions).where(eq(pushSubscriptions.workspaceId,workspaceId)):null;
+  if(subs){result.configured=true;result.subscriptions=subs.length;}
   const body=JSON.stringify({url:"/vendas",...payload});
-  await Promise.allSettled(subs.map(async s=>{
+  if(subs?.length)await Promise.allSettled(subs.map(async s=>{
    // urgency "high": sem isso o Android segura a notificação com a tela
    // bloqueada e ela só aparece quando o app é aberto.
    try{await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},body,{urgency:"high",TTL:3600});result.sent++;}
@@ -46,6 +45,8 @@ export async function pushToWorkspace(workspaceId:string,payload:{title:string;b
    }
   }));
  }catch(e){console.error("push",e);result.errors.push(e instanceof Error?e.message.slice(0,160):"erro desconhecido");}
+ const n=await native;
+ if(n.tokens){result.configured=true;result.subscriptions+=n.tokens;result.sent+=n.sent;result.failed+=n.failed;result.errors.push(...n.errors.map(e=>`app: ${e}`));}
  return result;
 }
 
