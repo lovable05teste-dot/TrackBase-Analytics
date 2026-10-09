@@ -67,7 +67,13 @@ const fresh=list.filter(o=>!known.current.has(o.id));
   let alive=true;
   const detect=async()=>{
    // Dentro do app nativo o push é do próprio app (registrado por ele).
-   if(/GhostScaleApp/.test(navigator.userAgent)){if(alive){setNativeApp(true);setPush("on");}return;}
+   if(/GhostScaleApp/.test(navigator.userAgent)){
+    // O app nativo informa o resultado real (permissão + registro do aparelho).
+    const w=window as Window&{__gsNativePush?:string};
+    const apply=()=>{if(!alive)return;const st=w.__gsNativePush;setNativeApp(true);setPush(st==="ok"?"on":st==="denied"?"denied":st==="error"||st==="unavailable"?"unsupported":"unknown");};
+    apply();window.addEventListener("gs-native-push",apply);
+    return;
+   }
    if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){if(alive)setPush("unsupported");return;}
    if(Notification.permission==="denied"){if(alive)setPush("denied");return;}
    try{
@@ -141,8 +147,9 @@ const fresh=list.filter(o=>!known.current.has(o.id));
      {pushError&&<p role="alert" className="text-center text-xs text-red-600">{pushError}</p>}
      {(push==="off"||push==="unknown")&&<Button variant="outline" size="sm" className="w-full" onClick={enablePush} disabled={push==="unknown"}><Smartphone/>{push==="unknown"?"Verificando notificações…":"Ativar notificação no celular"}</Button>}
      {push==="loading"&&<p className="text-center text-xs text-slate-500">Ativando… confirme no navegador.</p>}
-     {push==="denied"&&<p className="text-center text-xs text-slate-500">Notificação bloqueada no navegador — libere nas configurações do site.</p>}
-     {push==="unsupported"&&!iosTab&&<p className="text-center text-xs text-slate-500">Este navegador não aceita notificações push. No iPhone, adicione o GhostScale à Tela de Início e abra pelo ícone.</p>}
+     {push==="denied"&&<p className="text-center text-xs text-slate-500">{nativeApp?"Notificações do app bloqueadas: libere em Ajustes → Notificações → GhostScale.":"Notificação bloqueada no navegador — libere nas configurações do site."}</p>}
+     {push==="unsupported"&&nativeApp&&<p className="text-center text-xs text-red-600">Não foi possível ativar as notificações do app. Feche e abra o app de novo.</p>}
+     {push==="unsupported"&&!iosTab&&!nativeApp&&<p className="text-center text-xs text-slate-500">Este navegador não aceita notificações push. No iPhone, adicione o GhostScale à Tela de Início e abra pelo ícone.</p>}
      {push==="on"&&<><p className="text-center text-xs text-emerald-600">{nativeApp?"Notificações do app ativas ✓ O som escolhido toca mesmo com o app fechado.":"Notificações no celular ativas ✓"}</p><Button variant="outline" size="sm" className="w-full" disabled={testing} onClick={sendTest}><BellRing/>{testing?"Enviando…":"Enviar venda de teste"}</Button>{testMsg&&<p className="text-center text-xs text-slate-500">{testMsg}</p>}</>}
      <details className="text-xs" onToggle={e=>{if((e.currentTarget as HTMLDetailsElement).open)void loadLog()}}><summary className="cursor-pointer text-center text-slate-500">Ver últimas vendas e notificações</summary>{log===null?<p className="mt-2 text-center text-slate-500">Carregando…</p>:log.length===0?<p className="mt-2 text-center text-slate-500">Nenhuma venda recebida pelo webhook desde esta atualização.</p>:<ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">{log.map((e,i)=><li key={i} className="rounded-md bg-muted/50 px-2 py-1.5"><span className="text-slate-500">{new Date(e.at*1000).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · </span>{describe(e)}</li>)}</ul>}</details>
     </div>
