@@ -111,6 +111,27 @@ test("tracker: instalação duplicada, IC, alternativa de rede e Purchase bloque
   assert.equal(b.requests[0].keepalive, true);
 });
 
+test("tracker: último clique substitui atribuição antiga e ignora {{macros}}", () => {
+  const b = browser("https://site.com/?utm_source=teste&utm_campaign=teste123&utm_term=%7B%7Badset.name%7D%7D");
+  b.context.localStorage.setItem("tb_attribution", JSON.stringify({ utm_medium: "paid", utm_content: "{{ad.name}}|{{ad.id}}", savedAt: Date.now() }));
+  vm.runInContext(trackerScript("p1", "https://app.com/api/events", "", parseTrackingConfig(null)), b.context);
+  const attribution = b.context.TrackBase.attribution();
+  assert.equal(attribution.utm_source, "teste");
+  assert.equal(attribution.utm_campaign, "teste123");
+  assert.equal(attribution.utm_medium, undefined, "UTM de visita anterior não se mistura com a nova");
+  assert.equal(attribution.utm_term, undefined, "macro {{...}} não substituída é ignorada");
+  assert.equal(attribution.utm_content, undefined);
+});
+
+test("tracker: sem campanha nova mantém a atribuição salva, mas descarta {{macros}}", () => {
+  const b = browser("https://site.com/produto");
+  b.context.localStorage.setItem("tb_attribution", JSON.stringify({ utm_source: "facebook", utm_term: "{{adset.name}}|{{adset.id}}", savedAt: Date.now() }));
+  vm.runInContext(trackerScript("p1", "https://app.com/api/events", "", parseTrackingConfig(null)), b.context);
+  const attribution = b.context.TrackBase.attribution();
+  assert.equal(attribution.utm_source, "facebook");
+  assert.equal(attribution.utm_term, undefined);
+});
+
 test("proteção interrompe tracker antes de Pixel e PageView em domínio copiado", () => {
   const b = browser("https://clone.com/");
   const c = { ...defaultProtection("site.com"), enabled: true, mode: "block" };

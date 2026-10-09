@@ -7,6 +7,7 @@ import { decryptSecret, sha256 } from "@/lib/trackbase-security";
 import { parseTrackingConfig } from "@/lib/tracking-config";
 import {
   alertUnknownStatus,
+  cleanUtmSource,
   clientIpFromHeaders,
   dispatchCapi,
   drainCapiOutbox,
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
       value,
       currency,
       utmCampaign: utmOf("utm_campaign"),
-      utmSource: utmOf("utm_source"),
+      utmSource: cleanUtmSource(utmOf("utm_source")),
       utmMedium: utmOf("utm_medium"),
       utmContent: utmOf("utm_content"),
       utmTerm: utmOf("utm_term"),
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
         fbclid,
         fbc,
         fbp,
-        utmSource: String(pick(body, ["utm_source", "tracking.utm_source", "trackingParameters.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || ""),
+        utmSource: cleanUtmSource(String(pick(body, ["utm_source", "tracking.utm_source", "trackingParameters.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || "")) || "",
         utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "trackingParameters.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
         utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "trackingParameters.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
         utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "trackingParameters.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),

@@ -7,6 +7,7 @@ import { parsePrefs } from "../../../../lib/notify";
 import { pushToWorkspace } from "../../../../lib/push";
 import {
   alertUnknownStatus,
+  cleanUtmSource,
   clientIpFromHeaders,
   dispatchCapi,
   drainCapiOutbox,
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
     const v = String(pick(body, [k, `tracking.${k}`, `metadata.${k}`, `data.tracking.${k}`]) || "").trim();
     return v || null;
   };
-  const utmSource = utmOf("utm_source"),
+  const utmSource = cleanUtmSource(utmOf("utm_source")),
     utmMedium = utmOf("utm_medium");
   const utmContent = utmName(utmOf("utm_content") || ""),
     utmTerm = utmName(utmOf("utm_term") || "");
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
     fbclid,
     fbc,
     fbp,
-    utmSource: String(pick(body, ["utm_source", "tracking.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || ""),
+    utmSource: cleanUtmSource(String(pick(body, ["utm_source", "tracking.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || "")) || "",
     utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
     utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
     utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),
