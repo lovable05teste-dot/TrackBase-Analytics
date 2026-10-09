@@ -29,7 +29,7 @@ export function LinkMapClient() {
         {error && <p role="alert" className="mb-3 text-sm text-red-500">{error}</p>}
         <form onSubmit={add} className="flex flex-col gap-2 sm:flex-row">
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex.: Checkout Pix" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm sm:w-52" />
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm" />
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm" />
           <Button type="submit" size="sm"><Plus className="size-4" />Adicionar</Button>
         </form>
         <div className="mt-4 space-y-2">

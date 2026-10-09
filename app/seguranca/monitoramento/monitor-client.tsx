@@ -58,8 +58,8 @@ export function MonitorClient() {
         <CardHeader><CardTitle className="flex items-center gap-2"><Activity className="size-5 text-emerald-300" />Monitoramento de Sites</CardTitle></CardHeader>
         <CardContent>
           {formError && <p role="alert" className="mb-3 text-sm text-red-500">{formError}</p>}
-          <form onSubmit={add} className="flex gap-2">
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://sua-pagina.com" className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm" />
+          <form onSubmit={add} className="flex flex-wrap gap-2">
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://sua-pagina.com" className="min-w-0 flex-1 basis-56 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm" />
             <Button type="submit" size="sm"><Plus className="size-4" />Adicionar</Button>
           </form>
           <Button variant="outline" size="sm" className="mt-3" onClick={checkAll} disabled={checking || !sites.length}>{checking ? "Verificando..." : "Verificar agora"}</Button>

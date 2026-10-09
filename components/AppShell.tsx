@@ -44,10 +44,12 @@ export function AppShell({
               <Menu className="size-4" />
             </button>
             <img src="/ghostscale-logo.png" alt="GhostScale" className="h-8 w-auto max-w-[132px] shrink-0 object-contain sm:h-10 sm:max-w-[200px] lg:hidden" />
-            <div className="min-w-0">
-              <h1 className="break-words text-base font-semibold leading-tight sm:text-xl lg:text-xl">{title}</h1>
-              {subtitle ? <p className="hidden text-sm text-muted-foreground sm:block">{subtitle}</p> : null}
-            </div>
+          </div>
+          {/* No celular o título vai para a linha de baixo, inteiro (antes
+              empurrava o avatar para outra linha). */}
+          <div className="order-last w-full min-w-0 sm:order-none sm:mr-auto sm:w-auto">
+            <h1 className="break-words text-base font-semibold leading-tight sm:text-xl lg:text-xl">{title}</h1>
+            {subtitle ? <p className="hidden text-sm text-muted-foreground sm:block">{subtitle}</p> : null}
           </div>
           <div className="flex items-center gap-2">
             {activeTracking === true ? (

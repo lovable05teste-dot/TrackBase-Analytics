@@ -45,7 +45,7 @@
 .gs-filter-actions {display:flex;align-items:center;gap:12px;margin-top:12px;font-size:11px;color:#94a0b8}
 .gs-filter-actions>button {color:#a5b4fc}
 .gs-filter-actions>span {margin-left:auto}
-.gs-dashboard .dashboard-input {background:#0e1320;border-radius:9px;font-size:12px;padding:10px 12px}
+@layer components {.gs-dashboard .dashboard-input {background:#0e1320;border-radius:9px;font-size:12px;padding:8px 12px}}
 .gs-dashboard .dashboard-input:focus-visible {outline:2px solid #7c5cff;outline-offset:2px}
 .gs-dashboard :is(button,a):focus-visible {outline:2px solid #22d3ee;outline-offset:3px}
 .gs-dashboard .recharts-cartesian-axis-line,.gs-dashboard .recharts-cartesian-axis-tick-line {stroke:#ffffff15}

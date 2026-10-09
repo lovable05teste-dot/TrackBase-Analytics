@@ -8,7 +8,7 @@ function Sec({id,n,title,children}:{id:string;n:string;title:string;children:Rea
 
 export default function Docs(){
  const items:[string,string][]=[["visao","1 · Visão geral"],["script","2 · Script na página"],["webhook","3 · Webhook de vendas"],["campos","4 · Campos aceitos"],["status","5 · Status"],["fortpay","6 · FortPay"],["valores","7 · Valores e moeda"],["dedup","8 · Deduplicação"],["respostas","9 · Respostas e erros"],["testes","10 · Testando"],["seguranca","11 · Segurança"],["faq","12 · Perguntas frequentes"]];
- return <div className="mx-auto grid max-w-[1100px] gap-6 px-5 py-8 lg:grid-cols-[220px_1fr]">
+ return <div className="mx-auto grid max-w-[1100px] grid-cols-[minmax(0,1fr)] gap-6 px-5 py-8 lg:grid-cols-[220px_minmax(0,1fr)]">
    <nav className="metric-card h-fit rounded-2xl p-4 lg:sticky lg:top-6"><p className="px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Nesta página</p><div className="mt-2 space-y-1">{items.map(([id,label])=><a key={id} href={`#${id}`} className="block rounded-lg px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">{label}</a>)}</div></nav>
    <div className="space-y-6">
     <Sec id="visao" n="Parte 1" title="Visão geral — como a venda chega">

@@ -37,8 +37,8 @@ export function AgentHubClient() {
           <a href="/meta-lab" className="mb-4 inline-block text-sm text-red-500 underline">Configurar regras executáveis no Meta Lab →</a><div className="flex flex-wrap gap-2">
             {PRESETS.map((p) => <Button key={p.name} variant="outline" size="sm" onClick={() => addPreset(p)}><Plus className="size-3.5" />{p.name}</Button>)}
           </div>
-          <form onSubmit={addCustom} className="mt-4 flex gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Vigiar campanha X" className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm" />
+          <form onSubmit={addCustom} className="mt-4 flex flex-wrap gap-2">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Vigiar campanha X" className="min-w-0 flex-1 basis-56 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm" />
             <Button type="submit" size="sm">Adicionar</Button>
           </form>
         </CardContent>
