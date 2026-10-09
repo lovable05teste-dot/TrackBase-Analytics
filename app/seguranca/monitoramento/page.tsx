@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
-    <AppShell title="Monitoramento de Sites" subtitle="Verifique se a página de vendas e o checkout estão no ar.">
+    <AppShell title="Monitoramento de Sites" subtitle="A GhostScale verifica sua página e o checkout a cada 5 minutos e avisa no celular se cair.">
       <MonitorClient />
     </AppShell>
   );

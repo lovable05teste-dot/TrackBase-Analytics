@@ -72,6 +72,7 @@ export async function GET(request:Request){
  try{
   if(task==="digest")return Response.json({ok:true,...await runDigest()});
   if(task==="capi")return Response.json({ok:true,...await runCapiDrain()});
+  if(task==="monitor"){await ensureDb();const {runDueMonitors}=await import("@/lib/site-monitor");return Response.json({ok:true,...await runDueMonitors({limit:200})});}
   return Response.json({ok:true,...await runRules()});
  }catch(e){console.error("cron meta",e);return Response.json({error:e instanceof Error?e.message:"Falha no cron."},{status:500})}
 }
