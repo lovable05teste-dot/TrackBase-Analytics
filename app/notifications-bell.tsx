@@ -110,7 +110,7 @@ const fresh=list.filter(o=>!known.current.has(o.id));
   </Button>
   {open&&<>
    <div className="fixed inset-0 z-40" onClick={()=>setOpen(false)}/>
-   <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-2xl">
+   <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border bg-card text-card-foreground shadow-2xl">
     <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3"><b className="text-sm">Vendas recentes</b><a href="/vendas" className="text-xs font-medium text-blue-600 hover:underline">Ver vendas</a></div>
     <div className="max-h-80 overflow-y-auto">
      {recent.length===0&&<p className="px-4 py-6 text-center text-sm text-slate-500">Nenhuma venda pendente ou aprovada nos últimos 30 dias.</p>}
