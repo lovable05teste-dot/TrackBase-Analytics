@@ -131,3 +131,22 @@ export async function GET(request: Request) {
   const names = new Map(ps.map((p) => [p.id, p.name]));
   return Response.json({ events: rows.map((row) => ({ ...row, payload: undefined, projectName: names.get(row.projectId) || "" })) });
 }
+
+// "Remover (era teste)" na tela Eventos: marca o evento — e tudo do mesmo
+// visitante no projeto (visitas, ICs, Pix) — como teste, fora das métricas.
+export async function PATCH(request: Request) {
+  const userId = await requestUserId(request);
+  if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
+  const body = (await request.json().catch(() => ({}))) as { id?: unknown };
+  const id = typeof body.id === "string" ? body.id : "";
+  if (!id) return Response.json({ error: "Evento não informado" }, { status: 400 });
+  await ensureDb();
+  const db = getDb();
+  const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
+  const ps = await db.select({ id: projects.id }).from(projects).where(eq(projects.workspaceId, workspaceId));
+  const [ev] = ps.length ? await db.select({ id: events.id, projectId: events.projectId, visitorId: events.visitorId }).from(events).where(and(eq(events.id, id), inArray(events.projectId, ps.map((p) => p.id)))).limit(1) : [];
+  if (!ev) return Response.json({ error: "Evento não encontrado" }, { status: 404 });
+  if (ev.visitorId) await db.update(events).set({ source: "test" }).where(and(eq(events.projectId, ev.projectId), eq(events.visitorId, ev.visitorId)));
+  else await db.update(events).set({ source: "test" }).where(eq(events.id, ev.id));
+  return Response.json({ ok: true, visitorId: ev.visitorId || null, projectId: ev.projectId });
+}
