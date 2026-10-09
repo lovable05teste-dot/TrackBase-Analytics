@@ -19,8 +19,7 @@ export async function PrivateSection({title,description,children}:{title:string;
   const userId=await getUserIdFromSessionCookie(session);
   // Modo visualização: logado navega em tudo; criar/editar é barrado nas APIs (402).
   // Sem plano ativo mostra a faixa "Ver planos" em vez de expulsar para /planos.
-  const { hasActive } = await getPlanContext(userId);
-  const accountFromSession = await getAccountData(userId);
+  const [{ hasActive }, accountFromSession] = await Promise.all([getPlanContext(userId), getAccountData(userId)]);
   const defaultAccount = accountFromSession.userEmail ? accountFromSession : accountDataFromIdentity(authUser);
    return <main className="min-h-screen bg-slate-50 text-slate-900 lg:pl-64">
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-card p-5 lg:flex">

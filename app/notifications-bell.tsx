@@ -19,6 +19,9 @@ export function NotificationsBell(){
  const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
  const[sound,setSound]=useState<SoundPrefs>(getSoundPrefs());
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
+ const[testing,setTesting]=useState(false);const[testMsg,setTestMsg]=useState("");
+ // Dispara um push real de teste: confere se a notificação e o som chegam no celular.
+ const sendTest=async()=>{setTesting(true);setTestMsg("");try{const r=await fetch("/api/push/test",{method:"POST",credentials:"same-origin"});setTestMsg(r.ok?"Enviada. Deve tocar em alguns segundos, mesmo com a tela bloqueada.":"Não foi possível enviar o teste.")}catch{setTestMsg("Não foi possível enviar o teste.")}finally{setTesting(false)}};
  const known=useRef<Set<string>>(new Set());
  const prefsRef=useRef(prefs);
  useEffect(()=>{prefsRef.current=prefs;},[prefs]);
@@ -118,7 +121,7 @@ const fresh=list.filter(o=>!known.current.has(o.id));
      {push==="loading"&&<p className="text-center text-xs text-slate-500">Ativando… confirme no navegador.</p>}
      {push==="denied"&&<p className="text-center text-xs text-slate-500">Notificação bloqueada no navegador — libere nas configurações do site.</p>}
      {push==="unsupported"&&<p className="text-center text-xs text-slate-500">Este navegador não aceita notificações push. No iPhone, adicione o GhostScale à Tela de Início e abra pelo ícone.</p>}
-     {push==="on"&&<p className="text-center text-xs text-emerald-600">Notificações no celular ativas ✓</p>}
+     {push==="on"&&<><p className="text-center text-xs text-emerald-600">Notificações no celular ativas ✓</p><Button variant="outline" size="sm" className="w-full" disabled={testing} onClick={sendTest}><BellRing/>{testing?"Enviando…":"Enviar venda de teste"}</Button>{testMsg&&<p className="text-center text-xs text-slate-500">{testMsg}</p>}</>}
     </div>
     <div className="space-y-2.5 border-t border-slate-200 p-3">
      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avisar sobre</p>

@@ -1,7 +1,9 @@
-import { desc, eq } from "drizzle-orm";
+import { cache } from "react";
+import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { planSubscriptions, users, workspaces } from "@/db/schema";
+import { users, workspaces } from "@/db/schema";
 import { getEffectivePlan, type PlanId } from "@/lib/plans";
+import { getPlanContext } from "@/lib/permissions";
 import { getUserIdFromSessionCookie, sha256, currentSessionTokens } from "@/lib/trackbase-security";
 
 export type AccountData = {
@@ -50,38 +52,33 @@ const ADMIN_ACCOUNT: AccountData = {
  * and roles are deliberately omitted for regular users; they are admin
  * context, not part of the end-user profile.
  */
-export async function getAccountData(userId: string | null | undefined): Promise<AccountData> {
+// Nome, e-mail e papel do usuário, lidos uma vez por requisição e
+// compartilhados entre o cabeçalho (getChatGPTUser) e os dados da conta.
+export const getUserProfile = cache(async (userId: string) => {
+  await ensureDb();
+  const [row] = await getDb().select({ name: users.name, email: users.email, role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  return row ?? null;
+});
+
+async function getAccountDataUncached(userId: string | null | undefined): Promise<AccountData> {
   if (!userId) return EMPTY_ACCOUNT;
   if (userId === "trackbase-owner") return ADMIN_ACCOUNT;
 
   try {
     await ensureDb();
     const db = getDb();
-    const [user] = await db
-      .select({ name: users.name, email: users.email, role: users.role })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+    const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
+    // As três leituras são independentes: em paralelo, não em fila.
+    const [user, [workspace], [subscription]] = await Promise.all([
+      getUserProfile(userId),
+      db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1),
+      // Mesma leitura do plano que o menu e as permissões já fazem.
+      getPlanContext(userId).then((ctx) => [ctx.sub as { plan: string; planVersion: number | null; status: string } | null].filter(Boolean)),
+    ]);
 
     if (!user?.email) return EMPTY_ACCOUNT;
 
     const displayName = user.name?.trim() || user.email.split("@")[0] || "Usuário";
-    const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
-    const [workspace] = await db
-      .select({ name: workspaces.name })
-      .from(workspaces)
-      .where(eq(workspaces.id, workspaceId))
-      .limit(1);
-    const [subscription] = await db
-      .select({
-        plan: planSubscriptions.plan,
-        planVersion: planSubscriptions.planVersion,
-        status: planSubscriptions.status,
-      })
-      .from(planSubscriptions)
-      .where(eq(planSubscriptions.workspaceId, workspaceId))
-      .orderBy(desc(planSubscriptions.createdAt))
-      .limit(1);
 
     let planName = "—";
     let planStatus = "demo";
@@ -115,6 +112,9 @@ export async function getAccountData(userId: string | null | undefined): Promise
     return EMPTY_ACCOUNT;
   }
 }
+
+// Dados da conta lidos uma vez por requisição (layout e menu pediam de novo).
+export const getAccountData = cache(getAccountDataUncached);
 
 export async function getCurrentAccountData(identity?: { displayName?: string | null; email?: string | null }): Promise<AccountData> {
   const token = await currentSessionTokens();
