@@ -11,11 +11,12 @@
 import { and, asc, desc, eq, lte, lt, or } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
+import { dispatchCapi } from "@/lib/meta-capi";
+export { dispatchCapi, CAPI_TIMEOUT_MS } from "@/lib/meta-capi";
 import type { getDb } from "@/db";
 
 type Db = ReturnType<typeof getDb>;
 
-export const CAPI_TIMEOUT_MS = 10000;
 export const OUTBOX_MAX_ATTEMPTS = 6; // ~24h de backoff até DLQ
 const BACKOFF_SECONDS = [60, 300, 1800, 7200, 43200, 86400];
 const STALE_PROCESSING_SECONDS = 600;
@@ -67,7 +68,9 @@ export function eventNameFor(status: string) {
 // único e vira no-op em vez de venda duplicada.
 export function eventIdFor(provided: unknown, provider: string, externalId: string, status: string) {
   const clean = String(provided || "").trim();
-  if (clean) return clean;
+  // Gateways may reuse event_id across pending -> approved. Keep the original
+  // for Purchase deduplication, but namespace non-purchase statuses.
+  if (clean) return status === "approved" ? clean : `${clean}_${status}`;
   const safeProvider = provider.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "gateway";
   const safeExternal = externalId.trim() || crypto.randomUUID();
   return status === "approved" ? `purchase_${safeProvider}_${safeExternal}` : `gw_${safeProvider}_${safeExternal}_${status}`;
@@ -92,8 +95,9 @@ export function clientIpFromHeaders(headers: Headers, mode: "auto" | "ipv4" | "d
 // visita da mesma pessoa (tb_vid ou fbclid) registrada pelo script.
 export type VisitorContext = { ip?: string; ua?: string; fbc?: string; fbp?: string; url?: string };
 
-export async function visitorContext(db: Db, projectId: string, keys: { visitorId?: string; fbclid?: string }): Promise<VisitorContext> {
-  const conds = [keys.visitorId ? eq(events.visitorId, keys.visitorId) : null, keys.fbclid ? eq(events.fbclid, keys.fbclid) : null].filter((c): c is NonNullable<typeof c> => Boolean(c));
+export async function visitorContext(db: Db, projectId: string, keys: { visitorId?: string; fbclid?: string; fbp?: string; fbc?: string }): Promise<VisitorContext> {
+  const conds = [keys.visitorId ? eq(events.visitorId, keys.visitorId) : null, keys.fbclid ? eq(events.fbclid, keys.fbclid) : null,
+    keys.fbp ? eq(events.fbp, keys.fbp) : null, keys.fbc ? eq(events.fbc, keys.fbc) : null].filter((c): c is NonNullable<typeof c> => Boolean(c));
   if (!conds.length) return {};
   try {
     const rows = await db
@@ -214,51 +218,48 @@ export async function insertEventOnce(db: Db, row: EventInput, source = "gateway
   return inserted.length > 0;
 }
 
-// POST na Meta com timeout — nunca estoura o tempo do webhook.
-export async function dispatchCapi(pixelId: string, accessToken: string, body: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await fetch(`https://graph.facebook.com/v25.0/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(CAPI_TIMEOUT_MS),
-    });
-    if (!res.ok) return { ok: false, error: `meta ${res.status}` };
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message.slice(0, 160) : "capi_error" };
-  }
-}
-
 export async function enqueueCapiOutbox(
   db: Db,
-  input: { workspaceId: string; projectId: string; pixelId: string; eventName: string; eventId: string; payload: Record<string, unknown> },
+  input: { workspaceId: string; projectId: string; pixelId: string; eventName: string; eventId: string; payload: Record<string, unknown>; immediate?: boolean },
 ) {
   const now = Math.floor(Date.now() / 1000);
+  // Reuse pending rows made by versions that used random UUIDs.
+  const [existing] = await db.select({ id: capiOutbox.id }).from(capiOutbox)
+    .where(and(eq(capiOutbox.projectId, input.projectId), eq(capiOutbox.eventName, input.eventName), eq(capiOutbox.eventId, input.eventId))).limit(1);
+  if (existing) return existing.id;
+  const id = `capi:${input.projectId}:${input.eventName}:${input.eventId}`;
+  const { immediate, ...record } = input;
   await db.insert(capiOutbox).values({
-    id: crypto.randomUUID(),
-    ...input,
+    id,
+    ...record,
     payload: JSON.stringify(input.payload),
     status: "pending",
     attempts: 0,
-    nextAttemptAt: now + backoffFor(0),
+    nextAttemptAt: immediate ? now : now + backoffFor(0),
     createdAt: now,
     updatedAt: now,
-  });
+  }).onConflictDoNothing();
+  return id;
 }
 
 // Drena pendências vencidas (piggyback do webhook, cron ou worker).
 // Nunca joga exceção — o chamador (webhook) não pode quebrar por causa disso.
-export async function drainCapiOutbox(db: Db, opts: { workspaceId?: string; limit?: number } = {}) {
+export async function drainCapiOutbox(db: Db, opts: { workspaceId?: string; limit?: number; id?: string } = {}) {
   const result = { processed: 0, sent: 0, dead: 0 };
   try {
     const now = Math.floor(Date.now() / 1000);
     const conds = [eq(capiOutbox.status, "pending"), lte(capiOutbox.nextAttemptAt, now)];
     if (opts.workspaceId) conds.push(eq(capiOutbox.workspaceId, opts.workspaceId));
+    if (opts.id) conds.push(eq(capiOutbox.id, opts.id));
     const due = await db.select().from(capiOutbox).where(and(...conds)).orderBy(asc(capiOutbox.nextAttemptAt)).limit(opts.limit ?? 5);
+    const deadline = Date.now() + 40000;
     for (const row of due) {
+      if (Date.now() >= deadline) break;
+      const claimed = await db.update(capiOutbox).set({ status: "processing", updatedAt: now })
+        .where(and(eq(capiOutbox.id, row.id), eq(capiOutbox.status, "pending")))
+        .returning({ id: capiOutbox.id });
+      if (!claimed.length) continue;
       result.processed++;
-      await db.update(capiOutbox).set({ status: "processing", updatedAt: now }).where(eq(capiOutbox.id, row.id));
       try {
         const [proj] = await db
           .select({ pixelId: projects.pixelId, cipher: projects.metaTokenCipher, iv: projects.metaTokenIv })
@@ -266,16 +267,20 @@ export async function drainCapiOutbox(db: Db, opts: { workspaceId?: string; limi
           .where(eq(projects.id, row.projectId))
           .limit(1);
         if (!proj?.pixelId || !proj.cipher || !proj.iv) throw new Error("pixel/token removido");
-        const sent = await dispatchCapi(proj.pixelId, await decryptSecret(proj.cipher, proj.iv), JSON.parse(row.payload) as Record<string, unknown>);
+        if (row.pixelId && row.pixelId !== proj.pixelId) throw new Error("pixel alterado; revise o destino antes de reenviar");
+        const payload = JSON.parse(row.payload) as Record<string, unknown>;
+        // A saved test code must never divert a confirmed real purchase.
+        if (row.eventName === "Purchase") delete payload.test_event_code;
+        const sent = await dispatchCapi(proj.pixelId, await decryptSecret(proj.cipher, proj.iv), payload);
         if (sent.ok) {
-          await db.delete(capiOutbox).where(eq(capiOutbox.id, row.id));
+          await db.update(capiOutbox).set({ status: "sent", pixelId: proj.pixelId, attempts: row.attempts + 1, lastError: null, updatedAt: now }).where(eq(capiOutbox.id, row.id));
           result.sent++;
           continue;
         }
         throw new Error(sent.error || "capi_error");
       } catch (error) {
         const attempts = row.attempts + 1;
-        const message = error instanceof Error ? error.message.slice(0, 200) : "capi_error";
+        const message = error instanceof Error && /^(meta |pixel)/.test(error.message) ? error.message.slice(0, 200) : "Falha ao preparar envio; confira o token CAPI e a chave de criptografia.";
         if (attempts >= OUTBOX_MAX_ATTEMPTS) {
           await db.update(capiOutbox).set({ status: "dead", attempts, lastError: message, updatedAt: now }).where(eq(capiOutbox.id, row.id));
           result.dead++;

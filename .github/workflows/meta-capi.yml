@@ -1,0 +1,26 @@
+name: Reenvio de compras para Meta
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: meta-capi-retries
+  cancel-in-progress: false
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Processar envios pendentes
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::warning::Configure CRON_SECRET nas Actions com o mesmo valor da Vercel. O cron diário e as novas vendas continuam processando a fila."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 55 --output /dev/null \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "https://www.ghostscale.com.br/api/cron/meta?task=capi"
