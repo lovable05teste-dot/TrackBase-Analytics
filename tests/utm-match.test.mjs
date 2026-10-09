@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildUtmIndex, isMetaTraffic, parseUtm } from "../lib/utm-match.ts";
+import { buildUtmIndex, isAdClick, isMetaTraffic, parseUtm } from "../lib/utm-match.ts";
 
 test("parseUtm separa nome e ID e ignora macros", () => {
   assert.deepEqual(parseUtm("Produto X|120211234567890"), { id: "120211234567890", name: "produto x" });
@@ -57,4 +57,12 @@ test("isMetaTraffic reconhece tráfego do Meta e ignora o resto", () => {
   assert.equal(isMetaTraffic({ utmSource: "google", utmCampaign: "brand" }), false);
   assert.equal(isMetaTraffic({ utmSource: "teste", utmCampaign: "teste123" }), false);
   assert.equal(isMetaTraffic({}), false);
+});
+
+test("isAdClick só aceita visitas vindas de clique no anúncio", () => {
+  assert.equal(isAdClick({ fbclid: "IwAR123" }), true);
+  assert.equal(isAdClick({ fbc: "fb.1.1712345678901.IwAR123" }), true);
+  assert.equal(isAdClick({ fbclid: "", fbc: "" }), false);
+  assert.equal(isAdClick({ fbclid: null, fbc: "lixo" }), false);
+  assert.equal(isAdClick({}), false);
 });
