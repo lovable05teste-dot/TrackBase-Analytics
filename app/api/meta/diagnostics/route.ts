@@ -6,7 +6,7 @@ import { accountToken,adDailyInsights,adTotals,graph,norm,num,rangeLast } from "
 import { requestUserId,sha256 } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
-type Creative={id:string;name:string;creative?:{object_story_spec?:{link_data?:{link?:string}}}};
+type Creative={id:string;name:string;effective_status?:string;creative?:{url_tags?:string;object_story_spec?:{link_data?:{link?:string};video_data?:{call_to_action?:{value?:{link?:string}}}};asset_feed_spec?:{link_urls?:{website_url?:string}[]}}};
 type FatigueItem={accountName:string;adId:string;adName:string;campaignName:string;spend7:number;freqPrev:number;freqRecent:number;ctrPrev:number;ctrRecent:number;verdict:string};
 type QualityItem={accountName:string;adId:string;adName:string;campaignName:string;impressions:number;flags:string[]};
 type UtmIssueItem={accountName:string;adId:string;adName:string;problem:string};
@@ -35,7 +35,7 @@ export async function GET(request:Request){
    const[totals,daily,creatives]=await Promise.all([
     adTotals(token,a.adAccountId,"last_7d"),
     adDailyInsights(token,a.adAccountId,since,until),
-    metaJson<{data:Creative[]}>(graph(`act_${a.adAccountId}/ads`,{fields:"id,name,creative{object_story_spec{link_data{link}}}",limit:"200"},token)).catch(()=>({data:[]} as {data:Creative[]})),
+    metaJson<{data:Creative[]}>(graph(`act_${a.adAccountId}/ads`,{fields:"id,name,effective_status,creative{url_tags,object_story_spec{link_data{link},video_data{call_to_action{value{link}}}},asset_feed_spec{link_urls{website_url}}}",effective_status:JSON.stringify(["ACTIVE"]),limit:"200"},token)).catch(()=>({data:[]} as {data:Creative[]})),
    ]);
    return {a,totals,daily,creatives:creatives.data||[]};
   }));
@@ -65,10 +65,19 @@ export async function GET(request:Request){
     const c=compareMap.get(key)||{accountName:a.accountName,campaignId:t.campaignId,campaignName:t.campaignName,metaPurchases:0,metaRevenue:0};
     c.metaPurchases+=t.purchases;c.metaRevenue+=t.revenue;compareMap.set(key,c);
    }
+   // Os "Parâmetros de URL" do anúncio ficam em creative.url_tags; o link
+   // pode trazer UTMs também. Sem o ID da campanha a venda não é atribuída
+   // (a atribuição é só por ID, para não confundir campanhas de mesmo nome).
    for(const c of creatives){
-    const link=c.creative?.object_story_spec?.link_data?.link||"";
-    if(!link){utmIssues.push({accountName:a.accountName,adId:c.id,adName:c.name,problem:"Sem link detectável no criativo."});}
-    else if(!/utm_(source|campaign|medium)/i.test(link)){utmIssues.push({accountName:a.accountName,adId:c.id,adName:c.name,problem:"Link do anúncio sem parâmetros UTM."});}
+    const cr=c.creative||{};
+    const link=cr.object_story_spec?.link_data?.link||cr.object_story_spec?.video_data?.call_to_action?.value?.link||cr.asset_feed_spec?.link_urls?.[0]?.website_url||"";
+    const rawTags=`${cr.url_tags||""}&${link.split("?")[1]||""}`;
+    let tags=rawTags;try{tags=decodeURIComponent(rawTags)}catch{}
+    let problem="";
+    if(!/utm_(source|campaign|medium|content)=/i.test(tags))problem="Sem parâmetros UTM. Cole os parâmetros da GhostScale em Rastreamento → Parâmetros de URL.";
+    else if(!/utm_campaign=[^&]*(\{\{campaign\.id\}\}|\d{6,})/i.test(tags))problem="Falta {{campaign.id}} no utm_campaign. As vendas deste anúncio não serão atribuídas à campanha.";
+    else if(!/(\{\{ad\.id\}\}|\{\{adset\.id\}\})/i.test(tags))problem="Sem {{ad.id}}/{{adset.id}}. A venda aparece na campanha, mas não no conjunto/anúncio.";
+    if(problem)utmIssues.push({accountName:a.accountName,adId:c.id,adName:c.name,problem});
    }
   }
   const compare=[...compareMap.values()].map(c=>{
