@@ -287,6 +287,26 @@ async function getSessionByTokenUncached(token: string | undefined | null): Prom
 // plano). `cache` do React memoriza só durante a requisição atual.
 export const getSessionByToken = cache(getSessionByTokenUncached);
 
+// Sessão deslizante: quem usa o painel não é deslogado depois de 30 dias.
+// Chamado por uma rota que o app consulta sempre (/api/orders, via sino):
+// quando passou da metade do prazo, renova no banco e devolve o Set-Cookie.
+export async function refreshSessionCookie(request: Request): Promise<string | null> {
+  try {
+    const found = await pickSessionToken(requestSessionTokens(request));
+    if (!found) return null;
+    const now = Math.floor(Date.now() / 1000);
+    if (found.session.expiresAt - now > SESSION_TTL_SECONDS / 2) return null;
+    const { getDb } = await import("@/db");
+    const { sessions } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    await getDb().update(sessions).set({ expiresAt: now + SESSION_TTL_SECONDS, lastSeenAt: now }).where(eq(sessions.tokenHash, await sha256(found.token)));
+    return sessionCookie(found.token, SESSION_TTL_SECONDS);
+  } catch (error) {
+    console.error("session refresh", error);
+    return null;
+  }
+}
+
 export async function finalizePendingSession(token: string, ttlSeconds = SESSION_TTL_SECONDS) {
   try {
     const { ensureDb, getDb } = await import("@/db");
