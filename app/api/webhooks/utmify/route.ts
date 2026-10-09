@@ -79,13 +79,13 @@ export async function POST(request: Request) {
       return Response.json({ error: "Assinatura inválida" }, { status: 401, headers: cors });
     }
 
-    const externalId = String(pick(body, ["id", "transaction_id", "sale_id", "data.id", "data.transaction.id", "order_id"]) || crypto.randomUUID());
+    const externalId = String(pick(body, ["orderId", "id", "transaction_id", "sale_id", "data.id", "data.transaction.id", "order_id"]) || crypto.randomUUID());
     const rawStatus = pick(body, ["status", "event", "type", "data.status", "data.transaction.status", "order.status"]);
     // Status inédito vira pendente + alerta (nunca descarta a venda).
     const { status, known } = resolveStatus(rawStatus);
     if (!known) await alertUnknownStatus(credential.workspaceId, "utmify", externalId, rawStatus);
 
-    const centsValue = pick(body, ["amount_cents", "amountCents", "data.amount_cents", "data.transaction.amount_cents", "order.total_cents"]);
+    const centsValue = pick(body, ["commission.totalPriceInCents", "amount_cents", "amountCents", "data.amount_cents", "data.transaction.amount_cents", "order.total_cents"]);
     const rawValue = pick(body, ["value", "amount", "total", "price", "data.value", "data.amount", "data.transaction.amount", "order.total"]);
     const value = centsValue !== undefined ? Number(centsValue || 0) / 100 : Number(rawValue || 0);
 
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     const now = Math.floor(Date.now() / 1000);
     const db = getDb();
     const utmOf = (k: string) => {
-      const v = String(pick(body, [k, `tracking.${k}`, `metadata.${k}`, `data.tracking.${k}`]) || "").trim();
+      const v = String(pick(body, [k, `tracking.${k}`, `trackingParameters.${k}`, `metadata.${k}`, `data.tracking.${k}`]) || "").trim();
       return v || null;
     };
 
@@ -129,9 +129,9 @@ export async function POST(request: Request) {
       return Response.json({ received: true, orderId: externalId, status, event: eventName, dedup: true }, { headers: cors });
     }
 
-    const fbc = String(pick(body, ["fbc", "tracking.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
-    const fbp = String(pick(body, ["fbp", "tracking.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
-    const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
+    const fbc = String(pick(body, ["fbc", "tracking.fbc", "trackingParameters.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
+    const fbp = String(pick(body, ["fbp", "tracking.fbp", "trackingParameters.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
+    const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "trackingParameters.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
 
     const eventCreated = await insertEventOnce(
       db,
@@ -146,11 +146,11 @@ export async function POST(request: Request) {
         fbclid,
         fbc,
         fbp,
-        utmSource: String(pick(body, ["utm_source", "tracking.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || ""),
-        utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
-        utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
-        utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),
-        utmTerm: String(pick(body, ["utm_term", "tracking.utm_term", "metadata.utm_term", "data.tracking.utm_term"]) || ""),
+        utmSource: String(pick(body, ["utm_source", "tracking.utm_source", "trackingParameters.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || ""),
+        utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "trackingParameters.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
+        utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "trackingParameters.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
+        utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "trackingParameters.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),
+        utmTerm: String(pick(body, ["utm_term", "tracking.utm_term", "trackingParameters.utm_term", "metadata.utm_term", "data.tracking.utm_term"]) || ""),
         payload: JSON.stringify(body),
       },
       "utmify",
@@ -219,7 +219,7 @@ export async function POST(request: Request) {
           if (product) parts.push(product);
         }
         if (prefs.showUtm) {
-          const campaign = String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || "").split("|")[0].trim();
+          const campaign = String(pick(body, ["utm_campaign", "tracking.utm_campaign", "trackingParameters.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || "").split("|")[0].trim();
           if (campaign) parts.push(campaign);
         }
         await Promise.race([

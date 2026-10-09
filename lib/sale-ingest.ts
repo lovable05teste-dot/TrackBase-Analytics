@@ -35,8 +35,8 @@ export function resolveStatus(value: unknown): { status: string; known: boolean 
   if (/approved|authorized|authorised|paid|completed|complete|succeeded|success|settled|captured|aprovad|autorizad|pago|liquidado|capturado/.test(s))
     return { status: "approved", known: true };
   if (/refund|reembols|estorn/.test(s)) return { status: "refunded", known: true };
-  if (/chargeback|contestad/.test(s)) return { status: "chargeback", known: true };
-  if (/cancel|failed|recusad|expired/.test(s)) return { status: "cancelled", known: true };
+  if (/chargeback|chargedback|contestad/.test(s)) return { status: "chargeback", known: true };
+  if (/cancel|failed|refused|declined|recusad|expired/.test(s)) return { status: "cancelled", known: true };
   if (/pending|waiting|processing|created|initiated|in_review|review|awaiting|aguard|criad|processando|analise/.test(s))
     return { status: "pending", known: true };
   return { status: "pending", known: false };
