@@ -30,7 +30,8 @@ export async function DELETE(request:Request){
  // Só revoga se nenhum outro usuário da GhostScale usa o mesmo login Meta:
  // a revogação vale para o app inteiro e derrubaria a conexão dele também.
  let revoked=false;
- if(!legacy){const[shared]=await db.select({id:metaAccounts.id}).from(metaAccounts).where(and(eq(metaAccounts.metaUserId,loginId),ne(metaAccounts.userId,userId))).limit(1);if(!shared)revoked=await revokeMetaGrant(accounts[0].cipher,accounts[0].iv)}
+ // Acesso de parceiro usa o token do sistema da GhostScale: nunca revogar.
+ if(!legacy&&loginId!=="partner"){const[shared]=await db.select({id:metaAccounts.id}).from(metaAccounts).where(and(eq(metaAccounts.metaUserId,loginId),ne(metaAccounts.userId,userId))).limit(1);if(!shared)revoked=await revokeMetaGrant(accounts[0].cipher,accounts[0].iv)}
  const adAccountIds=[...new Set(accounts.map(account=>account.adAccountId))];
  await db.delete(metaAccounts).where(owner);
  await db.delete(metaLinked).where(and(eq(metaLinked.userId,userId),inArray(metaLinked.adAccountId,adAccountIds)));
