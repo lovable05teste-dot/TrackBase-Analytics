@@ -49,7 +49,7 @@ export const TOOL_MIN_PLAN: Record<string, PlanId> = Object.fromEntries(
   } as Record<string, string>).map(([href, feat]) => [href, featureMinPlan(feat as never)])
 ) as Record<string, PlanId>;
 
-const ALWAYS_OPEN = new Set(["/planos", "/conta/assinatura", "/docs", "/login", "/recuperar", "/verificar-codigo", "/termos", "/privacidade"]);
+const ALWAYS_OPEN = new Set(["/planos", "/conta/assinatura", "/docs", "/login", "/recuperar", "/verificar-codigo", "/termos", "/privacidade", "/exclusao-de-dados"]);
 
 export function toolMinPlan(href: string): PlanId | null {
   if (ALWAYS_OPEN.has(href) || href.startsWith("/docs/")) return null;
