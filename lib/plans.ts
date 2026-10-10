@@ -267,6 +267,7 @@ export const HREF_FEATURE: Record<string, FeatureKey> = {
   "/ferramentas/mapa-links": "mapa_links",
   "/ferramentas/checklist": "checklist",
   "/ferramentas/ativador-tiktok": "ativador_tiktok",
+  "/tiktok": "ativador_tiktok",
   "/webhooks": "webhook_entrada",
   "/docs/api-vendas": "api_entrada",
   "/equipe": "equipe",

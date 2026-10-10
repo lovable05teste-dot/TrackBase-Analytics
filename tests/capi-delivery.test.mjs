@@ -68,6 +68,19 @@ test('approved payment is acknowledged, stored as sent, and duplicate webhook ca
  assert.equal(sql.prepare("SELECT count(*) n FROM events WHERE event_name='Purchase'").get().n,1);assert.equal(globalThis.__notifications,1);
 });
 
+test('approved payment with TikTok pixel also sends CompletePayment to the TikTok Events API with the same event id',async()=>{
+ sql.prepare("UPDATE projects SET tiktok_pixel_id='CTTPIXEL1234567890',tiktok_token_cipher='c',tiktok_token_iv='i',tiktok_test_code='TEST1' WHERE id='p'").run();
+ response=()=>Response.json({code:0,message:'OK',events_received:1});
+ const body={...paid(),tracking:{ttclid:'tt-click-1',ttp:'ttp-cookie'}};assert.equal((await gateway.POST(webhook(body))).status,200);
+ const tt=calls.find(c=>String(c.url).includes('business-api.tiktok.com'));assert.ok(tt);
+ assert.equal(tt.headers['Access-Token'],'test-token');assert.equal(tt.body.event_source_id,'CTTPIXEL1234567890');
+ assert.equal(tt.body.test_event_code,undefined);
+ const ev=tt.body.data[0],meta=calls.find(c=>String(c.url).includes('graph.facebook.com')).body.data[0];
+ assert.equal(ev.event,'CompletePayment');assert.equal(ev.event_id,meta.event_id);assert.equal(ev.properties.value,14.9);
+ assert.equal(ev.user.ttclid,'tt-click-1');assert.equal(ev.user.ttp,'ttp-cookie');assert.match(ev.user.email,/^[a-f0-9]{64}$/);
+ assert.equal(sql.prepare("SELECT count(*) n FROM capi_outbox WHERE status='sent'").get().n,2);
+});
+
 test('Meta error persists its code and an authenticated retry keeps the original event id and time',async()=>{
  response=()=>Response.json({error:{code:190,message:'sensitive buyer data'}},{status:400});
  await gateway.POST(webhook(paid()));assert.equal(row().status,'pending');assert.match(row().last_error,/code 190/);assert.ok(!row().last_error.includes('sensitive'));

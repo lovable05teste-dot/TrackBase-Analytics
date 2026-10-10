@@ -36,6 +36,7 @@ import {
   TrendingUp,
   FileText,
   HelpCircle,
+  Music2,
 } from "lucide-react";
 
 export type NavItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }>; badge?: string };
@@ -50,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Dashboard", href: "/", icon: LayoutDashboard },
       { label: "Vendas", href: "/vendas", icon: ShoppingCart },
       { label: "Campanhas", href: "/campanhas", icon: Megaphone },
+      { label: "TikTok Ads", href: "/tiktok", icon: Music2 },
       { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
       { label: "Integrações", href: "/integracoes", icon: Plug },
     ],

@@ -442,6 +442,21 @@ export const FEATURE_GUIDES: FeatureGuide[] = [
     "example": "Comece verificando tracker, UTMs, InitiateCheckout e pagamento confirmado."
   },
   {
+    "href": "/tiktok",
+    "title": "TikTok Ads",
+    "category": "Integrações",
+    "summary": "Rastreie vendas do TikTok Ads: Pixel + Events API pelo servidor e campanhas com gasto, vendas e lucro.",
+    "needs": "Código do Pixel TikTok e token da Events API (Gerenciador de eventos do TikTok). Para campanhas: login do TikTok for Business.",
+    "steps": [
+      "Em TikTok Ads, escolha o projeto, cole o código do Pixel e o token de acesso e salve. O script da GhostScale passa a carregar o Pixel TikTok sozinho.",
+      "Em cada anúncio do TikTok, cole os parâmetros de URL mostrados na página (utm_source=tiktok e IDs de campanha, grupo e anúncio).",
+      "Clique em Conectar TikTok Ads (ou gere o link de conexão para usar no perfil do AdsPower) e vincule as contas de anúncios.",
+      "Venda aprovada no gateway vai ao TikTok como CompletePayment, com o mesmo ID do navegador, e aparece na campanha certa com o lucro."
+    ],
+    "troubleshoot": "Não instale o Pixel TikTok por fora se já salvou o pixel aqui (conta em dobro). Sem os parâmetros de URL, a venda aparece em “Vendas do TikTok”, mas não na campanha. Use o código de teste só para conferir e depois apague.",
+    "example": "utm_campaign=__CAMPAIGN_NAME__|__CAMPAIGN_ID__ casa a venda com a campanha pelo ID."
+  },
+  {
     "href": "/ferramentas/ativador-tiktok",
     "title": "Pixel TikTok",
     "category": "Ferramentas",
@@ -453,7 +468,7 @@ export const FEATURE_GUIDES: FeatureGuide[] = [
       "Instale uma única vez na página.",
       "Confira o PageView nas ferramentas de teste do TikTok."
     ],
-    "troubleshoot": "Esse snippet inicial envia PageView. Eventos de compra no TikTok precisam da integração correspondente; o webhook do GhostScale não a configura sozinho.",
+    "troubleshoot": "Esse snippet envia só PageView. Para enviar checkout e vendas ao TikTok, configure o pixel em TikTok Ads (o script da GhostScale carrega o pixel sozinho).",
     "example": "Não remova letras do ID do Pixel."
   },
   {
