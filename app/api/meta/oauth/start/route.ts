@@ -1,6 +1,7 @@
-import { and, eq, gte, lt } from "drizzle-orm";
+import { lt } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { metaConnectLinks, metaOauthStates } from "@/db/schema";
+import { metaOauthStates } from "@/db/schema";
+import { userFromConnectLink } from "@/lib/connect-link";
 import { metaRedirectUri, requireMetaConfig } from "@/lib/meta";
 import { pickSessionToken, requestSessionTokens, requestUserId, sessionCookie, sha256 } from "@/lib/trackbase-security";
 
@@ -13,20 +14,9 @@ function returnHost(request: Request, callbackOrigin: string) {
   return PUBLIC_APP_HOSTS.has(host) ? host : new URL(callbackOrigin).hostname;
 }
 
-// Link de conexão (multilogin/AdsPower): ?t=<token> gerado no painel.
-// Conecta a conta Meta sem login da GhostScale no navegador e sem gravar
-// nenhum cookie nele.
-async function userFromLink(request: Request) {
-  const t = new URL(request.url).searchParams.get("t") || "";
-  if (!/^[A-Za-z0-9_-]{32,80}$/.test(t)) return null;
-  await ensureDb();
-  const [row] = await getDb().select({ userId: metaConnectLinks.userId }).from(metaConnectLinks).where(and(eq(metaConnectLinks.tokenHash, await sha256(t)), gte(metaConnectLinks.expiresAt, Math.floor(Date.now() / 1000)))).limit(1);
-  return row?.userId ?? null;
-}
-
 export async function GET(request: Request) {
   const hasLink = new URL(request.url).searchParams.has("t");
-  const linkUser = hasLink ? await userFromLink(request) : null;
+  const linkUser = hasLink ? await userFromConnectLink(request) : null;
   if (hasLink && !linkUser) return Response.redirect(new URL("/meta-conectado?erro=link", request.url), 302);
   const userId = linkUser ?? (await requestUserId(request));
   if (!userId) return Response.redirect(new URL("/login?return_to=%2Fapi%2Fmeta%2Foauth%2Fstart", request.url), 302);

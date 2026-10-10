@@ -12,6 +12,7 @@ import { and, asc, desc, eq, lte, lt, or } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
 import { dispatchCapi } from "@/lib/meta-capi";
+import { dispatchTiktokEvent } from "@/lib/tiktok";
 export { dispatchCapi, CAPI_TIMEOUT_MS } from "@/lib/meta-capi";
 import type { getDb } from "@/db";
 
@@ -93,7 +94,7 @@ export function clientIpFromHeaders(headers: Headers, mode: "auto" | "ipv4" | "d
 // e o navegador da requisição são do gateway, não do cliente, e atrapalham a
 // Meta a casar a venda com quem clicou no anúncio. Então buscamos a última
 // visita da mesma pessoa (tb_vid ou fbclid) registrada pelo script.
-export type VisitorContext = { ip?: string; ua?: string; fbc?: string; fbp?: string; url?: string };
+export type VisitorContext = { ip?: string; ua?: string; fbc?: string; fbp?: string; url?: string; ttclid?: string; ttp?: string };
 
 export async function visitorContext(db: Db, projectId: string, keys: { visitorId?: string; fbclid?: string; fbp?: string; fbc?: string }): Promise<VisitorContext> {
   const conds = [keys.visitorId ? eq(events.visitorId, keys.visitorId) : null, keys.fbclid ? eq(events.fbclid, keys.fbclid) : null,
@@ -113,6 +114,10 @@ export async function visitorContext(db: Db, projectId: string, keys: { visitorI
       out.ip ||= typeof p._ip === "string" ? p._ip : undefined;
       out.ua ||= typeof p._ua === "string" ? p._ua : undefined;
       out.url ||= typeof p.url === "string" ? p.url : undefined;
+      const attr = p.attribution && typeof p.attribution === "object" ? (p.attribution as Record<string, unknown>) : {};
+      const ttclid = p.ttclid || attr.ttclid;
+      out.ttclid ||= typeof ttclid === "string" && ttclid ? ttclid : undefined;
+      out.ttp ||= typeof p.ttp === "string" && p.ttp ? p.ttp : undefined;
       out.fbc ||= r.fbc || undefined;
       out.fbp ||= r.fbp || undefined;
     }
@@ -261,6 +266,17 @@ export async function drainCapiOutbox(db: Db, opts: { workspaceId?: string; limi
       if (!claimed.length) continue;
       result.processed++;
       try {
+        // Linhas do TikTok (pixelId "tiktok:<código>") vão para a Events API.
+        if (row.pixelId.startsWith("tiktok:")) {
+          const [tt] = await db.select({ code: projects.tiktokPixelId, cipher: projects.tiktokTokenCipher, iv: projects.tiktokTokenIv }).from(projects).where(eq(projects.id, row.projectId)).limit(1);
+          if (!tt?.code || !tt.cipher || !tt.iv) throw new Error("pixel TikTok/token removido");
+          if (row.pixelId !== `tiktok:${tt.code}`) throw new Error("pixel TikTok alterado; revise o destino antes de reenviar");
+          const sentTt = await dispatchTiktokEvent(await decryptSecret(tt.cipher, tt.iv), JSON.parse(row.payload) as Record<string, unknown>);
+          if (!sentTt.ok) throw new Error(sentTt.error || "tiktok erro");
+          await db.update(capiOutbox).set({ status: "sent", attempts: row.attempts + 1, lastError: null, updatedAt: now }).where(eq(capiOutbox.id, row.id));
+          result.sent++;
+          continue;
+        }
         const [proj] = await db
           .select({ pixelId: projects.pixelId, cipher: projects.metaTokenCipher, iv: projects.metaTokenIv })
           .from(projects)
@@ -280,11 +296,12 @@ export async function drainCapiOutbox(db: Db, opts: { workspaceId?: string; limi
         throw new Error(sent.error || "capi_error");
       } catch (error) {
         const attempts = row.attempts + 1;
-        const message = error instanceof Error && /^(meta |pixel)/.test(error.message) ? error.message.slice(0, 200) : "Falha ao preparar envio; confira o token CAPI e a chave de criptografia.";
+        const message = error instanceof Error && /^(meta |pixel)/.test(error.message) ? error.message.slice(0, 200) : error instanceof Error && /^(tiktok|pixel TikTok)/.test(error.message) ? error.message.slice(0, 200) : "Falha ao preparar envio; confira o token CAPI e a chave de criptografia.";
         if (attempts >= OUTBOX_MAX_ATTEMPTS) {
           await db.update(capiOutbox).set({ status: "dead", attempts, lastError: message, updatedAt: now }).where(eq(capiOutbox.id, row.id));
           result.dead++;
-          await alertWorkspace(row.workspaceId, "CAPI com problema", `Evento ${row.eventName} não chegou à Meta após várias tentativas.`, `tb-capi-dead-${row.id}`);
+          const tt = row.pixelId.startsWith("tiktok:");
+          await alertWorkspace(row.workspaceId, tt ? "TikTok com problema" : "CAPI com problema", `Evento ${row.eventName.replace(/^TikTok:/, "")} não chegou ${tt ? "ao TikTok" : "à Meta"} após várias tentativas.`, `tb-capi-dead-${row.id}`);
         } else {
           await db
             .update(capiOutbox)

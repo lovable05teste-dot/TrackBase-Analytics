@@ -7,6 +7,7 @@ import {parseTrackingConfig} from "../../../lib/tracking-config";
 import { domainAllowed, parseProtection } from "@/lib/protection";
 import { parseBlockedIps, requestIp } from "@/lib/protection-ip";
 import { isBotUserAgent } from "@/lib/bot-filter";
+import { dispatchTiktokEvent, TIKTOK_EVENT, tiktokEventBody } from "@/lib/tiktok";
 
 const allowed = new Set(["TestMode","AdClick","PageView","PageError","ViewContent","AddToCart","InitiateCheckout","Purchase","Lead","SecurityCheck","SecurityViolation","SecurityRecovery"]);
 const internalOnly = new Set(["AdClick","PageError","TestMode"]);
@@ -106,9 +107,22 @@ export async function POST(request: Request) {
       // O evento já foi gravado; falha/lentidão da Meta não vira erro p/ o site.
       capi = { ok: false, status: 0 };
     }
+    // TikTok Events API: mesmo event_id do ttq no navegador (deduplica).
+    let tiktok: unknown = null;
+    const ttEvent = TIKTOK_EVENT[eventName];
+    if (!isTest && ttEvent && eventName !== "Purchase" && project.tiktokPixelId && project.tiktokTokenCipher && project.tiktokTokenIv) try {
+      const token = await decryptSecret(project.tiktokTokenCipher, project.tiktokTokenIv), config = parseTrackingConfig(project.trackingConfig);
+      const ttBody = await tiktokEventBody(project.tiktokPixelId, { event: ttEvent, eventId, eventTime, url, referrer: String(body.referrer || "") || undefined,
+        ttclid: String(body.ttclid || attribution.ttclid || "") || undefined, ttp: String(body.ttp || "") || undefined,
+        ip: clientIp(request, config.ipMode), ua: request.headers.get("user-agent") || undefined, email: body.email, phone: body.phone,
+        externalId: String(body.visitorId || "") || undefined, value, currency: String(body.currency || "BRL"), contentName: body.contentName ? String(body.contentName) : undefined }, project.tiktokTestCode);
+      tiktok = await dispatchTiktokEvent(token, ttBody);
+    } catch {
+      tiktok = { ok: false };
+    }
     // Monitoramento "de carona" depois de responder; nunca afeta o evento.
     try { after(async () => { const { maybeRunDueMonitors } = await import("@/lib/site-monitor"); await maybeRunDueMonitors(); }); } catch { /* fora do contexto do Next (testes) */ }
-    return Response.json({ received: true, eventId, capi }, { headers: cors });
+    return Response.json({ received: true, eventId, capi, tiktok }, { headers: cors });
   } catch {
     return Response.json({ error: "Não foi possível registrar o evento" }, { status: 400, headers: cors });
   }

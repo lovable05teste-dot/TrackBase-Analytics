@@ -59,8 +59,11 @@ export function buildUtmIndex<T>(events: T[], keysOf: (event: T) => unknown[]) {
 // Tráfego vindo do Meta: fbclid, utm_source do Facebook/Instagram/Meta (com
 // ou sem sufixo de rastreamento) ou utm_campaign com ID de campanha.
 const META_SOURCE = /^(facebook|fb|ig|instagram|meta|an|messenger|msg)(?=$|[^a-z]|jlj)/i;
+const NOT_META_SOURCE = /^(tiktok|tt|tiktokads|tik_tok|google|gads|youtube|kwai)(?=$|[^a-z])/i;
 export function isMetaTraffic(event: { fbclid?: string | null; utmSource?: string | null; utmCampaign?: string | null }) {
   if (String(event.fbclid ?? "").trim()) return true;
+  // ID numérico na utm_campaign também aparece no TikTok (__CAMPAIGN_ID__).
+  if (NOT_META_SOURCE.test(String(event.utmSource ?? "").trim())) return false;
   if (META_SOURCE.test(String(event.utmSource ?? "").trim())) return true;
   return parseUtm(event.utmCampaign).id !== null;
 }

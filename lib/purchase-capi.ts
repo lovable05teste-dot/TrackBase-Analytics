@@ -3,6 +3,7 @@ import type { getDb } from "@/db";
 import { capiOutbox, projects } from "@/db/schema";
 import { purchaseUserData } from "@/lib/capi-user-data";
 import { parseTrackingConfig } from "@/lib/tracking-config";
+import { tiktokEventBody } from "@/lib/tiktok";
 import { drainCapiOutbox, enqueueCapiOutbox, pick, visitorContext } from "@/lib/sale-ingest";
 
 function websiteUrl(...values: unknown[]) {
@@ -44,9 +45,25 @@ export async function queuePurchaseCapi(db: ReturnType<typeof getDb>, input: {
         currency: input.currency, order_id: input.externalId },
     }],
   };
-  const id = await enqueueCapiOutbox(db, { workspaceId: input.workspaceId, projectId: input.projectId,
-    pixelId: project.pixelId || "", eventName: "Purchase", eventId: input.eventId, payload, immediate: true });
-  await drainCapiOutbox(db, { workspaceId: input.workspaceId, id, limit: 1 });
-  const [receipt] = await db.select({ status: capiOutbox.status }).from(capiOutbox).where(eq(capiOutbox.id, id)).limit(1);
+  const purchaseValue = config.purchase.valueSource === "fixed" ? config.purchase.fixedValue : input.value;
+  // TikTok: CompletePayment pela Events API, na mesma fila com tentativas.
+  let tiktokId: string | null = null;
+  if (project.tiktokPixelId && project.tiktokTokenCipher) {
+    const ttclid = String(pick(body, ["ttclid", "tracking.ttclid", "trackingParameters.ttclid", "metadata.ttclid", "data.tracking.ttclid"]) || "") || visitor.ttclid;
+    const ttp = String(pick(body, ["ttp", "tracking.ttp", "trackingParameters.ttp", "metadata.ttp", "data.tracking.ttp"]) || "") || visitor.ttp;
+    const ttPayload = await tiktokEventBody(project.tiktokPixelId, { event: "CompletePayment", eventId: input.eventId, eventTime: input.occurredAt,
+      url: payload.data[0].event_source_url, ttclid, ttp, ip: payload.data[0].user_data.client_ip_address as string | undefined, ua: ua || undefined,
+      email, phone, externalId: input.visitorId || undefined, value: purchaseValue, currency: input.currency, orderId: input.externalId });
+    tiktokId = await enqueueCapiOutbox(db, { workspaceId: input.workspaceId, projectId: input.projectId,
+      pixelId: `tiktok:${project.tiktokPixelId}`, eventName: "TikTok:Purchase", eventId: input.eventId, payload: ttPayload, immediate: true });
+  }
+  // Meta: fica na fila mesmo sem pixel (é enviada quando o pixel for configurado).
+  // Exceção: projeto só com TikTok, sem pixel da Meta, não gera alerta falso.
+  const id = project.pixelId || !tiktokId ? await enqueueCapiOutbox(db, { workspaceId: input.workspaceId, projectId: input.projectId,
+    pixelId: project.pixelId || "", eventName: "Purchase", eventId: input.eventId, payload, immediate: true }) : null;
+  if (id) await drainCapiOutbox(db, { workspaceId: input.workspaceId, id, limit: 1 });
+  if (tiktokId) await drainCapiOutbox(db, { workspaceId: input.workspaceId, id: tiktokId, limit: 1 });
+  const receiptId = (id || tiktokId) as string;
+  const [receipt] = await db.select({ status: capiOutbox.status }).from(capiOutbox).where(eq(capiOutbox.id, receiptId)).limit(1);
   return receipt?.status || "queued";
 }

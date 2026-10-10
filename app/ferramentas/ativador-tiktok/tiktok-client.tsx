@@ -24,7 +24,7 @@ export function TiktokClient() {
           <Button type="button" onClick={copy} disabled={!valid}>{copied ? <Check /> : <Copy />}{copied ? "Copiado" : "Copiar snippet"}</Button>
           <a href="/ferramentas/utm-builder" className="rounded-lg border border-white/10 px-4 py-2 text-sm hover:bg-white/5">Gerar UTM tiktok →</a>
         </div>
-        <p className="text-xs text-slate-500">Este snippet envia PageView ao TikTok. Use o tracker GhostScale para atribuição por UTM; compras no TikTok exigem configuração própria. Não instale o Pixel duas vezes.</p>
+        <p className="text-xs text-slate-500">Prefira conectar o pixel em <a href="/tiktok" className="font-medium text-violet-500 underline">TikTok Ads</a>: o script da GhostScale carrega o pixel sozinho e manda checkout e vendas pelo servidor. Use este código só em páginas sem o script da GhostScale. Não instale o Pixel duas vezes.</p>
       </CardContent>
     </Card>
   );
