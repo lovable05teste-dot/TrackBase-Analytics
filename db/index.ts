@@ -70,6 +70,8 @@ const statements=[
 "CREATE INDEX IF NOT EXISTS idx_site_monitors_due ON site_monitors(last_checked_at)",
 "CREATE TABLE IF NOT EXISTS monitor_checks(id text PRIMARY KEY,monitor_id text NOT NULL,at integer NOT NULL,ok integer NOT NULL,code integer,ms integer)",
 "CREATE INDEX IF NOT EXISTS idx_monitor_checks_monitor_at ON monitor_checks(monitor_id,at)",
+"CREATE TABLE IF NOT EXISTS meta_connect_links(token_hash text PRIMARY KEY,user_id text NOT NULL,expires_at integer NOT NULL,created_at integer NOT NULL)",
+"CREATE INDEX IF NOT EXISTS idx_meta_connect_links_user ON meta_connect_links(user_id)",
 "CREATE TABLE IF NOT EXISTS native_push_tokens(token text PRIMARY KEY,workspace_id text NOT NULL,platform text NOT NULL,created_at integer NOT NULL)",
 "CREATE INDEX IF NOT EXISTS idx_native_push_workspace ON native_push_tokens(workspace_id)",
 "CREATE TABLE IF NOT EXISTS sound_prefs(workspace_id text PRIMARY KEY,user_id text,prefs text NOT NULL,updated_at integer NOT NULL)",
