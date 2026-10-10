@@ -23,20 +23,23 @@ function stateOrigin(state: string) {
   return PUBLIC_APP_HOSTS.has(host) ? `https://${host}` : null;
 }
 
-function accountsRedirect(request: Request, query: string, origin?: string | null) {
+// Sem sessão da GhostScale neste navegador = veio do link de conexão
+// (AdsPower): termina numa página neutra, sem exigir login.
+function accountsRedirect(request: Request, query: string, origin?: string | null, viaLink = false) {
   const safeOrigin = origin && PUBLIC_APP_HOSTS.has(new URL(origin).hostname.toLowerCase()) ? origin : new URL(request.url).origin;
-  return new URL(`/contas-meta?${query}`, safeOrigin);
+  return new URL(`${viaLink ? "/meta-conectado" : "/contas-meta"}?${query}`, safeOrigin);
 }
 
 export async function GET(request: Request) {
+  const viaLink = !(await requestUserId(request));
   const incoming = new URL(request.url);
   const state = incoming.searchParams.get("state") || "";
   const origin = stateOrigin(state);
 
-  if (incoming.searchParams.get("error")) return Response.redirect(accountsRedirect(request, "erro=cancelado", origin), 302);
+  if (incoming.searchParams.get("error")) return Response.redirect(accountsRedirect(request, "erro=cancelado", origin, viaLink), 302);
 
   const code = incoming.searchParams.get("code") || "";
-  if (!code || !state) return Response.redirect(accountsRedirect(request, "erro=retorno"), 302);
+  if (!code || !state) return Response.redirect(accountsRedirect(request, "erro=retorno", null, viaLink), 302);
 
   try {
     await ensureDb();
@@ -87,7 +90,7 @@ export async function GET(request: Request) {
       metaJson<MetaUser>(graph.toString()),
       metaPages<AdAccounts["data"][number]>(accountUrl.toString()),
     ]);
-    if (!accounts.data.length) return Response.redirect(accountsRedirect(request, "erro=sem_contas", origin), 302);
+    if (!accounts.data.length) return Response.redirect(accountsRedirect(request, "erro=sem_contas", origin, viaLink), 302);
 
     const secured = await encryptSecret(token.access_token);
     const workspaceId = `ws_${(await sha256(userId)).slice(0, 24)}`;
@@ -130,10 +133,10 @@ export async function GET(request: Request) {
         });
     }
 
-    return Response.redirect(accountsRedirect(request, `conectado=1&contas=${accounts.data.length}`, origin), 302);
+    return Response.redirect(accountsRedirect(request, `conectado=1&contas=${accounts.data.length}`, origin, viaLink), 302);
   } catch (error) {
     console.error("Meta OAuth callback failed");
     const reason = error instanceof Error && error.message === "STATE_INVALID" ? "sessao" : "oauth";
-    return Response.redirect(accountsRedirect(request, `erro=${reason}`, origin), 302);
+    return Response.redirect(accountsRedirect(request, `erro=${reason}`, origin, viaLink), 302);
   }
 }
