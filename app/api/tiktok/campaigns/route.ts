@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { events, projects, tiktokAccounts } from "@/db/schema";
 import { isTestEvent, testVisitorIds } from "@/lib/test-traffic";
+import { rateToBrl } from "@/lib/fx";
 import { isTiktokSource, payloadField, tiktokApi } from "@/lib/tiktok";
 import { buildUtmIndex } from "@/lib/utm-match";
 import { decryptSecret, requestUserId, sha256 } from "@/lib/trackbase-security";
@@ -25,6 +26,8 @@ function range(period: string) {
 
 async function accountItems(account: typeof tiktokAccounts.$inferSelect, r: ReturnType<typeof range>) {
   const token = await decryptSecret(account.accessTokenCipher, account.accessTokenIv);
+  // Conta em outra moeda (ex.: USD): gasto convertido para BRL.
+  const fx = await rateToBrl(account.currency);
   const metrics = new Map<string, Record<string, string>>();
   for (let page = 1; page <= 10; page++) {
     const data = await tiktokApi<Report>("/report/integrated/get/", { token, query: { advertiser_id: account.advertiserId, report_type: "BASIC", data_level: "AUCTION_CAMPAIGN", dimensions: ["campaign_id"], metrics: ["spend", "impressions", "clicks"], start_date: r.start, end_date: r.end, page, page_size: 1000 } });
@@ -42,8 +45,8 @@ async function accountItems(account: typeof tiktokAccounts.$inferSelect, r: Retu
   return [...ids].map((id) => {
     const c = byId.get(id);
     const m = metrics.get(id) || {};
-    const spend = Number(m.spend || 0), impressions = Number(m.impressions || 0), clicks = Number(m.clicks || 0);
-    return { id, name: c?.campaign_name || m.campaign_name || `Campanha ${id}`, status: c?.operation_status === "ENABLE" ? "ACTIVE" : "PAUSED", advertiserId: account.advertiserId, account: account.advertiserName, currency: account.currency, budget: c?.budget ?? null, spend, impressions, clicks, cpc: clicks ? spend / clicks : null, ctr: impressions ? (clicks / impressions) * 100 : null, cpm: impressions ? (spend / impressions) * 1000 : null };
+    const spend = Number(m.spend || 0) * (fx || 1), impressions = Number(m.impressions || 0), clicks = Number(m.clicks || 0);
+    return { id, name: c?.campaign_name || m.campaign_name || `Campanha ${id}`, status: c?.operation_status === "ENABLE" ? "ACTIVE" : "PAUSED", advertiserId: account.advertiserId, account: account.advertiserName, currency: fx ? "BRL" : account.currency, originalCurrency: account.currency, budget: c?.budget ?? null, spend, impressions, clicks, cpc: clicks ? spend / clicks : null, ctr: impressions ? (clicks / impressions) * 100 : null, cpm: impressions ? (spend / impressions) * 1000 : null };
   }).filter((item) => item.status === "ACTIVE" || item.spend > 0 || item.impressions > 0);
 }
 

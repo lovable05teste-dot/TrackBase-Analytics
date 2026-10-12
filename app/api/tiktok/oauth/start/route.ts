@@ -1,7 +1,7 @@
 import { lt } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaOauthStates } from "@/db/schema";
-import { userFromConnectLink } from "@/lib/connect-link";
+import { connectLinkConfirmation, userFromConnectLink } from "@/lib/connect-link";
 import { requireTiktokConfig, tiktokRedirectUri } from "@/lib/tiktok";
 import { requestUserId, sha256 } from "@/lib/trackbase-security";
 
@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const hasLink = new URL(request.url).searchParams.has("t");
   const linkUser = hasLink ? await userFromConnectLink(request) : null;
   if (hasLink && !linkUser) return Response.redirect(new URL("/meta-conectado?p=tiktok&erro=link", request.url), 302);
+  if (linkUser) { const confirm = await connectLinkConfirmation(request, linkUser, "tiktok"); if (confirm) return confirm; }
   const userId = linkUser ?? (await requestUserId(request));
   if (!userId) return Response.redirect(new URL("/login?return_to=%2Ftiktok", request.url), 302);
   const done = linkUser ? "/meta-conectado?p=tiktok&" : "/tiktok?";
