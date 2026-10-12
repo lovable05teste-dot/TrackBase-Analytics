@@ -4,6 +4,7 @@ import { Check, CheckCircle2, Copy, ExternalLink, Loader2, RefreshCw, Trash2 } f
 import { Button } from "@/components/ui/button";
 import { copyText } from "@/lib/clipboard";
 import { apiFetch } from "@/lib/plan-client";
+import { LoadingState } from "@/components/LoadingState";
 
 type Item = { id: string; name: string; status: string; account: string; spend: number; impressions: number; clicks: number; cpc: number | null; ctr: number | null; pageViews: number; checkouts: number; sales: number; revenue: number; pendingSales: number; profit: number; roas: number | null; cpa: number | null };
 type Totals = { spend: number; impressions: number; clicks: number; sales: number; revenue: number; profit: number; roas: number | null; tiktokSales: number; tiktokRevenue: number };
@@ -122,7 +123,7 @@ export function TiktokAdsClient() {
         </div>}
         {failures.map((f) => <p key={f.account} className="mt-3 text-sm text-amber-600">{f.account}: {f.error}</p>)}
         {!selected ? <p className="mt-4 rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">Conecte e vincule uma conta de anúncios do TikTok abaixo para ver as campanhas.</p>
-          : items === null || (loading && !items.length) ? <div className="mt-4 flex items-center justify-center gap-2 p-6 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" />Carregando…</div>
+          : items === null || (loading && !items.length) ? <LoadingState label="Carregando campanhas" rows={4} className="mt-4" />
           : !shown.length ? <p className="mt-4 rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">Nenhuma campanha {status === "ACTIVE" ? "ativa " : ""}no período.</p>
           : <div className="mt-4 overflow-x-auto overscroll-x-contain rounded-lg border border-border">
             <table className="w-full min-w-[980px] text-sm">

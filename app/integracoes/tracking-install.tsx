@@ -4,6 +4,7 @@ import { Check, Copy, FlaskConical, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { copyText } from "@/lib/clipboard";
 import { apiFetch } from "@/lib/plan-client";
+import { LoadingState } from "@/components/LoadingState";
 
 type Project = { id: string; name: string; domain?: string; publicKey?: string; pixelId?: string; lastVisitAt?: number | null };
 
@@ -85,7 +86,7 @@ export function TrackingInstall() {
     }
   };
 
-  if (loading) return <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" />Carregando projetos…</div>;
+  if (loading) return <LoadingState label="Carregando projetos" rows={2} />;
 
   const form = (
     <form onSubmit={create} className="grid gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">

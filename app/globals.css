@@ -279,3 +279,20 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 @media(max-width:640px){.gs-ambient-orb{opacity:.16}.gs-ambient-scan{opacity:.16}.gs-hero-art::before{inset:18% -18%;opacity:.65}.gs-card:hover{transform:translateY(-2px)}.gs-landing table tbody tr:hover{transform:none}}
 @media(max-width:640px){.gs-orbit-stage{min-height:300px}.gs-orbit-core{width:108px;height:108px}.gs-orbit-core img{width:88px}.gs-orbit-token{width:50px;height:50px}.gs-orbit-token img{width:26px;height:26px}.gs-orbit-token span{display:none}}
 @media (prefers-reduced-motion:reduce){.gs-ambient-orb,.gs-ambient-scan,.gs-flow-line,.gs-hero-art::before,.gs-hero-art::after,.gs-hero-panel,.gs-hero-panel::after,.gs-price-best,.gs-final-cta::after,.gs-eyebrow i,.gs-integrations-beam,.gs-orbit-path,.gs-orbit-token,.reveal-visible .gs-card{animation:none!important}.gs-card::after,.gs-card::before,.gs-price-card::before{transition:none!important}.gs-price-card:hover,.gs-card:hover,#faq .space-y-3>div:hover{transform:none}}
+/* Carregamento: tela da marca + esqueletos com brilho (sem "bolinha"). */
+.gs-loader{position:relative;display:grid;place-items:center;width:132px;height:132px}
+.gs-loader-ring{position:absolute;inset:0;border-radius:9999px;background:conic-gradient(from 0deg,transparent 0 55%,#7c3aed 70%,#3b82f6 85%,#22d3ee 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));animation:gs-spin 1.4s linear infinite}
+.gs-loader-ring.is-slow{inset:14px;opacity:.45;animation-duration:2.6s;animation-direction:reverse}
+.gs-loader-glow{position:absolute;inset:22px;border-radius:9999px;background:radial-gradient(circle,#7c3aed55,#3b82f622 55%,transparent 70%);filter:blur(10px);animation:gs-breathe 2.2s ease-in-out infinite}
+.gs-loader-logo{position:relative;width:58px;height:58px;object-fit:contain;animation:gs-float 2.2s ease-in-out infinite}
+.gs-progress{position:relative;height:3px;width:180px;overflow:hidden;border-radius:9999px;background:color-mix(in oklab,var(--foreground) 10%,transparent)}
+.gs-progress::after{content:"";position:absolute;inset:0;width:40%;border-radius:inherit;background:linear-gradient(90deg,#7c3aed,#3b82f6,#22d3ee);animation:gs-progress 1.3s cubic-bezier(.65,0,.35,1) infinite}
+.gs-shimmer{position:relative;overflow:hidden;background:color-mix(in oklab,var(--foreground) 7%,transparent)}
+.gs-shimmer::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,color-mix(in oklab,var(--foreground) 10%,transparent),transparent);animation:gs-shine 1.4s ease-in-out infinite}
+.gs-skeleton{position:relative;overflow:hidden}.gs-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(100deg,transparent 20%,#ffffff0d 50%,transparent 80%);animation:gs-shine 1.5s ease-in-out infinite}
+@keyframes gs-spin{to{transform:rotate(360deg)}}
+@keyframes gs-breathe{0%,100%{opacity:.55;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes gs-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes gs-progress{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+@keyframes gs-shine{to{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){.gs-loader-ring,.gs-loader-glow,.gs-loader-logo,.gs-progress::after,.gs-shimmer::after,.gs-skeleton::after{animation:none}}

@@ -5,6 +5,7 @@ import {Button} from "@/components/ui/button";
 import {TrackingRules} from "./tracking-rules";
 import { copyText } from "@/lib/clipboard";
 import { apiFetch } from "@/lib/plan-client";
+import { LoadingState } from "@/components/LoadingState";
 
 type Project={id:string;name:string;domain?:string;pixelId?:string;metaConnectedAt?:string};
 type Credential={id:string;name:string;provider:string;projectId:string;active:boolean;createdAt:string;lastUsedAt?:string};
@@ -43,7 +44,7 @@ export function PixelConnect(){const[projects,setProjects]=useState<Project[]>([
  const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setMessage("");try{const r=await apiFetch("/api/meta/connect",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,pixelId,accessToken:token,testCode})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível conectar.");setMessage(`Pixel ${b.pixelId} conectado. Navegador e CAPI estão ativos.`);setToken("");await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Erro ao conectar.")}finally{setBusy(false)}};
  const createPixel=async()=>{setCreating(true);setMessage("");try{const r=await apiFetch("/api/meta/pixel/create",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,name:pixelName})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível criar o Pixel.");setPixelId(b.pixelId);setMessage(`Pixel ${b.pixelId} criado e conectado. Navegador e CAPI estão prontos.`);await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Erro ao criar Pixel.")}finally{setCreating(false)}};
  const disconnect=async()=>{if(!current?.pixelId||!confirm(`Desconectar o Pixel ${current.pixelId} do projeto “${current.name}”?`))return;setDeleting(true);setMessage("");try{const r=await apiFetch(`/api/meta/connect?projectId=${encodeURIComponent(projectId)}`,{method:"DELETE"}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível desconectar.");setPixelId("");setMessage("Pixel desconectado do projeto.");await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Não foi possível desconectar.")}finally{setDeleting(false)}};
- if(!loaded)return <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin"/>Carregando…</div>;
+ if(!loaded)return <LoadingState label="Carregando" rows={2}/>;
  if(!projects.length)return <NeedProject/>;
  const ok=/conectado|criado|ativo/i.test(message)&&!/desconectado/i.test(message);
  return <div className="space-y-5">
@@ -93,10 +94,9 @@ export function GatewayConnect(){const[projects,setProjects]=useState<Project[]>
  const gateway=GATEWAYS.find(g=>g.id===provider)||GATEWAYS[0];
  const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError("");setCreated(null);try{const project=projects.find(p=>p.id===projectId);const name=`${gateway.label}${project&&projects.length>1?` · ${project.name}`:""}`;const r=await apiFetch("/api/credentials",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,name,provider})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Erro ao gerar a URL.");setCreated({...b.credential,provider});await load()}catch(e){setError(e instanceof Error?e.message:"Erro ao gerar a URL.")}finally{setBusy(false)}};
  const remove=async(c:Credential)=>{if(!confirm(`Desconectar “${c.name}”? O gateway deixará de enviar vendas por esta URL.`))return;setBusy(true);setError("");try{const r=await apiFetch(`/api/credentials?id=${encodeURIComponent(c.id)}`,{method:"DELETE"}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível desconectar.");await load()}catch(e){setError(e instanceof Error?e.message:"Não foi possível desconectar.")}finally{setBusy(false)}};
- if(!loaded)return <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin"/>Carregando…</div>;
+ if(!loaded)return <LoadingState label="Carregando" rows={2}/>;
  if(!projects.length)return <NeedProject/>;
  const createdGateway=created&&GATEWAYS.find(g=>g.id===created.provider);
- const origin=typeof location!=="undefined"?location.origin:"";
  return <div className="min-w-0 space-y-5">
   {credentials.length>0&&<section><h4 className="mb-2 text-sm font-semibold text-foreground">Gateways conectados</h4><div className="space-y-2">{credentials.map(c=><div className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-200 p-3 text-sm sm:flex-row sm:items-center sm:justify-between" key={c.id}><div className="min-w-0 break-words"><b>{c.name}</b>{c.name!==providerLabel(c.provider)&&<span className="text-slate-500"> · {providerLabel(c.provider)}</span>}<p className={`mt-1 text-xs ${c.lastUsedAt?"text-emerald-700":"text-slate-500"}`}>{c.lastUsedAt?`● Última venda recebida: ${new Date(c.lastUsedAt).toLocaleString("pt-BR")}`:"○ Aguardando a primeira venda"}</p></div><Button type="button" variant="ghost" size="sm" className="w-full text-red-600 sm:w-auto" disabled={busy} onClick={()=>remove(c)}><Trash2/>Desconectar</Button></div>)}</div></section>}
   <form onSubmit={submit} className="space-y-4">

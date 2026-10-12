@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/AppShell";
 import { formatCpf, stripCpf, validateCpf } from "@/lib/cpf";
 import { sendGAEvent } from "@next/third-parties/google";
+import { LoadingState } from "@/components/LoadingState";
 
 type Plan = { id: string; name: string; price: number; priceLabel: string; sales: number | null; feats: string[]; hot?: boolean; configured: boolean };
 type Subscription = { plan: string; status: string; amount: string | null; currentPeriodEnd: number | null; planVersion?: number; cancelAtPeriodEnd?: boolean; scheduledPlan?: string | null; excessEnabled?: boolean; excessCap?: number | null } | null;
@@ -325,7 +326,7 @@ export function AssinaturaClient() {
   if (loading) {
     return (
       <AppShell title="Assinatura" subtitle="Carregando planos...">
-        <div className="metric-card rounded-xl p-10 text-center text-slate-500">Carregando...</div>
+        <LoadingState label="Carregando planos" variant="cards" rows={3}/>
       </AppShell>
     );
   }
