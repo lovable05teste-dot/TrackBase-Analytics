@@ -94,7 +94,7 @@ export function AccountMenu({ data = EMPTY_ACCOUNT }: { data?: AccountData }) {
         onClick={() => setOpen((o) => !o)}
         aria-label="Minha conta"
         aria-expanded={open}
-        className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-blue-600 text-sm font-semibold text-white shadow-sm transition hover:from-violet-500 hover:to-blue-500"
+        className="grid size-9 place-items-center rounded-full bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 text-sm font-semibold shadow-sm transition hover:bg-zinc-300 dark:hover:bg-zinc-700"
       >
         {account.avatarInitial}
       </button>
@@ -102,7 +102,7 @@ export function AccountMenu({ data = EMPTY_ACCOUNT }: { data?: AccountData }) {
         <div className="absolute right-0 top-11 z-50 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
           <div className="border-b border-slate-100 px-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-blue-600 text-sm font-semibold text-white">
+              <div className="grid size-8 place-items-center rounded-full bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 text-sm font-semibold">
                 {account.avatarInitial}
               </div>
               <div className="min-w-0">

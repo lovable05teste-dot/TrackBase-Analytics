@@ -3,17 +3,18 @@
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
 :root{
-  --background:#ffffff;--foreground:#0f172a;--card:#ffffff;--card-foreground:#0f172a;
-  --popover:#ffffff;--popover-foreground:#0f172a;--primary:#2563eb;--primary-foreground:#ffffff;
-  --secondary:#f8fafc;--secondary-foreground:#0f172a;--muted:#f1f5f9;--muted-foreground:#475569;
-  --accent:#dbeafe;--accent-foreground:#1d4ed8;--destructive:#dc2626;--border:#e2e8f0;
-  --input:#e2e8f0;--ring:#93c5fd;--radius:.75rem;
+  --background:#fafafa;--foreground:#09090b;--card:#ffffff;--card-foreground:#09090b;
+  --popover:#ffffff;--popover-foreground:#09090b;--primary:#18181b;--primary-foreground:#fafafa;
+  --secondary:#f4f4f5;--secondary-foreground:#18181b;--muted:#f4f4f5;--muted-foreground:#52525b;
+  --accent:#f4f4f5;--accent-foreground:#18181b;--destructive:#dc2626;--border:#e4e4e7;
+  --input:#e4e4e7;--ring:#a78bfa66;--radius:.75rem;--brand:#7c3aed;
 }
 .dark{
-  --background:#080b12;--foreground:#edf2ff;--card:#0e121d;--card-foreground:#edf2ff;
-  --popover:#111624;--popover-foreground:#edf2ff;--secondary:#171c2a;--secondary-foreground:#e8ecf7;
-  --muted:#151a27;--muted-foreground:#94a3b8;--accent:#172554;--accent-foreground:#bfdbfe;
-  --border:#ffffff12;--input:#ffffff18;--ring:#60a5fa;
+  --background:#09090b;--foreground:#fafafa;--card:#111113;--card-foreground:#fafafa;
+  --popover:#18181b;--popover-foreground:#fafafa;--primary:#fafafa;--primary-foreground:#09090b;
+  --secondary:#18181b;--secondary-foreground:#fafafa;
+  --muted:#18181b;--muted-foreground:#a1a1aa;--accent:#1f1f23;--accent-foreground:#fafafa;
+  --border:#ffffff14;--input:#ffffff1a;--ring:#a78bfa55;--brand:#a78bfa;
 }
 @theme inline{
   --color-background:var(--background);--color-foreground:var(--foreground);--color-card:var(--card);
@@ -73,15 +74,15 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 .mobile-nav a{border-radius:.5rem;padding:.45rem .7rem;font-size:.78rem;color:var(--muted-foreground);transition:background .16s,color .16s}
 .mobile-nav a:hover{background:var(--accent);color:var(--foreground)}
 
-.dark .bg-white{background-color:#0e121d!important}.dark .bg-slate-50{background-color:#0b0f18!important}
-.dark .bg-slate-100{background-color:#151a27!important}.dark .bg-slate-200{background-color:#1c2333!important}
-.dark .text-slate-900{color:#edf2ff!important}.dark .text-slate-700,.dark .text-slate-300{color:#cbd5e1!important}
-.dark .text-slate-600,.dark .text-slate-500,.dark .text-slate-400{color:#94a3b8!important}
-.dark .border-slate-200{border-color:#273449!important}
-.dark .bg-blue-50{background-color:#172554!important}.dark .bg-emerald-50{background-color:rgba(16,185,129,.12)!important}
+.dark .bg-white{background-color:#111113!important}.dark .bg-slate-50{background-color:#0d0d0f!important}
+.dark .bg-slate-100{background-color:#18181b!important}.dark .bg-slate-200{background-color:#27272a!important}
+.dark .text-slate-900{color:#fafafa!important}.dark .text-slate-700,.dark .text-slate-300{color:#d4d4d8!important}
+.dark .text-slate-600,.dark .text-slate-500,.dark .text-slate-400{color:#a1a1aa!important}
+.dark .border-slate-200{border-color:#ffffff14!important}
+.dark .bg-blue-50{background-color:#a78bfa14!important}.dark .bg-emerald-50{background-color:rgba(16,185,129,.12)!important}
 .dark .bg-amber-50{background-color:rgba(245,158,11,.12)!important}.dark .bg-red-50{background-color:rgba(239,68,68,.12)!important}
 .dark .border-blue-100{border-color:#ffffff18!important}.dark .border-emerald-200{border-color:rgba(16,185,129,.28)!important}
-.dark .text-blue-600{color:#60a5fa!important}.dark .text-blue-700{color:#93c5fd!important}
+.dark .text-blue-600{color:#c4b5fd!important}.dark .text-blue-700{color:#ddd6fe!important}
 .dark .text-emerald-600{color:#34d399!important}.dark .text-emerald-700{color:#6ee7b7!important}
 .dark .text-red-600{color:#f87171!important}.dark .text-amber-700{color:#fbbf24!important}
 .dark .text-amber-200{color:#fcd34d!important}.dark .text-red-200{color:#fecaca!important}
@@ -296,3 +297,9 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--ring)}
 @keyframes gs-progress{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
 @keyframes gs-shine{to{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){.gs-loader-ring,.gs-loader-glow,.gs-loader-logo,.gs-progress::after,.gs-shimmer::after,.gs-skeleton::after{animation:none}}
+
+/* Identidade única: botões de ação neutros (como o botão padrão) e o violeta da
+   marca só como destaque. Remapeia os azuis/violetas saturados espalhados. */
+:is(.bg-blue-600,.bg-blue-500,.bg-violet-600,.bg-\[\#2563eb\]){background-color:var(--primary)!important;color:var(--primary-foreground)!important}
+:is(.hover\:bg-blue-700,.hover\:bg-blue-600,.hover\:bg-violet-700):hover{background-color:color-mix(in oklab,var(--primary) 88%,var(--background))!important}
+.text-blue-600{color:var(--brand)}
