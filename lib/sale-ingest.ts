@@ -1,4 +1,4 @@
-// Núcleo compartilhado da ingestão de vendas (gateway universal + utmify).
+// Núcleo compartilhado da ingestão de vendas (webhook universal de gateways).
 // Regras de confiabilidade concentradas aqui:
 // - dedup por (provider, externalId): mesmo status repetido = 200 sem
 //   reinserir evento nem re-disparar CAPI; transição de status atualiza;

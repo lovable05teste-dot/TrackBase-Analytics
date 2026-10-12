@@ -29,11 +29,10 @@ async function load(path) {
   const m={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(require,m,m.exports);return m.exports;
 }
 const gateway = await load('app/api/webhooks/gateway/route.ts');
-const utmify = await load('app/api/webhooks/utmify/route.ts');
 const ingest = await load('lib/sale-ingest.ts');
 const diagnostics = await load('app/api/meta/capi-deliveries/route.ts');
 const realFetch = globalThis.fetch;
-let sql, calls, response, originalSecret;
+let sql, calls, response;
 beforeEach(() => {
   sql = new DatabaseSync(':memory:');
   const src=readFileSync('db/index.ts','utf8');
@@ -47,10 +46,9 @@ beforeEach(() => {
   sql.prepare('INSERT INTO api_credentials(id,workspace_id,project_id,name,provider,token_hash,active,created_at) VALUES(?,?,?,?,?,?,?,?)').run('cred',ws,'p','gateway','fortpay',sha('test-key'),1,'2026-10-09');
   calls=[];response=()=>Response.json({events_received:1,fbtrace_id:'trace'});
   globalThis.__decryptFails=false;globalThis.__notifications=0;
-  originalSecret=process.env.UTMIFY_WEBHOOK_SECRET;delete process.env.UTMIFY_WEBHOOK_SECRET;
   globalThis.fetch=async(url,init)=>{calls.push({url,headers:init.headers,body:JSON.parse(init.body)});return response();};
 });
-afterEach(()=>{globalThis.fetch=realFetch;sql.close();if(originalSecret===undefined)delete process.env.UTMIFY_WEBHOOK_SECRET;else process.env.UTMIFY_WEBHOOK_SECRET=originalSecret;});
+afterEach(()=>{globalThis.fetch=realFetch;sql.close();});
 const paid=()=>({id:'order-1',status:'approved',amount:1490,currency:'BRL',paid_at:new Date(Date.now()-90000).toISOString(),customer:{email:'buyer@example.com',phone:'11988887777'}});
 const webhook=(body,token='test-key')=>new Request('https://app.example/api/webhooks/gateway?token='+token,{method:'POST',headers:{'content-type':'application/json','user-agent':'gateway-server'},body:JSON.stringify(body)});
 const diag=(method='GET',user='owner',body,origin='https://app.example')=>new Request('https://app.example/api/meta/capi-deliveries',{method,headers:{...(user?{'x-test-user':user}:{}),origin,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
@@ -117,10 +115,11 @@ test('pixel changes do not redirect an existing purchase to a different advertis
  await diagnostics.POST(diag('POST','owner',{id:row().id}));assert.equal(calls.length,1);assert.match(row().last_error,/pixel alterado/);
 });
 
-test('Utmify confirmed purchases are production events even with saved test code',async()=>{
- const body={orderId:'u1',status:'paid',commission:{totalPriceInCents:2490},customer:{email:'buyer@example.com'}};
- await utmify.POST(webhook(body));assert.equal(calls.length,1);assert.equal(calls[0].body.test_event_code,undefined);assert.equal(calls[0].body.data[0].custom_data.value,24.9);
- await utmify.POST(webhook(body));assert.equal(calls.length,1);
+test('confirmed purchases are production events even with saved test code',async()=>{
+ sql.prepare("UPDATE projects SET meta_test_code='TEST123' WHERE id='p'").run();
+ const body={...paid(),id:'u1'};
+ await gateway.POST(webhook(body));assert.equal(calls.length,1);assert.equal(calls[0].body.test_event_code,undefined);
+ await gateway.POST(webhook(body));assert.equal(calls.length,1);
 });
 
 test('pending, cancelled and refunded orders never send Purchase',async()=>{

@@ -9,11 +9,11 @@ async function logout(request: Request, headers: Headers) {
 }
 
 export async function GET(request: Request) {
-  const headers = await logout(request, new Headers({ location: new URL("/login", request.url).toString() }));
+  const headers = await logout(request, new Headers({ location: new URL("/login", request.url).toString(), "cache-control": "no-store" }));
   return new Response(null, { status: 302, headers });
 }
 
 export async function POST(request: Request) {
-  const headers = await logout(request, new Headers({ "content-type": "application/json" }));
+  const headers = await logout(request, new Headers({ "content-type": "application/json", "cache-control": "no-store" }));
   return new Response(JSON.stringify({ ok: true }), { headers });
 }
