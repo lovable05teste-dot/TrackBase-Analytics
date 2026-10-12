@@ -47,7 +47,11 @@ export async function GET(request: Request) {
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", "ads_read,ads_management,business_management");
-    if (config.configId) url.searchParams.set("config_id", config.configId);
+    // modo=classico: abre o login do Facebook sem a configuração do "Login
+    // para Empresas" (config_id). Alternativa quando a Meta mostra "Recurso
+    // indisponível" para essa configuração.
+    const classic = new URL(request.url).searchParams.get("modo") === "classico";
+    if (config.configId && !classic) url.searchParams.set("config_id", config.configId);
 
     const headers = new Headers({ Location: url.toString(), "Cache-Control": "no-store, no-cache, must-revalidate", "Referrer-Policy": "no-referrer" });
     // Regrava o token que está VÁLIDO (não o primeiro do header, que pode
