@@ -2,6 +2,7 @@ import { and, eq, gte } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaAccounts, metaOauthStates } from "@/db/schema";
 import { metaJson, metaPages, metaRedirectUri, requireMetaConfig } from "@/lib/meta";
+import { metaStateOrigin } from "@/lib/meta-oauth-state";
 import { encryptSecret, requestUserId, sha256 } from "@/lib/trackbase-security";
 
 type Token = { access_token: string; expires_in?: number };
@@ -18,11 +19,6 @@ type AdAccounts = {
 
 const PUBLIC_APP_HOSTS = new Set(["ghostscale.com.br", "www.ghostscale.com.br"]);
 
-function stateOrigin(state: string) {
-  const host = state.slice(state.lastIndexOf(".") + 1).toLowerCase();
-  return PUBLIC_APP_HOSTS.has(host) ? `https://${host}` : null;
-}
-
 // Sem sessão da GhostScale neste navegador = veio do link de conexão
 // (AdsPower): termina numa página neutra, sem exigir login.
 function accountsRedirect(request: Request, query: string, origin?: string | null, viaLink = false) {
@@ -34,7 +30,7 @@ export async function GET(request: Request) {
   const viaLink = !(await requestUserId(request));
   const incoming = new URL(request.url);
   const state = incoming.searchParams.get("state") || "";
-  const origin = stateOrigin(state);
+  const origin = metaStateOrigin(state);
 
   if (incoming.searchParams.get("error")) return Response.redirect(accountsRedirect(request, "erro=cancelado", origin, viaLink), 302);
 
