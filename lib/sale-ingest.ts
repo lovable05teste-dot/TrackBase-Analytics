@@ -8,7 +8,7 @@
 // - status desconhecido vira `pending` + alerta (nunca 400 que dropa venda).
 // O `db` vem por parâmetro tipado via `import type` (apagado em runtime) e o
 // push é dinâmico — este módulo segue importável em testes unitários puros.
-import { and, asc, desc, eq, lte, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, lt, or } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
 import { dispatchCapi } from "@/lib/meta-capi";
@@ -33,13 +33,21 @@ export function pick(source: Record<string, unknown>, paths: string[]) {
 // Mapeia status heterogêneos p/ o vocabulário interno. `known=false` =
 // plataforma mandou algo novo → vira pending + alerta (nunca descarta).
 export function resolveStatus(value: unknown): { status: string; known: boolean } {
-  const s = String(value || "pending").toLowerCase();
-  if (/approved|authorized|authorised|paid|completed|complete|succeeded|success|settled|captured|aprovad|autorizad|pago|liquidado|capturado/.test(s))
-    return { status: "approved", known: true };
-  if (/refund|reembols|estorn/.test(s)) return { status: "refunded", known: true };
-  if (/chargeback|chargedback|contestad/.test(s)) return { status: "chargeback", known: true };
-  if (/cancel|failed|refused|declined|recusad|expired/.test(s)) return { status: "cancelled", known: true };
-  if (/pending|waiting|processing|created|initiated|in_review|review|awaiting|aguard|criad|processando|analise/.test(s))
+  // Compara PALAVRAS inteiras (sem acento), nunca pedaços: "unpaid",
+  // "not_authorized" e "refund.completed" contêm "paid"/"authorized"/
+  // "completed" e antes viravam venda aprovada (Purchase falso na Meta).
+  const norm = String(value || "pending").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const words = norm.split(/[^a-z]+/).filter(Boolean);
+  const has = (re: RegExp) => words.some((w) => re.test(w));
+  if (has(/^(refund\w*|reembols\w*|estorn\w*|devolvid\w*)$/)) return { status: "refunded", known: true };
+  if (has(/^(chargeback\w*|chargedback|contestad\w*|disputed?|dispute)$/)) return { status: "chargeback", known: true };
+  if (has(/^(cancel\w*|failed|failure|fail|refused|declined|recusad\w*|expired|expirad\w*|rejected|rejeitad\w*|denied|negad\w*|void|voided)$/)) return { status: "cancelled", known: true };
+  const approvedWord = /^(paid|approved|authori[sz]ed|complete|completed|succeeded|success|successful|settled|captured|aprovad[oa]s?|autorizad[oa]s?|pag[oa]s?|liquidad[oa]s?|capturad[oa]s?|concluid[oa]s?|confirmad[oa]s?)$/;
+  const negated = has(/^(not|nao|no|non)$/);
+  if (negated && has(approvedWord)) return { status: "cancelled", known: true };
+  if (has(/^(unpaid|incomplete|uncaptured|unapproved|unauthori[sz]ed|unsuccessful)$/)) return { status: has(/^unauthori[sz]ed$/) ? "cancelled" : "pending", known: true };
+  if (has(approvedWord)) return { status: "approved", known: true };
+  if (has(/^(pending|waiting|processing|created|initiated|review|awaiting|aguard\w*|criad[oa]s?|processando|analise|em|generated|gerad[oa]s?|open|aberto|aberta)$/) || /in_review|in_process/.test(norm))
     return { status: "pending", known: true };
   return { status: "pending", known: false };
 }
@@ -50,6 +58,17 @@ export function resolveStatus(value: unknown): { status: string; known: boolean 
 export function cleanUtmSource(value: string | null | undefined) {
   const clean = String(value || "").replace(/jLj[0-9a-f]{12,}$/i, "").trim();
   return clean || null;
+}
+
+// Valor em número ou texto: 97, "97.00", "97,00", "R$ 1.234,56", "1,234.56".
+export function parseMoney(raw: unknown): number {
+  if (typeof raw === "number") return raw;
+  let v = String(raw ?? "").replace(/[^\d,.-]/g, "");
+  if (!v) return 0;
+  const lastComma = v.lastIndexOf(","), lastDot = v.lastIndexOf(".");
+  if (lastComma > lastDot) v = v.replace(/\./g, "").replace(",", ".");
+  else v = v.replace(/,/g, "");
+  return Number(v);
 }
 
 export function eventNameFor(status: string) {
@@ -154,6 +173,14 @@ export type OrderInput = {
 
 // Upsert do pedido com veredito de dedup. Retorna prevStatus para decidir se
 // o CAPI deve disparar (só em criação ou transição PARA approved).
+// Status só anda para frente: pendente < cancelado < aprovado < reembolso/
+// chargeback. Webhook atrasado (ex.: "pendente" depois de "pago") ou
+// reenviado fora de ordem não pode rebaixar a venda.
+const STATUS_RANK: Record<string, number> = { pending: 0, cancelled: 1, approved: 2, refunded: 3, chargeback: 3 };
+export function statusRank(status: string | null | undefined) {
+  return STATUS_RANK[String(status || "")] ?? 0;
+}
+
 export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: boolean; prevStatus: string | null }> {
   const existing = await db
     .select({ status: orders.status, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmContent: orders.utmContent, utmTerm: orders.utmTerm })
@@ -162,6 +189,7 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
     .limit(1);
   const prev = existing[0]?.status ?? null;
   if (prev === input.status) return { dedup: true, prevStatus: prev };
+  if (prev && statusRank(input.status) < statusRank(prev)) return { dedup: true, prevStatus: prev };
   const now = Math.floor(Date.now() / 1000);
   if (!prev) {
     await db
@@ -188,7 +216,9 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
         eventId: input.eventId,
         updatedAt: now,
       })
-      .where(and(eq(orders.projectId, input.projectId), eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)));
+      // Trava contra corrida: só grava se o status atual ainda é anterior.
+      .where(and(eq(orders.projectId, input.projectId), eq(orders.provider, input.provider), eq(orders.externalId, input.externalId),
+        inArray(orders.status, Object.keys(STATUS_RANK).filter((st) => st !== input.status && statusRank(st) <= statusRank(input.status)))));
   }
   return { dedup: false, prevStatus: prev };
 }

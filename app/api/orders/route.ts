@@ -1,6 +1,6 @@
 import {and,desc,eq,inArray} from "drizzle-orm";
 import {ensureDb,getDb} from "@/db";
-import {events,orders,projects} from "@/db/schema";
+import {events,orders,projects,capiOutbox} from "@/db/schema";
 import {refreshSessionCookie,requestUserId,sha256} from "@/lib/trackbase-security";
 
 export async function GET(request:Request){
@@ -30,8 +30,13 @@ export async function DELETE(request:Request){
   if(!order)return Response.json({error:"Venda não encontrada"},{status:404});
   const provider=order.provider.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")||"gateway";
   // IDs gerados por eventIdFor (lib/sale-ingest.ts) para cada status.
-  const ids=[`purchase_${provider}_${order.externalId}`,...["pending","cancelled","refunded","chargeback"].map(st=>`gw_${provider}_${order.externalId}_${st}`),order.eventId].filter((v):v is string=>Boolean(v));
+  // event_id vindo do gateway: aprovado usa o id puro, os demais `${id}_${status}`.
+  const base=String(order.eventId||"").replace(/_(pending|cancelled|refunded|chargeback)$/,"");
+  const statuses=["pending","cancelled","refunded","chargeback"];
+  const ids=[`purchase_${provider}_${order.externalId}`,...statuses.map(st=>`gw_${provider}_${order.externalId}_${st}`),order.eventId,base,...(base?statuses.map(st=>`${base}_${st}`):[])].filter((v):v is string=>Boolean(v));
   await db.delete(events).where(and(eq(events.projectId,order.projectId),inArray(events.eventId,ids)));
+  // Envios pendentes à Meta/TikTok dessa venda também saem (não manda Purchase de teste apagado).
+  await db.delete(capiOutbox).where(and(eq(capiOutbox.projectId,order.projectId),inArray(capiOutbox.eventId,ids),inArray(capiOutbox.status,["pending","processing","dead"])));
   await db.delete(orders).where(eq(orders.id,order.id));
   return Response.json({ok:true});
 }
