@@ -15,6 +15,7 @@ import {
   insertEventOnce,
   pick,
   resolveStatus,
+  parseMoney,
   upsertOrder,
 } from "../../../../lib/sale-ingest";
 
@@ -83,11 +84,13 @@ export async function POST(request: Request) {
     : pick(body, ["amount_cents", "amountCents", "total_cents", "data.amount_cents", "data.transaction.amount_cents", "order.total_cents"]);
   const rawValue = pick(body, ["value", "amount", "total", "price", "data.value", "data.amount", "data.transaction.amount", "order.total"]);
   let value: number;
-  if (centsValue !== undefined) value = Number(centsValue || 0) / 100;
-  else if (rawValue !== undefined) value = Number(rawValue || 0);
-  else if (itemsList.length && Number.isFinite(Number(itemsList[0].price))) value = fortpay ? Number(itemsList[0].price) / 100 : Number(itemsList[0].price);
+  if (centsValue !== undefined) value = parseMoney(centsValue) / 100;
+  else if (rawValue !== undefined) value = parseMoney(rawValue);
+  else if (itemsList.length && Number.isFinite(parseMoney(itemsList[0].price))) value = fortpay ? parseMoney(itemsList[0].price) / 100 : parseMoney(itemsList[0].price);
   else value = 0;
-  if (!Number.isFinite(value) || value < 0) return Response.json({ error: "Valor da venda inválido" }, { status: 400, headers: cors });
+  // Valor ilegível não pode derrubar a venda (gateway não reenvia 4xx):
+  // grava com 0 e segue.
+  if (!Number.isFinite(value) || value < 0) value = 0;
 
   const rawUtm = String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || "").trim();
   const utmName = (v: string) => {

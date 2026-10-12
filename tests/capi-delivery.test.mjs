@@ -179,3 +179,20 @@ test('old recorded approvals without a receipt are not automatically replayed',a
  sql.prepare("UPDATE events SET occurred_at=? WHERE event_name='Purchase'").run(Math.floor(Date.now()/1000)-3*86400);
  await gateway.POST(webhook(body));assert.equal(calls.length,1);assert.equal(row(),undefined);
 });
+
+test('status words are matched whole: unpaid/not authorized/refund completed never become approved',()=>{
+ const st=v=>ingest.resolveStatus(v).status;
+ for(const v of ['paid','approved','Aprovado','pago','completed','payment.paid','authorized'])assert.equal(st(v),'approved',v);
+ for(const v of ['unpaid','payment_incomplete','incomplete','waiting_payment'])assert.equal(st(v),'pending',v);
+ for(const v of ['not_authorized','nao_autorizado','Não autorizada','refused','expired'])assert.equal(st(v),'cancelled',v);
+ for(const v of ['refund.completed','refund_succeeded','Estornado'])assert.equal(st(v),'refunded',v);
+ assert.equal(st('chargeback_completed'),'chargeback');
+});
+
+test('pt-BR amounts are parsed and a late pending webhook never downgrades an approved sale',async()=>{
+ assert.equal(ingest.parseMoney('R$ 1.234,56'),1234.56);assert.equal(ingest.parseMoney('97,00'),97);
+ assert.equal((await gateway.POST(webhook({id:'brl-1',status:'paid',value:'97,00'}))).status,200);
+ assert.equal(sql.prepare("SELECT value FROM orders WHERE external_id='brl-1'").get().value,97);
+ assert.equal((await gateway.POST(webhook({id:'brl-1',status:'waiting_payment',value:'97,00'}))).status,200);
+ assert.equal(sql.prepare("SELECT status FROM orders WHERE external_id='brl-1'").get().status,'approved');
+});
