@@ -38,7 +38,7 @@ export default async function Page() {
 
   return (
     <AppShell title="Análise de Funil" subtitle="Do clique à compra: onde o tráfego está vazando.">
-      <div className="metric-card mb-4 rounded-xl border-violet-400/20 bg-violet-500/[.06] p-4 text-sm text-violet-100">💡 {gargalo}</div>
+      <div className="metric-card mb-4 rounded-xl border-l-2 border-l-violet-500 p-4 text-sm"><span className="mr-2 text-xs font-semibold uppercase tracking-wider text-violet-500">Diagnóstico</span>{gargalo}</div>
       <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr]">
         <div className="metric-card rounded-xl p-5">
           <h3 className="font-semibold">Funil geral · 30 dias</h3>

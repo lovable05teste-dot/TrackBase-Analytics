@@ -121,7 +121,7 @@ const tickerSales = [
   ["R$ 1.997,00", "Stripe", "há 2min"],
   ["R$ 197,00", "Braip", "há 3min"],
   ["R$ 347,00", "FlevoPay", "há 4min"],
-  ["R$ 67,00", "Utmify", "há 5min"],
+  ["R$ 67,00", "Pagar.me", "há 5min"],
 ];
 const tickerWins = [
   "Campanha escala bateu ROAS 4,1x",
@@ -397,7 +397,7 @@ const compareRows: [string, boolean, string][] = [
 
 const faqs = [
   { q: "Preciso saber programar?", a: "Não. Você cola um script na página e configura o webhook no checkout seguindo o passo a passo em /docs. Em minutos está rastreando." },
-  { q: "Funciona com o meu checkout?", a: "Se o seu gateway envia webhook, funciona. FortPay, Hotmart, Kiwify, Braip, Stripe, FlevoPay, Utmify e qualquer outro. O endpoint aceita qualquer formato e detecta os campos sozinho." },
+  { q: "Funciona com o meu checkout?", a: "Se o seu gateway envia webhook, funciona. FortPay, Hotmart, Kiwify, Braip, Stripe, FlevoPay e qualquer outro. O endpoint aceita qualquer formato e detecta os campos sozinho." },
   { q: "E se o pixel for bloqueado?", a: "É exatamente para isso que existe o CAPI. O servidor reenvia cada evento com o mesmo event_id, então a conversão chega na Meta mesmo com iOS restrito ou bloqueador ativo." },
   { q: "Como funciona a taxa de R$ 0,10?", a: "Cada plano inclui uma franquia de vendas (500, 1.000, 2.000, Black ilimitado). Só o que passar paga R$ 0,10 por venda aprovada. Pendente, reembolso, cancelamento e chargeback não geram cobrança." },
   { q: "Posso cancelar quando quiser?", a: "Sim. Sem multa, sem burocracia. Seus dados de eventos e pedidos continuam auditáveis." },
@@ -683,7 +683,7 @@ export function LandingPage() {
         <div className="mx-auto w-full max-w-6xl min-w-0 px-4 sm:px-5">
           <Eyebrow>Como o GhostScale resolve</Eyebrow>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight break-words text-[#FFF3F5] sm:text-4xl">
-            Do clique ao saque com atribuição fechada.
+            Do clique à venda aprovada, com atribuição fechada.
           </h2>
           <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#C99AA4]">
             Cada recurso abaixo existe no painel e funciona em conjunto, não em quatro ferramentas separadas.

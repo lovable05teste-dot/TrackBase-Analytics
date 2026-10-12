@@ -28,7 +28,7 @@ export default async function Page() {
   const score = !ids.length ? 0 : Math.min(100, Math.round((cPv > 0 ? 30 : 0) + (cIc > 0 ? 30 : 0) + (cPurch > 0 ? 40 : 0)));
 
   const sugestoes: string[] = [];
-  if (!ids.length) sugestoes.push("Crie um projeto e instale o tracker para ativar o Predict.");
+  if (!ids.length) sugestoes.push("Crie um projeto e instale o tracker para ativar as previsões.");
   else {
     if (cPv > 50 && pct(cIc, cPv) < 5) sugestoes.push("Otimize a página: IC/accesso abaixo de 5%. Teste nova headline e CTA no primeiro scroll.");
     if (cIc >= 10 && convIc < 20) sugestoes.push(`Checkout com gargalo (${convIc}% IC→compra). Reduza fricção: Pix à vista, 1-click, prova perto do botão.`);
@@ -38,7 +38,7 @@ export default async function Page() {
   }
 
   return (
-    <AppShell title="Predict" subtitle="Projeção simples baseada nos últimos 7 e 30 dias + recomendações.">
+    <AppShell title="Previsões" subtitle="Projeção dos próximos dias com base nos últimos 7 e 30 dias.">
       <div className="grid gap-4 md:grid-cols-4">
         {[
           ["Health score", `${score}/100`, `Tendência: ${trend}`],
@@ -54,7 +54,7 @@ export default async function Page() {
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-300">
           {sugestoes.map((s) => <li key={s}>{s}</li>)}
         </ul>
-        <p className="mt-4 text-xs text-slate-500">Modelo heurístico local (sem IA externa): média móvel + regras de funil. Conecte mais volume para previsões mais estáveis. Projetos: {rows.length}.</p>
+        <p className="mt-4 text-xs text-slate-500">Cálculo por média móvel e regras de funil. Quanto mais volume, mais estáveis as previsões. Projetos: {rows.length}.</p>
       </div>
     </AppShell>
   );

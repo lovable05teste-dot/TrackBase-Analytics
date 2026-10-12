@@ -38,7 +38,7 @@ export default async function Page() {
                   <div key={h} title={`${h}h: ${n} eventos, ${c} compras`} className="rounded-lg border border-white/10 p-2 text-center" style={{ background: `rgba(117,92,255,${0.05 + (intensity / 100) * 0.5})` }}>
                     <div className="text-xs text-slate-400">{String(h).padStart(2, "0")}h</div>
                     <div className="text-sm font-semibold">{n}</div>
-                    <div className="text-[11px] text-emerald-300">{c > 0 ? `${c} 🛒` : "—"}</div>
+                    <div className="text-[11px] text-emerald-300">{c > 0 ? `${c} cliques` : "—"}</div>
                   </div>
                 );
               })}

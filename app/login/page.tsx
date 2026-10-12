@@ -36,8 +36,8 @@ export default function Login(){
   <div className="relative mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-6 text-sm">
    <div><b className="text-lg">CAPI v25.0</b><small className="block text-xs text-slate-500">Pixel + servidor</small></div>
    <div><b className="text-lg">Planos</b><small className="block text-xs text-slate-500">a partir de R$ 39,90/mês</small></div>
-   <div><b className="text-lg">D+0</b><small className="block text-xs text-slate-500">venda cai no painel na hora</small></div>
-   <small className="w-full text-xs text-slate-600">Taxas transparentes. Sem mensalidade escondida.</small>
+   <div><b className="text-lg">Tempo real</b><small className="block text-xs text-slate-500">venda aparece no painel em segundos</small></div>
+   <small className="w-full text-xs text-slate-600">Sem fidelidade. Cancele quando quiser.</small>
   </div>
  </section>
  <section className="flex items-center justify-center border-t border-white/10 bg-[#0b0e17] p-5 sm:p-10 lg:border-l lg:border-t-0"><div className="w-full max-w-md">
