@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState} from "react";
 import {Loader2,Search,Trash2} from "lucide-react";
 import {apiFetch} from "@/lib/plan-client";
+import { LoadingState } from "@/components/LoadingState";
 
 type Ev={id:string;eventName:string;source:string;occurredAt:number;projectName:string;projectId?:string;visitorId?:string|null;utmCampaign?:string|null;utmSource?:string|null;value:number|null;currency:string|null};
 const NAMES=["","AdClick","PageView","ViewContent","InitiateCheckout","AddToCart","Lead","Purchase","PageError"];
@@ -33,7 +34,7 @@ export function EventsClient(){
       <select value={name} onChange={e=>setName(e.target.value)} aria-label="Filtrar por evento" className="dashboard-input h-11"><option value="">Todos os eventos</option>{NAMES.filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}</select>
     </div>
     <p className="text-xs text-slate-500" role="status">{loading?"Carregando eventos...":`${filtered.length} evento(s) · mais recentes primeiro`}</p>
-    {loading?<div className="flex items-center gap-2 rounded-xl border border-slate-200 p-10 text-sm text-slate-500 dark:border-white/10"><Loader2 className="size-4 animate-spin"/>Carregando eventos...</div>:filtered.length===0?<div className="rounded-xl border border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-white/10">{rows.length?"Nada encontrado com esses filtros.":"Nenhum evento recebido ainda."}</div>:<>
+    {loading?<LoadingState label="Carregando eventos" rows={6}/>:filtered.length===0?<div className="rounded-xl border border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-white/10">{rows.length?"Nada encontrado com esses filtros.":"Nenhum evento recebido ainda."}</div>:<>
     <div className="hidden overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10 md:block"><table className="w-full min-w-[760px] text-left text-sm"><thead><tr>{["Evento","Origem","Campanha","Projeto","Quando",""].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{filtered.map(r=><tr key={r.id} className="border-t border-slate-200 dark:border-white/10"><td className="p-3 font-medium">{r.eventName}</td><td className="p-3 text-slate-500">{r.source}</td><td className="max-w-[240px] truncate p-3">{r.utmCampaign||"—"}</td><td className="max-w-[180px] truncate p-3">{r.projectName||"—"}</td><td className="whitespace-nowrap p-3 text-slate-500">{when(r.occurredAt)}</td><td className="whitespace-nowrap p-3 text-right">{action(r)}</td></tr>)}</tbody></table></div>
     <div className="grid gap-3 md:hidden">{filtered.map(r=><div key={r.id} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[.03]"><div className="flex items-center justify-between gap-2"><b>{r.eventName}</b><span className="text-xs text-slate-500">{when(r.occurredAt)}</span></div><p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">{r.utmCampaign||"Sem campanha"} · {r.source}</p><div className="mt-2">{action(r)}</div></div>)}</div>
     </>}

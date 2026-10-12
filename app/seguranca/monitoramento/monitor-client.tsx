@@ -5,6 +5,7 @@ import { Activity, BellRing, Loader2, Plus, RefreshCw, Trash2 } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetch } from "@/lib/plan-client";
+import { LoadingState } from "@/components/LoadingState";
 
 type Monitor = { id: string; url: string; keyword: string | null; status: string; code: number | null; ms: number | null; error: string | null; checkedAt: number | null; downSince: number | null; uptime24h: number | null; checks24h: number; recent: { at: number; ok: number; ms: number | null }[] };
 
@@ -120,7 +121,7 @@ export function MonitorClient() {
 
       <div className="grid gap-3">
         {loading ? (
-          <div className="metric-card flex items-center justify-center gap-2 rounded-xl p-8 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" />Carregando…</div>
+          <LoadingState label="Carregando monitores" variant="cards" rows={3} />
         ) : monitors.length ? monitors.map((m) => {
           const st = STATUS[m.status] || STATUS.unknown;
           return (
