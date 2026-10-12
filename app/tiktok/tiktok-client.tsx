@@ -14,7 +14,7 @@ const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", c
 const num = (v: number) => new Intl.NumberFormat("pt-BR").format(Math.round(v || 0));
 const UTM = "utm_source=tiktok&utm_medium=paid&utm_campaign=__CAMPAIGN_NAME__|__CAMPAIGN_ID__&utm_term=__AID_NAME__|__AID__&utm_content=__CID_NAME__|__CID__";
 const PERIODS: [string, string][] = [["today", "Hoje"], ["yesterday", "Ontem"], ["last_7d", "7 dias"], ["last_30d", "30 dias"], ["this_month", "Este mês"]];
-const MESSAGES: Record<string, string> = { cancelado: "Autorização cancelada no TikTok.", sessao: "A conexão expirou. Tente de novo.", sem_contas: "O TikTok não retornou contas de anúncios.", oauth: "Não foi possível concluir a conexão.", config: "A conexão com o TikTok ainda não está configurada no servidor.", start: "Não foi possível iniciar a conexão.", retorno: "Retorno incompleto do TikTok." };
+const MESSAGES: Record<string, string> = { cancelado: "Autorização cancelada no TikTok.", sessao: "A conexão expirou. Tente de novo.", sem_contas: "O TikTok não retornou contas de anúncios.", oauth: "Não foi possível concluir a conexão.", config: "A conexão com o TikTok Ads ainda não está disponível.", start: "Não foi possível iniciar a conexão.", retorno: "Retorno incompleto do TikTok." };
 
 async function readJson(r: Response) { const t = await r.text(); try { return t ? JSON.parse(t) : {}; } catch { throw new Error(`Resposta inválida (${r.status}).`); } }
 
@@ -110,8 +110,8 @@ export function TiktokAdsClient() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Campanhas TikTok</h2>
           <div className="flex flex-wrap gap-2">
-            <select value={period} onChange={(e) => setPeriod(e.target.value)} className="dashboard-input h-10" aria-label="Período">{PERIODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="dashboard-input h-10" aria-label="Status"><option value="ACTIVE">Ativas</option><option value="PAUSED">Pausadas</option><option value="ALL">Todas</option></select>
+            <select value={period} onChange={(e) => setPeriod(e.target.value)} className="dashboard-input h-10 w-auto" aria-label="Período">{PERIODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="dashboard-input h-10 w-auto" aria-label="Status"><option value="ACTIVE">Ativas</option><option value="PAUSED">Pausadas</option><option value="ALL">Todas</option></select>
             <Button variant="outline" className="h-10" disabled={loading} onClick={() => loadCampaigns(period)}>{loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}Atualizar</Button>
           </div>
         </div>
@@ -155,12 +155,12 @@ export function TiktokAdsClient() {
 
       <section className="metric-card rounded-xl p-4 sm:p-5">
         <h2 className="text-lg font-semibold">Conta de anúncios TikTok</h2>
-        {!configured && <p className="mt-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700">A conexão com o TikTok ainda não está ativa no servidor (falta TIKTOK_APP_ID e TIKTOK_APP_SECRET).</p>}
+        {!configured && <p className="mt-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">A conexão da conta de anúncios do TikTok será liberada em breve. O pixel e o envio de vendas (abaixo) já funcionam.</p>}
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <Button asChild={configured} disabled={!configured} className="h-11">{configured ? <a href="/api/tiktok/oauth/start"><ExternalLink />{accounts.length ? "Conectar outra conta TikTok" : "Conectar TikTok Ads"}</a> : <span><ExternalLink />Conexão indisponível</span>}</Button>
+          <Button asChild={configured} disabled={!configured} className="h-11">{configured ? <a href="/api/tiktok/oauth/start" className="inline-flex items-center gap-2"><ExternalLink />{accounts.length ? "Conectar outra conta TikTok" : "Conectar TikTok Ads"}</a> : <span className="inline-flex items-center gap-2"><ExternalLink />Em breve</span>}</Button>
           {accounts.length > 0 && <Button variant="outline" className="h-11 text-red-600" disabled={busy === "remove"} onClick={removeAll}><Trash2 />Desconectar TikTok</Button>}
         </div>
-        <div className="mt-4 rounded-xl border border-border p-4">
+        {configured && <div className="mt-4 rounded-xl border border-border p-4">
           <h3 className="font-semibold">Multilogin (AdsPower)</h3>
           <p className="mt-1 text-sm text-muted-foreground">Gere o link, cole no perfil do AdsPower e entre no TikTok desse perfil. A conta conecta aqui <b className="text-foreground">sem login da GhostScale e sem cookie</b> no perfil.</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -168,7 +168,7 @@ export function TiktokAdsClient() {
             {link && <Button variant="outline" className="min-h-11" disabled={busy === "link"} onClick={makeLink}><RefreshCw />Gerar novo</Button>}
           </div>
           {link && <><p className="mt-3 select-all break-all rounded-lg bg-muted/50 p-3 font-mono text-xs text-muted-foreground">{link.tiktokUrl}</p><p className="mt-2 text-xs text-muted-foreground">Vale até {new Date(link.expiresAt * 1000).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}, serve para vários perfis e cancela o link anterior (inclusive o da Meta). Não compartilhe.</p></>}
-        </div>
+        </div>}
         {accounts.length > 0 && <div className="mt-4 grid gap-2">{accounts.map((a) => (
           <div key={a.advertiserId} className={`flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${a.selected ? "border-violet-400/60 bg-violet-500/10" : "border-border"}`}>
             <div className="min-w-0"><p className="flex flex-wrap items-center gap-2 font-medium"><span className="break-words">{a.name}</span>{a.selected && <span className="inline-flex items-center gap-1 text-sm text-emerald-600"><CheckCircle2 className="size-4" />Vinculada</span>}</p><p className="text-xs text-slate-500">ID {a.advertiserId}{a.currency ? ` · ${a.currency}` : ""}{a.timezone ? ` · ${a.timezone}` : ""}</p></div>

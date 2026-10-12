@@ -57,14 +57,14 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Análise e Otimização",
+    title: "Análise",
     items: [
       { label: "Relatórios de UTMs", href: "/relatorios/utms", icon: Tags },
       { label: "Eventos", href: "/eventos", icon: Activity },
       { label: "Meta Lab", href: "/meta-lab", icon: FlaskConical },
       { label: "Análise de Funil", href: "/funil", icon: Filter },
       { label: "Heatmaps", href: "/heatmaps", icon: Flame },
-      { label: "Predict (IA)", href: "/predict", icon: Sparkles, badge: "IA" },
+      { label: "Previsões", href: "/predict", icon: Sparkles },
       { label: "Atribuição", href: "/atribuicao", icon: GitBranch },
       { label: "Agent Hub", href: "/agent-hub", icon: Bot },
     ],

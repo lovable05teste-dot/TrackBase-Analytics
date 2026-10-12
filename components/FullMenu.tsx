@@ -31,7 +31,7 @@ export function FullMenu() {
   const firstGroupTitle = NAV_GROUPS[0]?.title;
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {NAV_GROUPS.map((g) => {
         // Abre o primeiro grupo e também o grupo da página atual, para a pessoa
           // sempre ver onde está no menu.
@@ -42,10 +42,10 @@ export function FullMenu() {
             <button
               type="button"
               onClick={() => setOpen((s) => ({ ...s, [g.title]: !expanded }))}
-              className="mb-1 flex w-full items-center justify-between px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium uppercase tracking-wider text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors"
+              className="mb-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[.12em] text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
             >
-              <span className="flex items-center gap-2">
-                <IconComponent className="size-4 shrink-0" />
+              <span className="flex min-w-0 items-center gap-2">
+                <IconComponent className="size-3.5 shrink-0" />
                 {g.title}
               </span>
               <ChevronDown className={`size-3.5 transition ${expanded ? "" : "-rotate-90"}`} />
@@ -65,13 +65,13 @@ export function FullMenu() {
                       className={`
                         flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
                         ${active && !locked 
-                          ? "bg-violet-50 text-violet-700 font-medium" 
+                          ? "bg-violet-500/10 font-medium text-violet-700 dark:text-violet-200" 
                           : locked 
                             ? "text-slate-400 hover:text-slate-500 border-l-2 border-[#FF4D67] pl-2" 
-                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100"}
                       `}
                     >
-                      <ItemIcon className={`size-4 shrink-0 ${locked ? "text-[#FF4D67]" : active ? "text-violet-600" : "text-slate-400"}`} />
+                      <ItemIcon className={`size-4 shrink-0 ${locked ? "text-[#FF4D67]" : active ? "text-violet-600 dark:text-violet-300" : "text-slate-400"}`} />
                       <span className="truncate">{item.label}</span>
                       {locked && minLabel ? (
                         <span className="ml-auto shrink-0 rounded-md bg-[#FF0030]/10 px-2 py-0.5 text-[10px] font-semibold text-[#FF4D67]">{minLabel}</span>

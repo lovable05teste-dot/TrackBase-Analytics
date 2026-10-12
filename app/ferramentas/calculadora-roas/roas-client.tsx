@@ -23,7 +23,7 @@ export function RoasClient() {
             <div key={k} className="rounded-xl bg-white/[.03] p-4"><p className="text-xs text-slate-500">{k}</p><p className="mt-1 text-xl font-semibold">{v}</p></div>
           ))}
         </div>
-        <p className="text-xs text-slate-500 md:col-span-3">{r.roas >= 2 ? "✅ ROAS saudável para escala." : r.roas >= 1 ? "⚠️ Empate: otimize CPA ou ticket antes de escalar." : "🔴 Prejuízo: pause e revise oferta/criativo."}</p>
+        <p className={`text-xs font-medium md:col-span-3 ${r.roas >= 2 ? "text-emerald-500" : r.roas >= 1 ? "text-amber-500" : "text-red-500"}`}>{r.roas >= 2 ? "ROAS saudável para escala." : r.roas >= 1 ? "Empate: otimize CPA ou ticket antes de escalar." : "Prejuízo: pause e revise oferta e criativo."}</p>
       </CardContent>
     </Card>
   );

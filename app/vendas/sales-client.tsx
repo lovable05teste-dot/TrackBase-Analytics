@@ -98,10 +98,10 @@ export function SalesClient(){
 
     <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[.02] lg:flex-row lg:items-center">
       <label className="relative block flex-1 lg:max-w-xs"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar pedido, campanha, projeto..." aria-label="Buscar vendas" className="dashboard-input h-10 pl-9"/></label>
-      <div className="flex flex-wrap gap-3">
-        <select value={status} onChange={e=>setStatus(e.target.value)} aria-label="Filtrar por status" className="dashboard-input h-10"><option value="all">Todos os status</option>{Object.entries(STATUS_LABEL).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
-        <select value={provider} onChange={e=>setProvider(e.target.value)} aria-label="Filtrar por gateway" className="dashboard-input h-10"><option value="all">Todos os gateways</option>{providers.map(p=><option key={p} value={p}>{p}</option>)}</select>
-        <select value={period} onChange={e=>setPeriod(e.target.value)} aria-label="Filtrar por período" className="dashboard-input h-10"><option value="all">Todo o período</option><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option></select>
+      <div className="grid gap-3 sm:flex sm:flex-wrap">
+        <select value={status} onChange={e=>setStatus(e.target.value)} aria-label="Filtrar por status" className="dashboard-input h-10 w-full sm:w-auto sm:min-w-44"><option value="all">Todos os status</option>{Object.entries(STATUS_LABEL).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
+        <select value={provider} onChange={e=>setProvider(e.target.value)} aria-label="Filtrar por gateway" className="dashboard-input h-10 w-full sm:w-auto sm:min-w-44"><option value="all">Todos os gateways</option>{providers.map(p=><option key={p} value={p}>{p}</option>)}</select>
+        <select value={period} onChange={e=>setPeriod(e.target.value)} aria-label="Filtrar por período" className="dashboard-input h-10 w-full sm:w-auto sm:min-w-44"><option value="all">Todo o período</option><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option></select>
       </div>
       <button type="button" onClick={()=>exportCsv(filtered)} disabled={!filtered.length} className="dashboard-input flex h-10 items-center justify-center gap-2 px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40 lg:ml-auto lg:w-auto"><Download className="size-4"/>Exportar CSV</button>
     </div>
