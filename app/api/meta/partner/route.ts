@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   if (!(await hasActivePlan(userId))) return planRequiredResponse();
   const config = partnerConfig();
   if (!config.configured) return json({ error: "Conexão por parceiro ainda não ativada no servidor." }, 503);
-  const body = (await request.json().catch(() => ({}))) as { adAccountId?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { adAccountId?: unknown; accountName?: unknown };
   const adAccountId = String(body.adAccountId || "").replace(/^act_/i, "").replace(/\D/g, "");
   if (!/^\d{5,25}$/.test(adAccountId)) return json({ error: "Cole o ID da conta de anúncios (só números, ex.: 1234567890)." }, 400);
   await ensureDb();
@@ -41,6 +41,10 @@ export async function POST(request: Request) {
       return json({ error: `Ainda não recebemos acesso à conta ${adAccountId}. Compartilhe a conta com o portfólio ${config.businessId} (passo 1) e tente de novo em 1 minuto.` }, 400);
     }
   }
+  // Prova de dono: além do ID, o nome exato da conta (visto só por quem tem
+  // acesso a ela na BM). Sem isso, quem soubesse o ID pegava a conta de outro.
+  const norm = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+  if (!norm(body.accountName) || norm(body.accountName) !== norm(account.name)) return json({ error: "O nome da conta não confere. Copie o nome exatamente como aparece na BM, em Contas de anúncios." }, 403);
   // Contas da própria BM da GhostScale não são de cliente: nunca liberar.
   if (account.business?.id === config.businessId) return json({ error: "Essa conta não pode ser adicionada por parceiro." }, 403);
   const now = Math.floor(Date.now() / 1000);

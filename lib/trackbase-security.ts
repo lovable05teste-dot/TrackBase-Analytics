@@ -360,29 +360,11 @@ export async function getUserIdFromSessionCookie(session: string | string[] | un
   if (!tokens.length) return null;
   // Pending-2FA sessions authenticate nothing until the code is verified.
   const active = await pickSessionToken(tokens);
-  if (active) return active.session.userId;
-  return legacyUserIdFromTokens(tokens);
+  // Sem fallback "legado": tokens determinísticos (sha256 da senha) davam
+  // sessão de admin sem 2FA, sem expirar e sem limite de tentativas.
+  return active ? active.session.userId : null;
 }
 
-async function legacyUserIdFromTokens(tokens: string[]) {
-  // Legacy fallback: deterministic pre-session tokens, so existing logins
-  // survive the upgrade. New logins never mint these.
-  const owner = process.env.ADMIN_PASSWORD ? await sha256(`trackbase:${process.env.ADMIN_PASSWORD}`) : "";
-  if (owner && tokens.some(token => timingSafeEqual(token, owner))) return "trackbase-owner";
-  try {
-    const { ensureDb, getDb } = await import("@/db");
-    const { users } = await import("@/db/schema");
-    await ensureDb();
-    const allUsers = await getDb().select({ id: users.id, passwordHash: users.passwordHash }).from(users);
-    for (const u of allUsers) {
-      const legacy = await sha256(`trackbase:${u.passwordHash}`);
-      if (tokens.some(token => timingSafeEqual(token, legacy))) return u.id;
-    }
-  } catch (error) {
-    console.error("session users lookup", error);
-  }
-  return null;
-}
 
 export async function requestUserId(request: Request) {
   return getUserIdFromSessionCookie(requestSessionTokens(request));
@@ -405,9 +387,32 @@ export const LOGIN_MAX_FAILS_PER_IP = 20;
 export const ACCOUNT_LOCKOUT_ATTEMPTS = 8;
 export const ACCOUNT_LOCKOUT_SECONDS = 900;
 
+// IP para limite de tentativas: na Vercel só o x-vercel-forwarded-for é
+// confiável (cf-connecting-ip/x-forwarded-for podem ser forjados pelo cliente).
 export function clientIpFromRequest(request: Request) {
-  const values = (request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "").split(",").map(v => v.trim()).filter(Boolean);
+  const raw = process.env.VERCEL
+    ? request.headers.get("x-vercel-forwarded-for") || request.headers.get("x-real-ip")
+    : request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for");
+  const values = (raw || "").split(",").map(v => v.trim()).filter(Boolean);
   return values[0] || null;
+}
+
+// Trava global do login administrativo (todas as origens somadas).
+export const ADMIN_MAX_FAILS_GLOBAL = 30;
+export async function isAdminLoginLocked() {
+  try {
+    const { ensureDb, getDb } = await import("@/db");
+    const { loginAttempts } = await import("@/db/schema");
+    const { and, eq, gte, isNull } = await import("drizzle-orm");
+    await ensureDb();
+    const since = Math.floor(Date.now() / 1000) - LOGIN_FAIL_WINDOW_SECONDS;
+    const rows = await getDb().select({ id: loginAttempts.id }).from(loginAttempts)
+      .where(and(isNull(loginAttempts.email), eq(loginAttempts.success, 0), gte(loginAttempts.createdAt, since))).limit(ADMIN_MAX_FAILS_GLOBAL + 1);
+    return rows.length > ADMIN_MAX_FAILS_GLOBAL;
+  } catch (error) {
+    console.error("admin lock check", error);
+    return false;
+  }
 }
 
 export async function logLoginAttempt(email: string | null, ip: string | null, success: boolean) {

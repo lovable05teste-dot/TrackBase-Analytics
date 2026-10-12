@@ -16,6 +16,7 @@ import {
   timingSafeEqual,
   verifyPassword,
   hashPassword,
+  isAdminLoginLocked,
 } from "@/lib/trackbase-security";
 
 export async function POST(request: Request) {
@@ -104,6 +105,11 @@ export async function POST(request: Request) {
   // Login administrativo (painel isolado): senha do ambiente + 2FA se configurado.
   const secret = process.env.ADMIN_PASSWORD;
   if (!secret) return Response.json({ error: "Login administrativo indisponível." }, { status: 503 });
+  // Limite ANTES de conferir a senha: senão um palpite certo sempre passava.
+  if (await isLoginRateLimited(null, ip) || await isAdminLoginLocked()) {
+    logAdminAccess("login-rate-limited", { ip });
+    return Response.json({ error: "Muitas tentativas. Aguarde 10 minutos." }, { status: 429 });
+  }
   if (!body.password || !timingSafeEqual(await sha256(`trackbase:${body.password}`), await sha256(`trackbase:${secret}`))) {
     await logLoginAttempt(null, ip, false);
     logAdminAccess("login-failed", { ip });
