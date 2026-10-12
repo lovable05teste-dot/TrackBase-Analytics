@@ -80,7 +80,6 @@ export function PixelConnect(){const[projects,setProjects]=useState<Project[]>([
 const GATEWAYS=[
  {id:"fortpay",label:"FortPay",logo:"/integration-fortpay.png",where:"No painel da FortPay, abra a área de Webhooks (às vezes chamada de Notificações ou Postback), crie um novo webhook e cole a URL abaixo. Marque todos os eventos de pagamento.",endpoint:"gateway"},
  {id:"sigilopay",label:"Sigilo Pay",logo:"/integration-sigilo-pay.png",where:"No painel da Sigilo Pay, abra a área de Webhooks (às vezes chamada de Notificações ou Postback), crie um novo webhook e cole a URL abaixo.",endpoint:"gateway"},
- {id:"utmify",label:"Utmify",logo:"",where:"Na Utmify, abra a área de Webhooks, crie um novo webhook e cole a URL abaixo como destino.",endpoint:"utmify"},
  {id:"flevopay",label:"FlevoPay",logo:"",where:"No painel da FlevoPay, abra a área de Webhooks (às vezes chamada de Notificações ou Postback), crie um novo webhook e cole a URL abaixo.",endpoint:"gateway"},
  {id:"hotmart",label:"Hotmart",logo:"",where:"Na Hotmart, abra a área de Webhook (notificações), cadastre um novo e cole a URL abaixo. Selecione os eventos de compra.",endpoint:"gateway"},
  {id:"kiwify",label:"Kiwify",logo:"",where:"Na Kiwify, abra a área de Webhooks, crie um novo e cole a URL abaixo. Marque compra aprovada, recusada, reembolso e chargeback.",endpoint:"gateway"},
@@ -111,7 +110,7 @@ export function GatewayConnect(){const[projects,setProjects]=useState<Project[]>
   {created&&createdGateway&&<div className="min-w-0 space-y-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4">
    <p className="flex items-center gap-2 font-semibold text-emerald-600"><CheckCircle2 className="size-5"/>URL gerada. Falta só colar no {createdGateway.label}.</p>
    <p className="text-sm leading-6 text-slate-700">{createdGateway.where}</p>
-   <CopyField label="URL do webhook" value={createdGateway.endpoint==="utmify"?`${origin}/api/webhooks/utmify?token=${encodeURIComponent(created.token)}`:created.webhookUrlWithToken} secret/>
+   <CopyField label="URL do webhook" value={created.webhookUrlWithToken} secret/>
    {createdGateway.endpoint==="gateway"&&<details className="text-sm"><summary className="cursor-pointer text-slate-600">Meu gateway pede URL e token separados</summary><div className="mt-3 space-y-3"><CopyField label="URL" value={created.webhookUrl}/><CopyField label="Token (header Authorization: Bearer)" value={created.token} secret/></div></details>}
    <p className="text-xs leading-5 text-slate-600">Depois de colar, faça uma venda de teste: ela aparece em <a href="/vendas" className="font-medium text-blue-600 underline">Vendas</a> e o status desta etapa muda para Concluído.</p>
   </div>}

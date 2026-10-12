@@ -15,7 +15,7 @@ const money=(value:number,currency="BRL")=>new Intl.NumberFormat("pt-BR",{style:
 const isOn=(row:Row)=>(row.configuredStatus||row.status)==="ACTIVE";
 const statusHint=(status:string)=>status==="CAMPAIGN_PAUSED"?"Campanha pausada":status==="ADSET_PAUSED"?"Conjunto pausado":status==="IN_PROCESS"?"Em análise":status==="WITH_ISSUES"?"Com problema":status==="DISAPPROVED"?"Reprovado":status==="PENDING_REVIEW"?"Em revisão":"Sem veicular";
 
-// Orçamento editável na linha, como na Utmify: valor por dia, ±20% e lápis.
+// Orçamento editável na linha: valor por dia, ±20% e lápis.
 function BudgetCell({row,level,busy,onSave}:{row:Row;level:Level;busy:boolean;onSave:(value:number)=>void}){
  const[editing,setEditing]=useState(false),[draft,setDraft]=useState("");
  if(row.lifetimeBudget)return <span className="whitespace-nowrap text-slate-500" title="Orçamento total (vitalício): altere no Gerenciador">{money(row.lifetimeBudget,row.currency)} total</span>;

@@ -2,7 +2,7 @@
 
 **GhostScale** — receba pedidos pelo nosso webhook universal e veja as vendas do seu usuário no painel de tráfego do Meta Ads, com atribuição por campanha.
 
-Este guia é destinado a **gateways de pagamento e plataformas de vendas** (FortPay, FlevoPay, Hotmart, Kiwify, Utmify e outros) que queiram enviar pedidos para a GhostScale de forma simples e segura.
+Este guia é destinado a **gateways de pagamento e plataformas de vendas** (FortPay, FlevoPay, Hotmart, Kiwify e outros) que queiram enviar pedidos para a GhostScale de forma simples e segura.
 
 ---
 
