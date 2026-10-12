@@ -9,11 +9,17 @@ import { pushToWorkspace } from "@/lib/push";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
 
+// Fecha por padrão: sem CRON_SECRET ninguém roda as tarefas (antes qualquer
+// pessoa podia disparar as regras e pausar campanhas de todos). Só aceita o
+// header Bearer (a Vercel Cron e o GitHub Actions mandam assim).
 function authorized(request:Request){
- const required=process.env.CRON_SECRET||"";
- if(!required)return true;
- const url=new URL(request.url);
- return url.searchParams.get("secret")===required||request.headers.get("authorization")===`Bearer ${required}`;
+ const required=(process.env.CRON_SECRET||"").trim();
+ if(!required){console.error("cron: CRON_SECRET não configurado; tarefa recusada");return false}
+ const given=request.headers.get("authorization")||"";
+ const expected=`Bearer ${required}`;
+ if(given.length!==expected.length)return false;
+ let diff=0;for(let i=0;i<expected.length;i++)diff|=given.charCodeAt(i)^expected.charCodeAt(i);
+ return diff===0;
 }
 
 async function runRules(){

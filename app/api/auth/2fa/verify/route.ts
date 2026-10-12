@@ -12,6 +12,10 @@ import {
   logAdminAccess,
   sessionCookie,
   verifyTotpCode,
+  isLoginRateLimited,
+  logLoginAttempt,
+  revokeSessionByToken,
+  sha256,
 } from "@/lib/trackbase-security";
 
 // POST {code}: segunda etapa do login — consome a sessão pendente (cookie
@@ -44,6 +48,14 @@ export async function POST(request: Request) {
   }
   if (!ok) {
     logAdminAccess("login-2fa-failed", { ip, userId: pending.userId });
+    // Limite por sessão pendente: depois de várias tentativas erradas a sessão
+    // é cancelada e a pessoa precisa entrar com a senha de novo.
+    const key = `2fa:${(await sha256(cookie)).slice(0, 24)}`;
+    await logLoginAttempt(key, ip, false);
+    if (await isLoginRateLimited(key, null)) {
+      await revokeSessionByToken(cookie);
+      return Response.json({ error: "Muitas tentativas. Entre de novo com a senha." }, { status: 429 });
+    }
     return Response.json({ error: "Código inválido." }, { status: 401 });
   }
   await finalizePendingSession(cookie);
