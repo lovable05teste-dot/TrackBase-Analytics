@@ -20,15 +20,15 @@ export function mapLegacySound(id:unknown):SaleSoundId{
 // - enabled/selected/volume: som. toast: aviso visual (independente do som).
 // - projects: filtro futuro por projeto — vazio agora, estrutura pronta no backend.
 export type SoundPrefs={selected:SaleSoundId;enabled:boolean;volume:number;toast:boolean;projects?:string[]};
-// Conta nova começa sem som (opt-in), mas com toast visual de venda ligado.
-export const DEFAULT_SOUND_PREFS:SoundPrefs={selected:"fortpay_caixa_registradora",enabled:false,volume:0.8,toast:true};
+// Conta nova já começa com o som de venda e o toast visual ligados.
+export const DEFAULT_SOUND_PREFS:SoundPrefs={selected:"fortpay_caixa_registradora",enabled:true,volume:0.8,toast:true};
 
 export function parseSoundPrefs(raw:unknown):SoundPrefs{
  let o:Record<string,unknown>={};
  try{o=(typeof raw==="string"?JSON.parse(raw):raw||{}) as Record<string,unknown>;}catch{o={};}
  const volume=typeof o.volume==="number"&&Number.isFinite(o.volume)?Math.min(1,Math.max(0,o.volume)):DEFAULT_SOUND_PREFS.volume;
  const projects=Array.isArray(o.projects)?o.projects.filter((p):p is string=>typeof p==="string"):undefined;
- return{selected:mapLegacySound(o.selected),enabled:o.enabled===true,volume,toast:o.toast===false?false:true,projects};
+ return{selected:o.selected===undefined?DEFAULT_SOUND_PREFS.selected:mapLegacySound(o.selected),enabled:typeof o.enabled==="boolean"?o.enabled:DEFAULT_SOUND_PREFS.enabled,volume,toast:o.toast===false?false:true,projects};
 }
 export function sanitizeSoundPrefs(body:unknown):Partial<SoundPrefs>{
  const o=(body||{}) as Record<string,unknown>;const out:Partial<SoundPrefs>={};
