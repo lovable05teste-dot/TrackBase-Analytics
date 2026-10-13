@@ -37,6 +37,7 @@ import {
   FileText,
   HelpCircle,
   Music2,
+  Bell,
 } from "lucide-react";
 
 export type NavItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }>; badge?: string };
@@ -50,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // segue acessível); Meta Lab e Eventos foram para Análise.
       { label: "Dashboard", href: "/", icon: LayoutDashboard },
       { label: "Vendas", href: "/vendas", icon: ShoppingCart },
+      { label: "Notificações", href: "/notificacoes", icon: Bell },
       { label: "Campanhas", href: "/campanhas", icon: Megaphone },
       { label: "TikTok Ads", href: "/tiktok", icon: Music2 },
       { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
