@@ -10,7 +10,9 @@ self.addEventListener("push",event=>{
  const options={body:data.body||"Nova atualização nas suas vendas.",icon:"/icon-192.png",badge:"/icon-192.png",vibrate:[300,100,200,100,300],silent:false,requireInteraction:false,tag:data.tag||"ghostscale-sale",renotify:true,data:{url:data.url||"/vendas"}};
  event.waitUntil((async()=>{
   const wins=await self.clients.matchAll({type:"window",includeUncontrolled:true});
-  for(const w of wins){try{w.postMessage({type:"play-sale-sound",soundId:soundPref.soundId,enabled:soundPref.enabled});}catch{}}
+  // Uma aba só toca o som: a focada, senão a visível, senão a primeira.
+  const w=wins.find(c=>c.focused)||wins.find(c=>c.visibilityState==="visible")||wins[0];
+  if(w){try{w.postMessage({type:"play-sale-sound",soundId:soundPref.soundId,enabled:soundPref.enabled});}catch{}}
   return self.registration.showNotification(title,options);
  })());
 });

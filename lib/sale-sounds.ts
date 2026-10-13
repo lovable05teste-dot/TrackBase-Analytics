@@ -14,6 +14,8 @@ let prefs:SoundPrefs=loadCache();
 let blocked=false;
 let unlocked=false;
 let lastPlayAt=0;
+let suppressUntil=0; // push já tocou: a consulta de 5 s não repete
+let pendingReplay:{id:string;at:number}|null=null; // som barrado pelo autoplay
 let windowStart=0;
 let pendingKeys:string[]=[];
 let flushTimer:ReturnType<typeof setTimeout>|null=null;
@@ -68,10 +70,27 @@ function ensureUnlock(){
  if(unlocked||typeof window==="undefined")return;unlocked=true;
  setBlocked(false);prime();
 }
+// O navegador barrou o som (ninguém clicou na página ainda): guarda para
+// tocar no primeiro clique, se a venda for recente.
+function markBlocked(id:string,err:unknown){
+ if(err&&typeof err==="object"&&(err as {name?:string}).name!=="NotAllowedError")return;
+ pendingReplay={id,at:Date.now()};setBlocked(true);
+}
+function onGesture(){
+ ensureUnlock();
+ if(!blocked&&!pendingReplay)return;
+ setBlocked(false);
+ const p=pendingReplay;pendingReplay=null;
+ if(p&&Date.now()-p.at<5*60000&&prefs.enabled)playNow(p.id);
+}
+function playNow(id:string){
+ const a=getAudio(id);if(!a)return;
+ try{a.volume=prefs.volume;a.currentTime=0;const r=a.play();if(r&&typeof r.catch==="function")r.catch(e=>markBlocked(id,e));lastPlayAt=Date.now();}catch(e){markBlocked(id,e);}
+}
 if(typeof window!=="undefined"){
- const unlock=()=>ensureUnlock();
- window.addEventListener("pointerdown",unlock,{once:true});
- window.addEventListener("keydown",unlock,{once:true});
+ window.addEventListener("pointerdown",onGesture,true);
+ window.addEventListener("keydown",onGesture,true);
+ window.addEventListener("touchend",onGesture,true);
  try{
   bc=new BroadcastChannel(BC_NAME);
   bc.onmessage=(e)=>{
@@ -79,6 +98,7 @@ if(typeof window!=="undefined"){
    if(!m||typeof m!=="object")return;
    if(m.k==="claim"&&typeof m.tab==="string"&&typeof m.key==="string")onClaim(m.tab,m.key);
    if(m.k==="played"&&typeof m.key==="string")onPlayedElsewhere(m.key);
+   if(m.k==="push-played"){suppressUntil=Date.now()+15000;clearFlush();}
   };
  }catch{bc=null;}
  schedulePrime();
@@ -109,11 +129,11 @@ function doPlay(count:number){
  try{
   a.volume=prefs.volume;a.currentTime=0;
   const r=a.play();
-  if(r&&typeof r.catch==="function")r.catch(()=>setBlocked(true));
+  if(r&&typeof r.catch==="function")r.catch(e=>markBlocked(prefs.selected,e));
   lastPlayAt=Date.now();
   try{bc?.postMessage({k:"played",key:windowKey()});}catch{}
   for(const fn of playListeners){try{fn(count);}catch{}}
- }catch{setBlocked(true);}
+ }catch(e){markBlocked(prefs.selected,e);}
 }
 function flush(){
  flushTimer=null;
@@ -178,8 +198,7 @@ export function setSoundPrefs(patch:Partial<SoundPrefs>){
 /** Toca o som escolhido agora (gesto do usuário: botão Testar). */
 export function previewSound(id:string){
  ensureUnlock();
- const a=getAudio(id);if(!a)return;
- try{a.volume=prefs.volume;a.currentTime=0;const r=a.play();if(r&&typeof r.catch==="function")r.catch(()=>setBlocked(true));}catch{setBlocked(true);}
+ playNow(id);
 }
 /**
  * Avisa vendas aprovadas novas. Colapsa rajadas em 1 toque e elege 1 aba.
@@ -188,6 +207,7 @@ export function previewSound(id:string){
 export function notifyApprovedSales(saleIds:string[]){
  if(!saleIds.length)return;
  if(!prefs.enabled||prefs.selected==="none")return;
+ if(Date.now()<suppressUntil)return;
  const now=Date.now();
  if(!pendingKeys.length||now-windowStart>BURST_MS){clearFlush();windowStart=now;}
  for(const id of saleIds)if(!pendingKeys.includes(id))pendingKeys.push(id);
@@ -196,11 +216,18 @@ export function notifyApprovedSales(saleIds:string[]){
 /** Silencia tudo, inclusive rajada em andamento. */
 export function silenceAll(){clearFlush();}
 /** Som vindo do service worker (push): toque único, sem eleição. */
-export function playFromWorker(soundId:string,enabled:boolean){
- if(enabled===false){silenceAll();return;}
- ensureUnlock();
- if(!prefs.enabled)return;
- const id=soundId&&soundFile(soundId)?soundId:prefs.selected;
- if(id==="none")return;
- previewSound(id);
+// O service worker avisa uma aba só; ela toca na hora (sem timer, que em aba
+// de fundo atrasa) e manda as outras abas não repetirem.
+export function playFromWorker(_soundId:string,_enabled:boolean){
+ if(!prefs.enabled||prefs.selected==="none")return;
+ suppressUntil=Date.now()+15000;clearFlush();
+ try{bc?.postMessage({k:"push-played"});}catch{}
+ playNow(prefs.selected);
+}
+/** Som ligado mas o navegador ainda não deixou tocar (falta um clique). */
+export function needsAudioGesture(){
+ if(typeof navigator==="undefined")return false;
+ if(blocked)return true;
+ const ua=(navigator as Navigator&{userActivation?:{hasBeenActive:boolean}}).userActivation;
+ return ua?!ua.hasBeenActive:false;
 }
