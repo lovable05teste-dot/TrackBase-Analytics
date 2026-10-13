@@ -9,7 +9,7 @@ const updated = "10 de setembro de 2026";
 
 export default function Privacidade() {
   return (
-    <main className="min-h-screen bg-[#080b12] text-slate-100">
+    <main className="dark min-h-screen bg-[#080b12] text-slate-100">
       <div className="mx-auto max-w-3xl px-5 py-12">
         <a href="/login" className="inline-flex items-center gap-2.5">
           <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-9 w-auto object-contain" />

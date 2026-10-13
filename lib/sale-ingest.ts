@@ -96,6 +96,21 @@ export function eventIdFor(provided: unknown, provider: string, externalId: stri
   return status === "approved" ? `purchase_${safeProvider}_${safeExternal}` : `gw_${safeProvider}_${safeExternal}_${status}`;
 }
 
+// paid_at do gateway → segundos. Aceita ISO, "YYYY-MM-DD HH:mm:ss" (horário
+// de Brasília), epoch em segundos ou ms. Inválido ou no futuro vira "agora".
+export function parsePaidAt(value: unknown, now = Math.floor(Date.now() / 1000)) {
+  if (value === undefined || value === null || value === "") return now;
+  const raw = String(value).trim();
+  let ts: number;
+  if (/^\d{9,13}$/.test(raw)) ts = Number(raw) > 1e11 ? Math.floor(Number(raw) / 1000) : Number(raw);
+  else {
+    const local = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(raw) ? raw.replace(" ", "T") + "-03:00" : raw;
+    ts = Math.floor(Date.parse(local) / 1000);
+  }
+  if (!Number.isFinite(ts) || ts <= 0 || ts > now + 300) return now;
+  return ts;
+}
+
 export function backoffFor(attempts: number) {
   return BACKOFF_SECONDS[Math.min(Math.max(0, attempts), BACKOFF_SECONDS.length - 1)];
 }
@@ -331,7 +346,9 @@ export async function drainCapiOutbox(db: Db, opts: { workspaceId?: string; limi
           await db.update(capiOutbox).set({ status: "dead", attempts, lastError: message, updatedAt: now }).where(eq(capiOutbox.id, row.id));
           result.dead++;
           const tt = row.pixelId.startsWith("tiktok:");
-          await alertWorkspace(row.workspaceId, tt ? "TikTok com problema" : "CAPI com problema", `Evento ${row.eventName.replace(/^TikTok:/, "")} não chegou ${tt ? "ao TikTok" : "à Meta"} após várias tentativas.`, `tb-capi-dead-${row.id}`);
+          // Projeto que nunca teve pixel da Meta: a venda fica salva e a
+          // linha morre em silêncio (não é falha, só não há destino).
+          if (tt || row.pixelId) await alertWorkspace(row.workspaceId, tt ? "TikTok com problema" : "CAPI com problema", `Evento ${row.eventName.replace(/^TikTok:/, "")} não chegou ${tt ? "ao TikTok" : "à Meta"} após várias tentativas.`, `tb-capi-dead-${row.id}`);
         } else {
           await db
             .update(capiOutbox)

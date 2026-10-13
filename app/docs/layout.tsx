@@ -18,7 +18,7 @@ const tabs = [
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[#080b12] text-slate-100">
+    <main className="dark min-h-screen bg-[#080b12] text-slate-100">
       <div className="mx-auto max-w-5xl px-5 py-8 lg:px-8">
         <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white"><span className="inline-block h-3 w-3 rotate-180">→</span>Voltar ao dashboard</Link>
 
