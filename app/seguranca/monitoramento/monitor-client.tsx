@@ -99,7 +99,7 @@ export function MonitorClient() {
           <ul className="grid gap-1.5 text-sm text-slate-500">
             <li>• O servidor da GhostScale verifica cada endereço a cada <b className="text-foreground">5 minutos</b>, mesmo com o app fechado.</li>
             <li>• Confere a resposta real da página (código HTTP) e o tempo de carregamento.</li>
-            <li>• <BellRing className="inline size-3.5" /> Avisa no celular quando a página <b className="text-foreground">cair</b> e quando <b className="text-foreground">voltar</b>. Ative as notificações no sino.</li>
+            <li>• <BellRing className="inline size-3.5" /> Avisa no celular quando a página <b className="text-foreground">cair</b> e quando <b className="text-foreground">voltar</b>. Ative em <a href="/notificacoes" className="underline">Notificações</a>.</li>
           </ul>
           {!canEdit && <p className="mt-3 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-600">Seu plano não inclui o Monitoramento de Sites. <Link href="/planos" className="font-semibold underline">Ver planos</Link></p>}
           <form onSubmit={add} className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,220px)_auto]">

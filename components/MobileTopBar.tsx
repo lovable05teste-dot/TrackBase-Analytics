@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { AccountMenu, type AccountData } from "./AccountMenu";
-import { NotificationsBell } from "@/app/notifications-bell";
 
 interface MobileTopBarProps { accountData: AccountData; }
 
@@ -15,10 +14,8 @@ export function MobileTopBar({ accountData }: MobileTopBarProps) {
           className="h-11 w-auto max-w-[220px] shrink-0 object-contain"
         />
       </Link>
-      {/* O sino é onde se ativa o push no celular; antes só existia no
-          cabeçalho do desktop, então o celular nunca recebia notificação. */}
+      {/* Notificações (e ativar o push no celular) ficam em /notificacoes, no menu. */}
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <NotificationsBell />
         <AccountMenu data={accountData} />
       </div>
     </div>

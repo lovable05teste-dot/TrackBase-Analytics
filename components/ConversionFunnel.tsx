@@ -82,7 +82,7 @@ export function ConversionFunnel({ stages }: { stages: FunnelStage[] }) {
           const prev = i ? stages[i - 1].value : 0;
           return (
             <div key={s.name} className={`px-1 pb-4 pt-2 text-center ${i ? "gs-funnel-divider" : ""}`}>
-              <p className="text-base font-semibold tabular-nums text-white sm:text-xl">{number(s.value)}</p>
+              <p className="text-base font-semibold tabular-nums text-foreground sm:text-xl">{number(s.value)}</p>
               {i > 0 && <p className="mt-1 min-h-4 text-[10px] text-slate-400 sm:text-xs">{prev && s.value <= prev ? `${pct((s.value / prev) * 100)} da etapa anterior` : ""}</p>}
             </div>
           );

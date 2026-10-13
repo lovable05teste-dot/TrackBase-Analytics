@@ -182,7 +182,7 @@ export async function POST(request: Request) {
     const [prefRow] = await db.select().from(notificationPrefs).where(eq(notificationPrefs.workspaceId, credential.workspaceId)).limit(1);
     const prefs = parsePrefs(prefRow?.prefs);
     const allowed = status === "approved" ? prefs.approved : prefs.pending;
-    if (!allowed) await recordSaleEvent(credential.workspaceId, "push.sale", externalId, { status, skipped: "desativado no sino" });
+    if (!allowed) await recordSaleEvent(credential.workspaceId, "push.sale", externalId, { status, skipped: "desativado em Notificações" });
     if (allowed) {
       const money = `R$ ${value.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
       const title = (status === "approved" ? "Venda aprovada" : "Venda pendente") + (prefs.showValue ? ` · ${money}` : "");

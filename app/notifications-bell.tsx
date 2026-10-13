@@ -5,7 +5,7 @@ import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
 import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
-import {getSoundPrefs,playFromWorker,previewSound,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
+import {getSoundPrefs,previewSound,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -14,7 +14,7 @@ function ago(ts:number){const s=Math.max(1,Math.floor(Date.now()/1000)-ts);if(s<
 function bufToB64(buf:ArrayBuffer|null){if(!buf)return "";const b=new Uint8Array(buf);let s="";for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
 function vapidKey(k:string){const pad="=".repeat((4-k.length%4)%4);return Uint8Array.from(atob((k+pad).replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))}
 
-export function NotificationsBell(){
+export function NotificationsBell({inline=false}:{inline?:boolean}={}){
  const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
  const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
  const[sound,setSound]=useState<SoundPrefs>(getSoundPrefs());
@@ -92,15 +92,11 @@ const fresh=list.filter(o=>!known.current.has(o.id));
 
  useEffect(()=>{const off=subscribeSoundPrefs(setSound);return off;},[]);
 
- const onSwMessage=(e:MessageEvent)=>{const m=e.data;if(m&&m.type==="play-sale-sound"){playFromWorker(m.soundId,m.enabled);}};
-
- useEffect(()=>{
-  try{if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",onSwMessage);}catch{}
-  return()=>{try{if("serviceWorker" in navigator)navigator.serviceWorker.removeEventListener("message",onSwMessage);}catch{}};
- },[]);
 
  const markSeen=()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}};
  const toggle=()=>{if(!open)markSeen();setOpen(v=>!v);};
+ // Página Notificações: abre já aberta e marca como vistas.
+ useEffect(()=>{if(!inline)return;const t=window.setTimeout(()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}},0);return()=>window.clearTimeout(t)},[inline]);
  // iPhone: a chave VAPID é buscada antes, para o subscribe acontecer logo
  // depois da permissão (o Safari pode recusar se houver espera no meio).
  const vapidRef=useRef("");
@@ -129,16 +125,17 @@ const fresh=list.filter(o=>!known.current.has(o.id));
   }catch(e){setPush("off");setPushError(`Falha ao ativar: ${e instanceof Error?e.message:"erro desconhecido"}`);}
  };
  const recent=orders.slice(0,12);
+ const shown=inline||open;
  return <div className="relative">
-  <Button variant="outline" size="icon" onClick={toggle} aria-label="Notificações de vendas" className="relative">
+  {!inline&&<Button variant="outline" size="icon" onClick={toggle} aria-label="Notificações de vendas" className="relative">
    {unread?<BellRing/>:<Bell/>}
    {unread>0&&<span className="absolute -right-1.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">{unread>99?"99+":unread}</span>}
-  </Button>
-  {open&&<>
-   <div className="fixed inset-0 z-40" onClick={()=>setOpen(false)}/>
-   <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border bg-card text-card-foreground shadow-2xl">
+  </Button>}
+  {shown&&<>
+   {!inline&&<div className="fixed inset-0 z-40" onClick={()=>setOpen(false)}/>}
+   <div className={inline?"max-w-2xl overflow-hidden rounded-xl border bg-card text-card-foreground":"absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border bg-card text-card-foreground shadow-2xl"}>
     <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3"><b className="text-sm">Vendas recentes</b><a href="/vendas" className="text-xs font-medium text-blue-600 hover:underline">Ver vendas</a></div>
-    <div className="max-h-80 overflow-y-auto">
+    <div className={inline?"max-h-[28rem] overflow-y-auto":"max-h-80 overflow-y-auto"}>
      {recent.length===0&&<p className="px-4 py-6 text-center text-sm text-slate-500">Nenhuma venda pendente ou aprovada nos últimos 30 dias.</p>}
      {recent.map(o=><div key={o.id} className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 last:border-0"><span className={`size-2.5 shrink-0 rounded-full ${o.status==="approved"?"bg-emerald-500":"bg-amber-400"}`}/><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{o.status==="approved"?"Venda aprovada":"Venda pendente"} · {money(o.value,o.currency)}</p><p className="truncate text-xs text-slate-500">{o.utmCampaign||o.projectName} · {ago(o.updatedAt)}</p></div></div>)}
     </div>

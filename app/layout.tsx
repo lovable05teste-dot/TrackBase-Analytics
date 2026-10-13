@@ -5,6 +5,7 @@ import "./globals.css";
 import {PwaRegister} from "./pwa-register";
 import {Toaster} from "@/components/ui/sonner";
 import {SoundNotifications} from "@/components/SoundNotifications";
+import {SaleSoundBridge} from "@/components/SaleSoundBridge";
 
 export const metadata: Metadata = {
   title: "GhostScale",
@@ -41,7 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <PwaRegister/><SoundNotifications/><Toaster position="bottom-right" richColors/>{children}
+        <PwaRegister/><SoundNotifications/><SaleSoundBridge/><Toaster position="bottom-right" richColors/>{children}
       </body>
       <GoogleAnalytics gaId="G-YV71CM9ETF" />
       <Script id="ghostscale-google-ads" strategy="afterInteractive">
