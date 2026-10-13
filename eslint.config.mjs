@@ -16,6 +16,21 @@ const eslintConfig = defineConfig([
     "mobile/**",
   ]),
   {
+    files: ["app/**/page.tsx"],
+    rules: {
+      // Páginas são server components com dynamic = "force-dynamic": ler o
+      // relógio no render é intencional (cada request recalcula a janela).
+      "react-hooks/purity": "off",
+    },
+  },
+  {
+    rules: {
+      // Busca em useEffect com setLoading(true) é o padrão do app (sem React
+      // Compiler); fica como aviso para não esconder erros de verdade.
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
+  {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],
     rules: {
       // These files are vendored verbatim from shadcn@4.17.0. Keep the

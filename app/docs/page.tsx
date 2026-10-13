@@ -43,7 +43,7 @@ export default function Docs(){
     </Sec>
     <Sec id="status" n="Parte 5" title="Status — o que cada valor vira">
      <Table head={["Você envia (exemplos)","Vira no painel","Evento gerado"]} rows={[["approved, authorized, paid, completed, succeeded, settled, captured, aprovado, pago, liquidado","Aprovada","Purchase"],["pending, waiting, processing, created, initiated, in_review, awaiting, aguardando, criado","Pendente","PaymentPending"],["refund, reembols*","Reembolsada","Refund"],["chargeback, contestad*","Chargeback","Chargeback"],["cancel, failed, recusad*, expired","Cancelada","PaymentCancelled"]]}/>
-     <p>Valores fora dessa lista retornam <code>HTTP 400</code> com <code>{"{"}"error": "Status de pagamento não reconhecido"{"}"}</code> e nada é salvo. Reenviar o mesmo ID atualiza a venda (mudança de pendente → aprovada funciona sozinha).</p>
+     <p>Valores fora dessa lista retornam <code>HTTP 400</code> com <code>{'{"error": "Status de pagamento não reconhecido"}'}</code> e nada é salvo. Reenviar o mesmo ID atualiza a venda (mudança de pendente → aprovada funciona sozinha).</p>
     </Sec>
     <Sec id="fortpay" n="Parte 6" title="Caso especial: FortPay">
      <p>A FortPay envia o pedido aninhado: ID em <code>transaction.id</code>, valor em <code>transaction.amount</code> <b>em centavos</b> (777 = R$ 7,77), produto em <code>items[0].title</code> e UTMs em <code>tracking.*</code>:</p>

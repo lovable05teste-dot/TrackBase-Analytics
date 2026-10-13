@@ -16,6 +16,7 @@ import {
   pick,
   resolveStatus,
   parseMoney,
+  parsePaidAt,
   upsertOrder,
 } from "../../../../lib/sale-ingest";
 
@@ -65,7 +66,10 @@ export async function POST(request: Request) {
       "data.id",
       "data.transaction.id",
       "order.id",
-    ]) || crypto.randomUUID(),
+    ]) ||
+      // Sem ID do pedido: hash do corpo, para o reenvio do mesmo webhook
+      // não virar venda duplicada.
+      "sem_id_" + (await sha256(JSON.stringify(body))).slice(0, 24),
   );
   const rawStatus = pick(body, ["status", "payment_status", "transaction_status", "event", "type", "data.status", "data.payment_status", "data.transaction.status", "order.status"]);
   // Status inédito vira pendente + alerta (nunca 400 que dropa a venda).
@@ -110,8 +114,8 @@ export async function POST(request: Request) {
   const currency = String(pick(body, ["currency", "data.currency", "data.transaction.currency"]) || "BRL").toUpperCase();
   const eventId = eventIdFor(pick(body, ["event_id", "eventId", "tracking.event_id", "metadata.event_id", "data.event_id"]), credential.provider, externalId, status);
   const paidAt = pick(body, ["paid_at", "data.paid_at"]);
-  const paidTime = paidAt ? Math.floor(Date.parse(String(paidAt)) / 1000) : Math.floor(Date.now() / 1000);
   const now = Math.floor(Date.now() / 1000);
+  const paidTime = parsePaidAt(paidAt, now);
   const db = getDb();
 
   // Dedup: redelivery do mesmo status = 200 sem reinserir nem re-disparar.
@@ -144,7 +148,7 @@ export async function POST(request: Request) {
     projectId: credential.projectId,
     eventId,
     eventName,
-    occurredAt: Number.isFinite(paidTime) ? paidTime : now,
+    occurredAt: paidTime,
     value,
     currency,
     visitorId,

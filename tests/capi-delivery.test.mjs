@@ -190,7 +190,7 @@ test('status words are matched whole: unpaid/not authorized/refund completed nev
 });
 
 test('pt-BR amounts are parsed and a late pending webhook never downgrades an approved sale',async()=>{
- assert.equal(ingest.parseMoney('R$ 1.234,56'),1234.56);assert.equal(ingest.parseMoney('97,00'),97);
+ assert.equal(ingest.parseMoney('R$ 1.234,56'),1234.56);assert.equal(ingest.parseMoney('97,00'),97); const now0=1770000000;assert.equal(ingest.parsePaidAt('',now0),now0);assert.equal(ingest.parsePaidAt('2099-01-01T00:00:00Z',now0),now0);assert.equal(ingest.parsePaidAt('1759990000',now0),1759990000);assert.equal(ingest.parsePaidAt('1759990000000',now0),1759990000);assert.equal(ingest.parsePaidAt('2025-10-09 10:00:00',now0),Date.parse('2025-10-09T13:00:00Z')/1000);assert.equal(ingest.parsePaidAt('lixo',now0),now0);
  assert.equal((await gateway.POST(webhook({id:'brl-1',status:'paid',value:'97,00'}))).status,200);
  assert.equal(sql.prepare("SELECT value FROM orders WHERE external_id='brl-1'").get().value,97);
  assert.equal((await gateway.POST(webhook({id:'brl-1',status:'waiting_payment',value:'97,00'}))).status,200);

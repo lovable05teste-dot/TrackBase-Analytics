@@ -10,7 +10,7 @@ const LIMIT=200;
 const STATUS_LABEL:Record<string,string>={approved:"Aprovada",pending:"Pendente",refunded:"Reembolsada",cancelled:"Cancelada",chargeback:"Chargeback"};
 const STATUS_DOT:Record<string,string>={approved:"bg-emerald-500",pending:"bg-amber-500",refunded:"bg-slate-400",cancelled:"bg-slate-400",chargeback:"bg-red-500"};
 type SortKey="updatedAt"|"value"|"status";
-const SORTABLE:{key:SortKey;label:string}[]=[{key:"updatedAt",label:"Atualizado"},{key:"value",label:"Valor"},{key:"status",label:"Status"}];
+const SORTABLE:{key:SortKey;label:string}[]=[{key:"status",label:"Status"},{key:"value",label:"Valor"},{key:"updatedAt",label:"Atualizado"}];
 
 function money(value:number,currency:string){
   const v=Number(value);
@@ -64,7 +64,7 @@ export function SalesClient(){
   const toggleSort=(key:SortKey)=>{if(key===sortKey)setSortDir(d=>d==="desc"?"asc":"desc");else{setSortKey(key);setSortDir("desc")}};
   const filtered=useMemo(()=>{
     const q=search.trim().toLocaleLowerCase();
-    const nowFilter=Math.floor(Date.now()/1000);
+    const nowFilter=Math.floor(new Date().getTime()/1000);
     const minTs=period==="7d"?nowFilter-7*86400:period==="30d"?nowFilter-30*86400:0;
     const list=rows.filter(r=>(status==="all"||r.status===status)&&(provider==="all"||r.provider===provider)&&(!minTs||Number(r.updatedAt)>=minTs)&&(!q||`${r.externalId} ${r.utmCampaign||""} ${r.projectName||""}`.toLocaleLowerCase().includes(q)));
     const dir=sortDir==="asc"?1:-1;

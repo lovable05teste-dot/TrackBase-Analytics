@@ -1,0 +1,1948 @@
+▲ Next.js 16.2.6
+- Local:         http://localhost:3100
+- Network:       http://192.0.2.2:3100
+✓ Ready in 195ms
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "protection_reports" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_protection_reports_project_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "site_protections" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "tool_states" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_tool_states_ws_tool" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "workspaces" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "members" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_members_workspace_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "projects" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_projects_public_key" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_projects_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "events" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_events_project_event" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_events_project_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_events_project_name_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '00000',
+  message: 'index "idx_orders_provider_external" does not exist, skipping',
+  file: 'tablecmds.c',
+  line: '1326',
+  routine: 'DropErrorMsgNonExistent'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_orders_project_provider_external" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_orders_project_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "api_credentials" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_api_credentials_token" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_api_credentials_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_api_credentials_project" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "users" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "sessions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_sessions_token" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_sessions_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_sessions_expires" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "login_attempts" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_login_attempts_email_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_login_attempts_ip_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "password_resets" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_password_resets_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "email_verifications" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_email_verifications_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "capi_outbox" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_capi_outbox_due" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_capi_outbox_project" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "verification_codes" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_verification_codes_email_purpose" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_verification_codes_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_oauth_states" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_oauth_states_hash" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_oauth_states_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '00000',
+  message: 'table "google_oauth_states" does not exist, skipping',
+  file: 'tablecmds.c',
+  line: '1326',
+  routine: 'DropErrorMsgNonExistent'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_accounts" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_accounts_user_ad" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_accounts_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_accounts_selected" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_linked" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_linked_user_ad" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "push_subscriptions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_push_sub_endpoint" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "notification_prefs" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "site_monitors" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_site_monitors_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_site_monitors_due" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "monitor_checks" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_monitor_checks_monitor_at" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_connect_links" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_connect_links_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "tiktok_accounts" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_tiktok_accounts_user_adv" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "native_push_tokens" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_native_push_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "sound_prefs" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "automation_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "action_history" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_action_history_ws" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "plan_subscriptions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_plan_subs_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_plan_subs_cakto_sub" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_plan_subs_email" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "webhook_events" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_webhook_events_provider_event" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_webhook_events_type" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "usage_counters" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_usage_ws_metric_period" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "audit_logs" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_audit_ws_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_audit_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tracking_config" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_pixel_id" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_token_cipher" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_token_iv" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_test_code" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_campaign" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_source" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_medium" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_content" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_term" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "user_id" of relation "notification_prefs" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "name" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "cpf" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "role" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "totp_secret_cipher" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "totp_iv" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "totp_enabled" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "email_verified_at" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "failed_attempts" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "locked_until" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "plan_version" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "current_period_start" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "cancel_at_period_end" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "excess_enabled" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "excess_cap" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "scheduled_plan" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "scheduled_at" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "protection_reports" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_protection_reports_project_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "site_protections" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "tool_states" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_tool_states_ws_tool" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "workspaces" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "members" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_members_workspace_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "projects" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_projects_public_key" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_projects_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "events" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_events_project_event" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_events_project_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_events_project_name_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '00000',
+  message: 'index "idx_orders_provider_external" does not exist, skipping',
+  file: 'tablecmds.c',
+  line: '1326',
+  routine: 'DropErrorMsgNonExistent'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_orders_project_provider_external" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_orders_project_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "api_credentials" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_api_credentials_token" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_api_credentials_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_api_credentials_project" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "users" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "sessions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_sessions_token" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_sessions_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_sessions_expires" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "login_attempts" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_login_attempts_email_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_login_attempts_ip_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "password_resets" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_password_resets_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "email_verifications" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_email_verifications_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "capi_outbox" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_capi_outbox_due" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_capi_outbox_project" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "verification_codes" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_verification_codes_email_purpose" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_verification_codes_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_oauth_states" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_oauth_states_hash" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_oauth_states_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '00000',
+  message: 'table "google_oauth_states" does not exist, skipping',
+  file: 'tablecmds.c',
+  line: '1326',
+  routine: 'DropErrorMsgNonExistent'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_accounts" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_accounts_user_ad" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_accounts_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_accounts_selected" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_linked" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_linked_user_ad" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "push_subscriptions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_push_sub_endpoint" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "notification_prefs" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "site_monitors" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_site_monitors_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_site_monitors_due" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "monitor_checks" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_monitor_checks_monitor_at" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "meta_connect_links" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_meta_connect_links_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "tiktok_accounts" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_tiktok_accounts_user_adv" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "native_push_tokens" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_native_push_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "sound_prefs" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "automation_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "action_history" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_action_history_ws" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "plan_subscriptions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_plan_subs_workspace" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_plan_subs_cakto_sub" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_plan_subs_email" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "webhook_events" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_webhook_events_provider_event" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_webhook_events_type" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "usage_counters" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_usage_ws_metric_period" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "audit_logs" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_audit_ws_time" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "idx_audit_user" already exists, skipping',
+  file: 'index.c',
+  line: '884',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tracking_config" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_pixel_id" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_token_cipher" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_token_iv" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "tiktok_test_code" of relation "projects" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_campaign" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_source" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_medium" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_content" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "utm_term" of relation "orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "user_id" of relation "notification_prefs" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "name" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "cpf" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "role" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "totp_secret_cipher" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "totp_iv" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "totp_enabled" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "email_verified_at" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "failed_attempts" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "locked_until" of relation "users" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "plan_version" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "current_period_start" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "cancel_at_period_end" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "excess_enabled" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "excess_cap" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "scheduled_plan" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "scheduled_at" of relation "plan_subscriptions" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7349',
+  routine: 'check_for_column_name_collision'
+}

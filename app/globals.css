@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
+/* dark: segue o botão de tema (classe .dark no <html>), não o tema do sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root{
   --background:#fafafa;--foreground:#09090b;--card:#ffffff;--card-foreground:#09090b;
   --popover:#ffffff;--popover-foreground:#09090b;--primary:#18181b;--primary-foreground:#fafafa;
