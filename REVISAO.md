@@ -1,3 +1,39 @@
+# Revisão do GhostScale (rodada 3: tracking e ferramentas)
+
+Foco: funcionamento básico do rastreamento e das ferramentas.
+
+## Corrigido
+
+1. **Compra sem campanha (crítico de tracking).** Quando o webhook do gateway não trazia UTM ou `fbclid` (caso comum), a venda entrava sem campanha, mesmo com o visitante vindo do anúncio. Agora a rota busca a última visita desse visitante (`tb_vid`) e preenche o que faltou. O que o gateway manda continua tendo prioridade. Também passam a seguir para a Meta o `fbclid`, o `fbc` e o `fbp` da visita. Conferido ao vivo: visita com UTM e `fbclid` no navegador, depois webhook só com `tb_vid`; pedido e evento saíram com campanha, conjunto e anúncio.
+2. **ROAS e CPA máximo zeravam com vírgula.** Os campos aceitam o formato brasileiro, mas o cálculo usava `Number()`: `1000,50` virava 0 sem aviso. Agora usam um leitor de número brasileiro (com testes). Conferido: ROAS 3,00x com R$ 3.000,00 / R$ 1.000,50.
+3. **CPA máximo com rótulo errado.** O campo de conversão dizia "checkout→compra", mas a fórmula do CPC máximo usa conversão de clique até a compra. Rótulo corrigido.
+4. **UTM Builder quebrava as variáveis do Meta.** O `URLSearchParams` codificava `{{campaign.name}}` e o `|`, e a Meta não substituía as variáveis. Agora ficam sem codificar.
+5. **Webhook do gateway sem `order_id`.** O campo `order_id` (comum) não era reconhecido, e cada reenvio criava pedido novo (venda duplicada). Corrigido em rodada anterior, conferido ao vivo nesta.
+
+## Verificado e funcionando
+
+- Tracker no navegador (página de teste na mesma origem): `PageView`, `ViewContent`, `AdClick` e `InitiateCheckout` saem com UTM, `fbclid` e `fbc`. Não há erro de página.
+- Todas as 40 páginas logadas e de ferramentas carregam sem erro de página.
+- Mapa de Links: adiciona, salva, recarrega e mantém.
+- Checklist: marca, salva e mantém depois de recarregar.
+- Offer Lab: carrega e tem o botão de criar.
+- CPA máximo: R$ 197 × 70% = R$ 137,90; CPC máximo R$ 4,14 (confere).
+
+## Limites desta verificação
+
+- **Envio à Meta (CAPI) não foi confirmado.** O sandbox não tem internet, então a chamada à Meta retorna `status 0`. O que foi conferido é que a compra entra na fila com a atribuição certa.
+- Monitor de sites, lista negra, tráfego inválido e anti-clone não foram testados de ponta a ponta (dependem de sites externos ou de tráfego real).
+- Nomes de campanha e ativador do TikTok só foram carregados, não testados por interação.
+
+## Continua pendente (de rodadas anteriores)
+
+- Rotas de leitura de dados não exigem plano ativo (decisão de produto).
+- Segredo do Cakto aceito dentro do corpo do webhook (decidir após confirmar a assinatura em produção).
+- Token do webhook na URL (`?token=`) fica em logs; trocar quebra integrações que já usam essa forma.
+- Diferença de data entre Campanhas (criação do pedido) e dashboard (data de pagamento).
+
+---
+
 # Revisão do GhostScale (rodada 2)
 
 Revisão de correção, segurança e acabamento das funções logadas. Landing e páginas públicas não foram alteradas. OAuth da Meta, redirect URI e variáveis de ambiente não foram tocados.
