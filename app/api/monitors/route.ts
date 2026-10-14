@@ -4,7 +4,7 @@ import { monitorChecks, siteMonitors, toolStates } from "@/db/schema";
 import { normalizeMonitorUrl } from "@/lib/monitor-core";
 import { requireFeature } from "@/lib/permissions";
 import { runDueMonitors, runMonitor, uptimeByMonitor } from "@/lib/site-monitor";
-import { requestUserId, sha256 } from "@/lib/trackbase-security";
+import { requestUserId, sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
   return json({ monitors: await list(ctx), canEdit, everySeconds: 300 });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const ctx = await context(request);
   if (!ctx) return json({ error: "Não autenticado" }, 401);
   if (!(await requireFeature(ctx.userId, "monitoramento"))) return json({ error: "Seu plano precisa incluir o Monitoramento de Sites.", upgrade: "/planos" }, 402);

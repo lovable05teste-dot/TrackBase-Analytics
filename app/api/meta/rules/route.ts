@@ -1,7 +1,7 @@
 import { and,eq } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { automationRules } from "@/db/schema";
-import { hasActivePlan, planRequiredResponse, requestUserId,sha256 } from "@/lib/trackbase-security";
+import { hasActivePlan, planRequiredResponse, requestUserId,sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 const LEVELS=["campaign","adset","ad"],METRICS=["roas","spend","cpa","ctr","frequency","sales"],OPS=["<",">","<=",">="],ACTIONS=["pause","activate","notify"],WINDOWS=[1,3,7,14,30];
@@ -31,7 +31,7 @@ export async function GET(request:Request){
  return Response.json({rules:rows.map(r=>({...r,active:r.active===1||(r.active as unknown)===true}))});
 }
 
-export async function POST(request:Request){
+export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  if(!(await hasActivePlan(userId)))return planRequiredResponse();
  const body=await request.json().catch(()=>({})) as RuleBody;

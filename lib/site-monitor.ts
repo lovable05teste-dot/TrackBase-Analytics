@@ -1,5 +1,8 @@
 import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
-import { lookup } from "node:dns/promises";
+import http from "node:http";
+import https from "node:https";
+import { isIP } from "node:net";
+import { lookup as dnsLookup, type LookupAddress } from "node:dns";
 import { getDb } from "@/db";
 import { monitorChecks, siteMonitors } from "@/db/schema";
 import { describeFailure, isPrivateIp, nextMonitorState, type CheckResult } from "@/lib/monitor-core";
@@ -12,10 +15,53 @@ const TIMEOUT_MS = 10000;
 const MAX_REDIRECTS = 5;
 const MAX_BODY = 512 * 1024;
 
-async function assertPublic(url: URL) {
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  const addrs = await lookup(host, { all: true });
-  if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) throw new Error("endereço não público");
+// Resolve o DNS e recusa IP interno NA HORA de conectar. Assim um domínio que
+// responde com IP público numa consulta e interno na outra (DNS rebinding) não passa.
+function publicLookup(hostname: string, options: { all?: boolean; family?: number }, callback: (err: Error | null, address?: string | LookupAddress[], family?: number) => void) {
+  dnsLookup(hostname, { all: true, family: options.family }, (err, addrs) => {
+    if (err) return callback(err);
+    if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) return callback(new Error("endereço não público"));
+    if (options.all) return callback(null, addrs);
+    callback(null, addrs[0].address, addrs[0].family);
+  });
+}
+
+// GET com a conexão validada pelo publicLookup. Devolve uma Response comum
+// para o resto do check seguir igual (status, location e corpo).
+function fetchPinned(url: URL, headers: Record<string, string>, timeoutMs: number): Promise<Response> {
+  const ip = url.hostname.replace(/^\[|\]$/g, "");
+  if (isIP(ip) && isPrivateIp(ip)) return Promise.reject(new Error("endereço não público"));
+  return new Promise((resolve, reject) => {
+    const lib = url.protocol === "https:" ? https : http;
+    const req = lib.request(url, { method: "GET", headers, lookup: publicLookup as unknown as https.RequestOptions["lookup"] }, (res) => {
+      const h = new Headers();
+      for (const [key, value] of Object.entries(res.headers)) if (value !== undefined) h.set(key, Array.isArray(value) ? value.join(", ") : String(value));
+      const status = res.statusCode || 0;
+      if (status === 204 || status === 304) {
+        res.resume();
+        resolve(new Response(null, { status, headers: h }));
+        return;
+      }
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          res.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
+          res.on("end", () => controller.close());
+          res.on("error", (e) => controller.error(e));
+        },
+        cancel() {
+          res.destroy();
+        },
+      });
+      resolve(new Response(body, { status, headers: h }));
+    });
+    const overall = setTimeout(() => req.destroy(new Error("timeout")), timeoutMs);
+    req.on("close", () => clearTimeout(overall));
+    req.on("error", (e) => {
+      clearTimeout(overall);
+      reject(e);
+    });
+    req.end();
+  });
 }
 
 async function readText(res: Response) {
@@ -41,8 +87,7 @@ export async function checkSite(rawUrl: string, keyword?: string | null): Promis
   try {
     let url = new URL(rawUrl);
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      await assertPublic(url);
-      const res = await fetch(url, { redirect: "manual", headers: { "user-agent": "GhostScaleMonitor/1.0 (+https://www.ghostscale.com.br)", accept: "text/html,*/*" }, signal: AbortSignal.timeout(TIMEOUT_MS), cache: "no-store" });
+      const res = await fetchPinned(url, { "user-agent": "GhostScaleMonitor/1.0 (+https://www.ghostscale.com.br)", accept: "text/html,*/*" }, TIMEOUT_MS);
       if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
         url = new URL(res.headers.get("location") as string, url);
         if (!["http:", "https:"].includes(url.protocol)) return { ok: false, code: res.status, ms: Date.now() - started, error: "redirecionamento inválido" };

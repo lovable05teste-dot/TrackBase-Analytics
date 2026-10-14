@@ -1,9 +1,9 @@
 import { ensureDb,getDb } from "@/db";
 import { metaAccounts } from "@/db/schema";
 import { metaJson,requireMetaConfig } from "@/lib/meta";
-import { encryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256 } from "@/lib/trackbase-security";
+import { encryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 type Token={access_token:string;expires_in?:number};type MetaUser={id:string;name?:string};type AdAccounts={data:Array<{account_id:string;name?:string;currency?:string;timezone_name?:string;account_status?:number}>};
-export async function POST(request:Request){
+export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  if(!(await hasActivePlan(userId)))return planRequiredResponse();
  const body=await request.json().catch(()=>({})) as {accessToken?:string};const pasted=(body.accessToken||"").trim();

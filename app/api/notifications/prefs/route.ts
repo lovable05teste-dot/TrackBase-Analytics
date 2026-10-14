@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { notificationPrefs } from "@/db/schema";
-import { requestUserId,sha256 } from "@/lib/trackbase-security";
+import { requestUserId,sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 import { parsePrefs,sanitizePrefs } from "@/lib/notify";
 
 export const dynamic="force-dynamic";
@@ -14,7 +14,7 @@ export async function GET(request:Request){
  return Response.json({prefs:parsePrefs(row?.prefs)});
 }
 
-export async function POST(request:Request){
+export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  const body=await request.json().catch(()=>({}));
  await ensureDb();
