@@ -27,7 +27,7 @@ export function SoundSidebar(){
   <div className="flex items-center gap-1">
    <button type="button" onClick={toggle} title={pref.enabled?"Clique para desligar o som de venda":"Clique para ativar o som de venda"} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left">
     <Volume2 className={`size-4 shrink-0 ${pref.enabled?"text-blue-600":"text-slate-400"}`}/>
-    <span className="min-w-0 flex-1"><b className="block text-sm">Som da venda</b><small className={`block truncate text-xs ${pref.enabled?"text-emerald-600":"text-slate-400"}`}>{pref.enabled?"Ativo":"Desligado"}</small></span>
+    <span className="min-w-0 flex-1"><b className="block truncate text-sm">Som da venda</b><small className={`block truncate text-xs ${pref.enabled?"text-emerald-600":"text-slate-400"}`}>{pref.enabled?"Ativo":"Desligado"}</small></span>
     <span className={`h-2 w-2 shrink-0 rounded-full ${pref.enabled?"bg-emerald-500":"bg-slate-300"}`}/>
    </button>
    <button type="button" onClick={()=>setOpen(v=>!v)} title={open?"Ocultar sons":"Ver os 4 sons"} className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition hover:text-blue-600">{open?<ChevronDown className="size-4"/>:<ChevronRight className="size-4"/>}</button>
@@ -47,7 +47,7 @@ export function SoundMobile(){
   <div className="flex items-center gap-1">
    <button type="button" onClick={toggle} title={pref.enabled?"Clique para desligar o som":"Clique para ativar o som"} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left">
     <Volume2 className={`size-4 shrink-0 ${pref.enabled?"text-blue-600":"text-slate-400"}`}/>
-    <span className="min-w-0 flex-1"><b className="block text-sm">Som da venda</b><small className={`block truncate text-xs ${pref.enabled?"text-emerald-600":"text-slate-400"}`}>{pref.enabled?"Ativo":"Desligado"}</small></span>
+    <span className="min-w-0 flex-1"><b className="block truncate text-sm">Som da venda</b><small className={`block truncate text-xs ${pref.enabled?"text-emerald-600":"text-slate-400"}`}>{pref.enabled?"Ativo":"Desligado"}</small></span>
     <span className={`h-2 w-2 shrink-0 rounded-full ${pref.enabled?"bg-emerald-500":"bg-slate-300"}`}/>
    </button>
    <button type="button" onClick={()=>setOpen(v=>!v)} title={open?"Ocultar sons":"Ver os 4 sons"} className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition hover:text-blue-600">{open?<ChevronDown className="size-4"/>:<ChevronRight className="size-4"/>}</button>
