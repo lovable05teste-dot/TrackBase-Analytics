@@ -70,6 +70,8 @@ export async function POST(request: Request) {
       "data.id",
       "data.transaction.id",
       "order.id",
+      "order_id",
+      "orderId",
   ]);
   // Sem ID do pedido: hash do corpo, para o reenvio do mesmo webhook não virar
   // venda duplicada. O pedido é marcado para revisão.
