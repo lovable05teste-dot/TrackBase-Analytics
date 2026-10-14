@@ -1,8 +1,8 @@
 import { and, eq, ne } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { metaAccounts } from "@/db/schema";
+import { metaAccounts, metaPartnerGrants } from "@/db/schema";
 import { assignToSystemUser, PARTNER_LOGIN_ID, partnerConfig, readPartnerAccount } from "@/lib/meta-partner";
-import { encryptSecret, hasActivePlan, hasConflictingOrigin, planRequiredResponse, requestUserId, sha256 } from "@/lib/trackbase-security";
+import { encryptSecret, hasActivePlan, hasConflictingOrigin, isAdminUserId, planRequiredResponse, requestUserId, sha256 } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -30,6 +30,12 @@ export async function POST(request: Request) {
   // Uma conta pertence a um único usuário da GhostScale.
   const [taken] = await db.select({ id: metaAccounts.id }).from(metaAccounts).where(and(eq(metaAccounts.adAccountId, adAccountId), eq(metaAccounts.metaUserId, PARTNER_LOGIN_ID), ne(metaAccounts.userId, userId))).limit(1);
   if (taken) return json({ error: "Essa conta já foi adicionada por outro usuário. Fale com o suporte se ela for sua." }, 409);
+  const [existing] = await db.select({ id: metaAccounts.id }).from(metaAccounts).where(and(eq(metaAccounts.adAccountId, adAccountId), eq(metaAccounts.userId, userId), eq(metaAccounts.metaUserId, PARTNER_LOGIN_ID))).limit(1);
+  // Nome e ID não são segredo. Novos vínculos exigem aprovação explícita.
+  const admin = await isAdminUserId(userId);
+  if (admin) await db.insert(metaPartnerGrants).values({ adAccountId, userId, approvedBy: userId, createdAt: Math.floor(Date.now() / 1000) }).onConflictDoNothing();
+  const [grant] = await db.select({ userId: metaPartnerGrants.userId }).from(metaPartnerGrants).where(eq(metaPartnerGrants.adAccountId, adAccountId)).limit(1);
+  if ((grant && grant.userId !== userId) || (!grant && !existing)) return json({ error: "A conexão desta conta precisa ser aprovada pelo administrador para o seu usuário.", code: "PARTNER_APPROVAL_REQUIRED" }, 403);
   let account;
   try {
     account = await readPartnerAccount(adAccountId, config.token);
@@ -41,8 +47,7 @@ export async function POST(request: Request) {
       return json({ error: `Ainda não recebemos acesso à conta ${adAccountId}. Compartilhe a conta com o portfólio ${config.businessId} (passo 1) e tente de novo em 1 minuto.` }, 400);
     }
   }
-  // Prova de dono: além do ID, o nome exato da conta (visto só por quem tem
-  // acesso a ela na BM). Sem isso, quem soubesse o ID pegava a conta de outro.
+  // O nome é apenas uma conferência adicional; a autorização vem do vínculo aprovado.
   const norm = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
   if (!norm(body.accountName) || norm(body.accountName) !== norm(account.name)) return json({ error: "O nome da conta não confere. Copie o nome exatamente como aparece na BM, em Contas de anúncios." }, 403);
   // Contas da própria BM da GhostScale não são de cliente: nunca liberar.

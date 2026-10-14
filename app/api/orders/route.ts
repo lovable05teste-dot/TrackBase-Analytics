@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import {and,desc,eq,inArray} from "drizzle-orm";
 import {ensureDb,getDb} from "@/db";
 import {events,orders,projects,capiOutbox} from "@/db/schema";
@@ -19,6 +20,7 @@ export async function GET(request:Request){
 // Apagar venda de TESTE (Pix gerado pelo próprio dono, por exemplo). Some do
 // painel, das campanhas e do funil: apaga o pedido e os eventos dele.
 export async function DELETE(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId=await requestUserId(request);
   if(!userId)return Response.json({error:"Não autenticado"},{status:401});
   const id=new URL(request.url).searchParams.get("id")||"";

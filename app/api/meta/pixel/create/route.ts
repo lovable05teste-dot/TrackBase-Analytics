@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { and, eq, inArray } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaAccounts, metaLinked, projects } from "@/db/schema";
@@ -58,6 +59,7 @@ async function discoverBusiness(token: string, adAccountId: string, version: str
 }
 
 export async function POST(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   try {
     const userId = await requestUserId(request);
     if (!userId) return Response.json({ error: "Sua sessão expirou. Entre novamente.", code: "AUTH_REQUIRED" }, { status: 401 });

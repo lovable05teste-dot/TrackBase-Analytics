@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { after } from "next/server";
 import { ensureDb, getDb } from "../../../db";
@@ -149,6 +150,7 @@ export async function GET(request: Request) {
 // "Remover (era teste)" na tela Eventos: marca o evento — e tudo do mesmo
 // visitante no projeto (visitas, ICs, Pix) — como teste, fora das métricas.
 export async function PATCH(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const body = (await request.json().catch(() => ({}))) as { id?: unknown };

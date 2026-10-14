@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { tiktokAccounts } from "@/db/schema";
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
 
 // Vincula/desvincula uma conta de anúncios (entra nas Campanhas TikTok).
 export async function POST(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return json({ error: "Não autenticado" }, 401);
   if (!(await requireFeature(userId, "ativador_tiktok"))) return json({ error: "Seu plano precisa estar ativo para vincular contas.", upgrade: "/planos" }, 402);
@@ -35,6 +37,7 @@ export async function POST(request: Request) {
 
 // Remove uma conta (ou todas, sem advertiserId) da GhostScale.
 export async function DELETE(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return json({ error: "Não autenticado" }, 401);
   await ensureDb();

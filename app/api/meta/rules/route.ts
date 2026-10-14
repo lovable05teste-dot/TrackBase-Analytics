@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { and,eq } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { automationRules } from "@/db/schema";
@@ -32,6 +33,7 @@ export async function GET(request:Request){
 }
 
 export async function POST(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  if(!(await hasActivePlan(userId)))return planRequiredResponse();
  const body=await request.json().catch(()=>({})) as RuleBody;
@@ -43,6 +45,7 @@ export async function POST(request:Request){
 }
 
 export async function PUT(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  if(!(await hasActivePlan(userId)))return planRequiredResponse();
  const body=await request.json().catch(()=>({})) as RuleBody;
@@ -56,6 +59,7 @@ export async function PUT(request:Request){
 }
 
 export async function DELETE(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
   if(!(await hasActivePlan(userId)))return planRequiredResponse();
   const id=new URL(request.url).searchParams.get("id");

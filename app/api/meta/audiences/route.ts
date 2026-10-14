@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { and,eq,inArray } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { metaAccounts,metaLinked } from "@/db/schema";
@@ -27,6 +28,7 @@ export async function GET(request:Request){
 }
 
 export async function POST(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  try{
   const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
   if(!(await hasActivePlan(userId)))return planRequiredResponse();

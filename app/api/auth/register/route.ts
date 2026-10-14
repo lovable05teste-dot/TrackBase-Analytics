@@ -47,10 +47,11 @@ export async function POST(request: Request) {
     // Criar workspace próprio do usuário
     const workspaceId = "ws_" + (await sha256(id)).slice(0, 24);
     const workspaceName = `GhostScale de ${name}`;
-    await db.insert(workspaces).values({ id: workspaceId, name: workspaceName, createdAt: new Date().toISOString() });
-    await db.insert(users).values({ id, email, name, cpf, passwordHash, createdAt: now });
-    // Membership owner no próprio workspace
-    await db.insert(members).values({ id: crypto.randomUUID(), workspaceId, userId: id, email, role: "owner" });
+    await db.transaction(async tx => {
+      await tx.insert(workspaces).values({ id: workspaceId, name: workspaceName, createdAt: new Date().toISOString() });
+      await tx.insert(users).values({ id, email, name, cpf, passwordHash, createdAt: now });
+      await tx.insert(members).values({ id: crypto.randomUUID(), workspaceId, userId: id, email, role: "owner" });
+    });
     // A confirmação de e-mail usa código de 6 dígitos (tela /verificar-codigo),
     // solicitado pelo frontend logo após este retorno.
     await logLoginAttempt(email, ip, true);

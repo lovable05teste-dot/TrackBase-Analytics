@@ -11,6 +11,7 @@ function url(){const value=process.env.DATABASE_URL||process.env.POSTGRES_URL||p
 export function getSql(){if(d1())throw new Error("SQL direto indisponível no D1; use getDb().");if(!pgClient)pgClient=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return pgClient}
 export function getDb():DrizzleD1Database<typeof schema>{const binding=d1();if(binding)return drizzleD1(binding as never,{schema});if(!pgClient)pgClient=postgres(url(),{prepare:false,max:3,idle_timeout:20,connect_timeout:15});return drizzlePg(pgClient,{schema}) as unknown as DrizzleD1Database<typeof schema>}
 const statements=[
+"CREATE TABLE IF NOT EXISTS meta_partner_grants(ad_account_id text PRIMARY KEY,user_id text NOT NULL,approved_by text NOT NULL,created_at integer NOT NULL)",
 "CREATE TABLE IF NOT EXISTS protection_reports(id text PRIMARY KEY,project_id text NOT NULL,event_name text NOT NULL,occurred_at integer NOT NULL,payload text NOT NULL)",
 "CREATE INDEX IF NOT EXISTS idx_protection_reports_project_time ON protection_reports(project_id,occurred_at)",
 "CREATE TABLE IF NOT EXISTS site_protections(project_id text PRIMARY KEY,workspace_id text NOT NULL,config text NOT NULL,blocked_ips text NOT NULL DEFAULT '[]',revision integer NOT NULL DEFAULT 0,updated_at integer NOT NULL)",
@@ -55,7 +56,6 @@ const statements=[
 "CREATE TABLE IF NOT EXISTS meta_oauth_states(id text PRIMARY KEY,user_id text NOT NULL,state_hash text NOT NULL,expires_at integer NOT NULL,created_at integer NOT NULL)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_oauth_states_hash ON meta_oauth_states(state_hash)",
 "CREATE INDEX IF NOT EXISTS idx_meta_oauth_states_user ON meta_oauth_states(user_id)",
-"DROP TABLE IF EXISTS google_oauth_states",
 "CREATE TABLE IF NOT EXISTS meta_accounts(id text PRIMARY KEY,workspace_id text NOT NULL,user_id text NOT NULL,meta_user_id text,meta_user_name text,ad_account_id text NOT NULL,account_name text NOT NULL,currency text,timezone_name text,account_status integer,access_token_cipher text NOT NULL,access_token_iv text NOT NULL,token_expires_at integer,selected integer NOT NULL DEFAULT 0,connected_at integer NOT NULL,updated_at integer NOT NULL)",
 "CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_accounts_user_ad ON meta_accounts(user_id,ad_account_id)",
 "CREATE INDEX IF NOT EXISTS idx_meta_accounts_workspace ON meta_accounts(workspace_id)",

@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { eq } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { notificationPrefs } from "@/db/schema";
@@ -15,6 +16,7 @@ export async function GET(request:Request){
 }
 
 export async function POST(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  const body=await request.json().catch(()=>({}));
  await ensureDb();

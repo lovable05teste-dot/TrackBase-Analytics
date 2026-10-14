@@ -8,7 +8,7 @@
 // - status desconhecido vira `pending` + alerta (nunca 400 que dropa venda).
 // O `db` vem por parâmetro tipado via `import type` (apagado em runtime) e o
 // push é dinâmico — este módulo segue importável em testes unitários puros.
-import { and, asc, desc, eq, inArray, lte, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, lt, or, sql } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
 import { dispatchCapi } from "@/lib/meta-capi";
@@ -416,13 +416,13 @@ export async function handleSalesQuota(
     const id = `${workspaceId}:sales:${start}`;
     const now = Math.floor(Date.now() / 1000);
     await db.insert(usageCounters).values({ id, workspaceId, metric: "sales", periodStart: start, periodEnd: end, count: 0, updatedAt: now }).onConflictDoNothing();
-    // read then increment (race window pequeno; aceitável sem tx pesada)
-    const [cur] = await db.select({ count: usageCounters.count }).from(usageCounters).where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start))).limit(1);
-    const next = (cur?.count ?? 0) + 1;
-    await db.update(usageCounters).set({ count: next, updatedAt: now }).where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start)));
-    const pct = Math.round((next / limit) * 100);
-    const thresholds = [80, 90, 100];
-    if (!thresholds.includes(pct) && !(next === limit)) return;
+    const [updated] = await db.update(usageCounters)
+      .set({ count: sql`${usageCounters.count} + 1`, updatedAt: now })
+      .where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start)))
+      .returning({ count: usageCounters.count });
+    const next = updated?.count ?? 0;
+    const pct = [80, 90, 100].find(threshold => ((next - 1) / limit) * 100 < threshold && (next / limit) * 100 >= threshold);
+    if (pct === undefined) return;
     // evita spam: só envia quando cruza threshold
     const email = (sub as { email?: string | null }).email || "";
     if (!email) return;

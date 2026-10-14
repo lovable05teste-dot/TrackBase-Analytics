@@ -1,3 +1,4 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { monitorChecks, siteMonitors, toolStates } from "@/db/schema";
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const ctx = await context(request);
   if (!ctx) return json({ error: "Não autenticado" }, 401);
   if (!(await requireFeature(ctx.userId, "monitoramento"))) return json({ error: "Seu plano precisa incluir o Monitoramento de Sites.", upgrade: "/planos" }, 402);
@@ -74,6 +76,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const ctx = await context(request);
   if (!ctx) return json({ error: "Não autenticado" }, 401);
   const id = new URL(request.url).searchParams.get("id") || "";
