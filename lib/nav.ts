@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Radio,
   Megaphone,
   FlaskConical,
   ShoppingCart,
@@ -86,7 +87,8 @@ export const NAV_GROUPS: NavGroup[] = [
       // Conta Meta, Pixel & CAPI, script e gateways são etapas da central
       // /integracoes (passo a passo). As páginas antigas seguem acessíveis.
       { label: "Pedidos por gateway", href: "/integracoes/gateways", icon: Landmark },
-      { label: "Testar webhook", href: "/webhooks", icon: Webhook },
+      { label: "Pixels e conversões", href: "/pixels", icon: Radio },
+      { label: "Webhooks", href: "/webhooks", icon: Webhook },
       { label: "Offer Lab", href: "/offer-lab", icon: Beaker },
     ],
   },

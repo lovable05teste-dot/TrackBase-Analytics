@@ -24,7 +24,8 @@ function friendlyCakto(e: CaktoError): string {
   return "A operadora recusou a cobrança. Confira os dados do cartão.";
 }
 
-export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
+export async function POST(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   await ensureDb();
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });

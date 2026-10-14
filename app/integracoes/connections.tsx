@@ -1,4 +1,5 @@
 "use client";
+import { AdditionalPixels } from "./additional-pixels";
 import {FormEvent,useEffect,useState} from "react";
 import {Check,CheckCircle2,Copy,KeyRound,Loader2,Plus,Settings2,ShieldCheck,Trash2} from "lucide-react";
 import {Button} from "@/components/ui/button";
@@ -41,12 +42,12 @@ export function PixelConnect(){const[projects,setProjects]=useState<Project[]>([
  const loadProjects=async()=>{try{const b=await fetch("/api/projects",{cache:"no-store"}).then(r=>r.json());setProjects(b.projects||[]);setProjectId(id=>id||b.projects?.[0]?.id||"")}catch{/* mantém lista atual */}finally{setLoaded(true)}};
  useEffect(()=>{const timer=window.setTimeout(()=>{void loadProjects()},0);return()=>window.clearTimeout(timer)},[]);
  const current=projects.find(p=>p.id===projectId);
- const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setMessage("");try{const r=await apiFetch("/api/meta/connect",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,pixelId,accessToken:token,testCode})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível conectar.");setMessage(`Pixel ${b.pixelId} conectado. Navegador e CAPI estão ativos.`);setToken("");await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Erro ao conectar.")}finally{setBusy(false)}};
+ const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setMessage("");try{const r=await apiFetch("/api/meta/connect",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,pixelId,accessToken:token,testCode})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível conectar.");setMessage(b.message || `Pixel ${b.pixelId} salvo. Valide o envio de eventos à Meta.`);setToken("");await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Erro ao conectar.")}finally{setBusy(false)}};
  const createPixel=async()=>{setCreating(true);setMessage("");try{const r=await apiFetch("/api/meta/pixel/create",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,name:pixelName})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível criar o Pixel.");setPixelId(b.pixelId);setMessage(`Pixel ${b.pixelId} criado e conectado. Navegador e CAPI estão prontos.`);await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Erro ao criar Pixel.")}finally{setCreating(false)}};
  const disconnect=async()=>{if(!current?.pixelId||!confirm(`Desconectar o Pixel ${current.pixelId} do projeto “${current.name}”?`))return;setDeleting(true);setMessage("");try{const r=await apiFetch(`/api/meta/connect?projectId=${encodeURIComponent(projectId)}`,{method:"DELETE"}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível desconectar.");setPixelId("");setMessage("Pixel desconectado do projeto.");await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Não foi possível desconectar.")}finally{setDeleting(false)}};
  if(!loaded)return <LoadingState label="Carregando" rows={2}/>;
  if(!projects.length)return <NeedProject/>;
- const ok=/conectado|criado|ativo/i.test(message)&&!/desconectado/i.test(message);
+ const ok=/conectado|criado|ativo|salvos|salvo/i.test(message)&&!/desconectado/i.test(message);
  return <div className="space-y-5">
   <ProjectSelect projects={projects} value={projectId} onChange={id=>{setProjectId(id);setMessage("")}}/>
   {current?.pixelId?<>
@@ -72,6 +73,7 @@ export function PixelConnect(){const[projects,setProjects]=useState<Project[]>([
      <Button type="button" className="h-11 w-full sm:w-auto" disabled={creating||!projectId||!pixelName.trim()} onClick={createPixel}>{creating?<Loader2 className="animate-spin"/>:<Plus/>}{creating?"Criando na Meta…":"Criar e conectar"}</Button>
     </div>}
   </>}
+  <AdditionalPixels key={projectId} projectId={projectId}/>
   {message&&<p role="status" className={"rounded-xl border p-4 text-sm leading-6 "+(ok?"border-emerald-300 bg-emerald-50 text-emerald-800":"border-red-300 bg-red-50 text-red-800")}>{message}</p>}
   {current?.pixelId&&<details className="rounded-xl border border-slate-200"><summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-sm font-medium text-slate-600"><Settings2 className="size-4"/>Configurações avançadas do rastreamento</summary><div className="border-t border-slate-200 px-4 pb-4"><TrackingRules projectId={projectId} enabled/></div></details>}
  </div>;
@@ -88,11 +90,11 @@ const GATEWAYS=[
 ] as const;
 const providerLabel=(id:string)=>GATEWAYS.find(g=>g.id===id)?.label||id;
 
-export function GatewayConnect(){const[projects,setProjects]=useState<Project[]>([]),[credentials,setCredentials]=useState<Credential[]>([]),[projectId,setProjectId]=useState(""),[provider,setProvider]=useState<string>("fortpay"),[busy,setBusy]=useState(false),[error,setError]=useState(""),[loaded,setLoaded]=useState(false),[created,setCreated]=useState<(Created&{provider:string})|null>(null);
+export function GatewayConnect(){const[projects,setProjects]=useState<Project[]>([]),[credentials,setCredentials]=useState<Credential[]>([]),[projectId,setProjectId]=useState(""),[provider,setProvider]=useState<string>("fortpay"),[webhookName,setWebhookName]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),[loaded,setLoaded]=useState(false),[created,setCreated]=useState<(Created&{provider:string})|null>(null);
  const load=async()=>{try{const[p,c]=await Promise.all([fetch("/api/projects",{cache:"no-store"}).then(r=>r.json()),fetch("/api/credentials",{cache:"no-store"}).then(r=>r.json())]);setProjects(p.projects||[]);setCredentials(c.credentials||[]);setProjectId(id=>id||p.projects?.[0]?.id||"")}catch{/* mantém listas atuais */}finally{setLoaded(true)}};
  useEffect(()=>{const timer=window.setTimeout(()=>{void load()},0);return()=>window.clearTimeout(timer)},[]);
  const gateway=GATEWAYS.find(g=>g.id===provider)||GATEWAYS[0];
- const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError("");setCreated(null);try{const project=projects.find(p=>p.id===projectId);const name=`${gateway.label}${project&&projects.length>1?` · ${project.name}`:""}`;const r=await apiFetch("/api/credentials",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,name,provider})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Erro ao gerar a URL.");setCreated({...b.credential,provider});await load()}catch(e){setError(e instanceof Error?e.message:"Erro ao gerar a URL.")}finally{setBusy(false)}};
+ const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError("");setCreated(null);try{const project=projects.find(p=>p.id===projectId);const name=webhookName.trim()||`${gateway.label}${project&&projects.length>1?` · ${project.name}`:""}`;const r=await apiFetch("/api/credentials",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,name,provider})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Erro ao gerar a URL.");setCreated({...b.credential,provider});await load()}catch(e){setError(e instanceof Error?e.message:"Erro ao gerar a URL.")}finally{setBusy(false)}};
  const remove=async(c:Credential)=>{if(!confirm(`Desconectar “${c.name}”? O gateway deixará de enviar vendas por esta URL.`))return;setBusy(true);setError("");try{const r=await apiFetch(`/api/credentials?id=${encodeURIComponent(c.id)}`,{method:"DELETE"}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível desconectar.");await load()}catch(e){setError(e instanceof Error?e.message:"Não foi possível desconectar.")}finally{setBusy(false)}};
  if(!loaded)return <LoadingState label="Carregando" rows={2}/>;
  if(!projects.length)return <NeedProject/>;
@@ -104,6 +106,7 @@ export function GatewayConnect(){const[projects,setProjects]=useState<Project[]>
    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
     {GATEWAYS.map(g=><button key={g.id} type="button" aria-pressed={provider===g.id} onClick={()=>{setProvider(g.id);setCreated(null)}} className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${provider===g.id?"border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/15":"border-slate-200 bg-white text-slate-700 hover:border-slate-300"}`}>{g.logo?<img src={g.logo} alt="" className="size-6 rounded object-contain"/>:null}{g.label}</button>)}
    </div>
+   <label className="block text-sm font-medium">Nome do webhook (opcional)<input className={input+" mt-1.5"} value={webhookName} maxLength={100} onChange={e=>setWebhookName(e.target.value)} placeholder="Ex.: Oferta principal · FortPay"/></label>
    <ProjectSelect projects={projects} value={projectId} onChange={setProjectId}/>
    <Button className="h-11 w-full sm:w-auto" disabled={busy||!projectId}>{busy?<Loader2 className="animate-spin"/>:<KeyRound/>}Gerar URL de webhook para {gateway.label}</Button>
   </form>

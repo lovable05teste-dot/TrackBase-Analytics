@@ -1,3 +1,5 @@
+import { metaDestinations } from "@/lib/project-pixels";
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { after } from "next/server";
 import { ensureDb, getDb } from "../../../db";
@@ -97,12 +99,15 @@ export async function POST(request: Request) {
     // AdClick/PageError são diagnósticos internos: o navegador já não os manda
     // ao Pixel, e o servidor também não pode mandá-los à CAPI (poluía o pixel
     // com eventos personalizados sem par para deduplicação).
-    if (!isTest && !internalOnly.has(eventName) && project.pixelId && project.metaTokenCipher && project.metaTokenIv) try {
-      const token = await decryptSecret(project.metaTokenCipher, project.metaTokenIv),config=parseTrackingConfig(project.trackingConfig);
+    if (!isTest && !internalOnly.has(eventName) ) try {
+      const destinations=await metaDestinations(getDb(),project.id);
+      capi=await Promise.all(destinations.map(async pixel=>{
+      const token = await decryptSecret(pixel.cipher, pixel.iv),config=parseTrackingConfig(project.trackingConfig);
       const payload: Record<string, unknown> = { data: [{ event_name: eventName, event_time: eventTime, event_id: eventId, action_source: "website", event_source_url: url, user_data: { client_ip_address: clientIp(request,config.ipMode), client_user_agent: request.headers.get("user-agent") || "", fbp: body.fbp || undefined, fbc: body.fbc || undefined, em:await hash(body.email),ph:await hash(body.phone,true) }, custom_data: { value, currency: String(body.currency || "BRL"), content_ids: body.contentIds || undefined, content_name: body.contentName || undefined, content_type: "product",order_id:body.externalId||undefined } }] };
-      if (project.metaTestCode) payload.test_event_code = project.metaTestCode;
-      const result = await fetch(`https://graph.facebook.com/v25.0/${project.pixelId}/events?access_token=${encodeURIComponent(token)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000) });
-      capi = { ok: result.ok, status: result.status };
+      if (pixel.testCode) payload.test_event_code = pixel.testCode;
+      const result = await fetch(`https://graph.facebook.com/v25.0/${pixel.pixelId}/events?access_token=${encodeURIComponent(token)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000) });
+      return { pixelId:pixel.pixelId, ok: result.ok, status: result.status };
+      }));
     } catch {
       // O evento já foi gravado; falha/lentidão da Meta não vira erro p/ o site.
       capi = { ok: false, status: 0 };
@@ -149,6 +154,7 @@ export async function GET(request: Request) {
 // "Remover (era teste)" na tela Eventos: marca o evento — e tudo do mesmo
 // visitante no projeto (visitas, ICs, Pix) — como teste, fora das métricas.
 export async function PATCH(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const body = (await request.json().catch(() => ({}))) as { id?: unknown };

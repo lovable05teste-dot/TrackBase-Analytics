@@ -1,7 +1,8 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { eq } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { soundPrefs } from "@/db/schema";
-import { requestUserId,sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
+import { requestUserId,sha256 } from "@/lib/trackbase-security";
 import { parseSoundPrefs,sanitizeSoundPrefs } from "@/lib/sound-prefs";
 
 export const dynamic="force-dynamic";
@@ -14,7 +15,8 @@ export async function GET(request:Request){
  return Response.json({prefs:parseSoundPrefs(row?.prefs),stored:!!row});
 }
 
-export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
+export async function POST(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  const body=await request.json().catch(()=>({}));
  await ensureDb();
