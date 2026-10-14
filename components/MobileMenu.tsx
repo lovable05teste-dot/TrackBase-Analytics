@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { FullMenu } from "./FullMenu";
@@ -24,7 +25,7 @@ export function MobileMenu() {
           <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-card p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <img src="/ghostscale-logo.png" alt="GhostScale" className="h-10 w-auto max-w-[200px] object-contain" />
+                <Image src="/ghostscale-logo.png" width={900} height={300} alt="GhostScale" className="h-10 w-auto max-w-[200px] object-contain" />
               </Link>
               <button
                 type="button"

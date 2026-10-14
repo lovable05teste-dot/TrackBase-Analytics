@@ -1,3 +1,4 @@
+import Image from "next/image";
 // Tela de carregamento entre páginas: marca com anel em gradiente, brilho
 // pulsando e barra de progresso (respeita "reduzir movimento").
 export default function Loading() {
@@ -8,7 +9,7 @@ export default function Loading() {
           <span className="gs-loader-glow" />
           <span className="gs-loader-ring" />
           <span className="gs-loader-ring is-slow" />
-          <img src="/ghostscale-ghost.png" alt="" className="gs-loader-logo" />
+          <Image src="/ghostscale-ghost.png" width={1254} height={1254} alt="" className="gs-loader-logo" />
         </div>
         <div className="flex flex-col items-center gap-3">
           <span className="gs-progress" />

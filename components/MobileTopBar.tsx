@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { AccountMenu, type AccountData } from "./AccountMenu";
 
@@ -8,8 +9,8 @@ export function MobileTopBar({ accountData }: MobileTopBarProps) {
   return (
     <div className="flex items-center gap-3">
       <Link href="/" className="flex min-w-0 items-center" aria-label="GhostScale - início">
-        <img
-          src="/ghostscale-logo.png"
+        <Image
+          src="/ghostscale-logo.png" width={900} height={300}
           alt="GhostScale"
           className="h-11 w-auto max-w-[220px] shrink-0 object-contain"
         />

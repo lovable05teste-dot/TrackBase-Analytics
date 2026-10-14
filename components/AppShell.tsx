@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useState } from "react";
 import { BookOpen, Menu, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,7 @@ export function AppShell({
             <button onClick={() => setMobileOpen(true)} className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-accent lg:hidden" aria-label="Abrir menu">
               <Menu className="size-4" />
             </button>
-            <img src="/ghostscale-logo.png" alt="GhostScale" className="h-8 w-auto max-w-[132px] shrink-0 object-contain sm:h-10 sm:max-w-[200px] lg:hidden" />
+            <Image src="/ghostscale-logo.png" width={900} height={300} alt="GhostScale" className="h-8 w-auto max-w-[132px] shrink-0 object-contain sm:h-10 sm:max-w-[200px] lg:hidden" />
           </div>
           {/* No celular o título vai para a linha de baixo, inteiro (antes
               empurrava o avatar para outra linha). */}
