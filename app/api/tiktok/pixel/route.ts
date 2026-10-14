@@ -3,7 +3,7 @@ import { ensureDb, getDb } from "@/db";
 import { projects } from "@/db/schema";
 import { requireFeature } from "@/lib/permissions";
 import { isTiktokPixelCode } from "@/lib/tiktok";
-import { encryptSecret, requestUserId, sha256 } from "@/lib/trackbase-security";
+import { encryptSecret, requestUserId, sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
 // Salva o Pixel TikTok + token da Events API de um projeto. O token fica
 // criptografado; o script da página passa a carregar o pixel sozinho.
-export async function POST(request: Request) {
+export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const ctx = await context(request);
   if (!ctx) return json({ error: "Não autenticado" }, 401);
   if (!(await requireFeature(ctx.userId, "ativador_tiktok"))) return json({ error: "Seu plano precisa estar ativo para conectar o Pixel TikTok.", upgrade: "/planos" }, 402);

@@ -3,7 +3,7 @@ import { ensureDb,getDb } from "@/db";
 import { metaAccounts,metaLinked } from "@/db/schema";
 import { metaConfig,metaJson } from "@/lib/meta";
 import { accountToken,graph } from "@/lib/meta-lab";
-import { decryptSecret,hasActivePlan,planRequiredResponse,requestUserId } from "@/lib/trackbase-security";
+import { decryptSecret,hasActivePlan,planRequiredResponse,requestUserId, hasConflictingOrigin } from "@/lib/trackbase-security";
 
 export const dynamic="force-dynamic";
 type Audience={id:string;name:string;approximate_count?:number;time_updated?:number};
@@ -26,7 +26,7 @@ export async function GET(request:Request){
  }catch(e){return Response.json({error:e instanceof Error?e.message:"Falha ao listar públicos."},{status:400})}
 }
 
-export async function POST(request:Request){
+export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  try{
   const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
   if(!(await hasActivePlan(userId)))return planRequiredResponse();

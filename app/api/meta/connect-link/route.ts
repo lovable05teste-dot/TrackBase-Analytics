@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaConnectLinks } from "@/db/schema";
-import { requestUserId, sha256 } from "@/lib/trackbase-security";
+import { requestUserId, sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ const VALID_SECONDS = 86400;
 // Gera o link de conexão para multilogin (AdsPower): abre a autorização do
 // Facebook ou do TikTok direto, sem login da GhostScale nem cookie no perfil. Só o hash
 // do token fica salvo; gerar um novo link cancela o anterior.
-export async function POST(request: Request) {
+export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   await ensureDb();

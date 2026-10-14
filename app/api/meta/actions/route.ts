@@ -2,12 +2,12 @@ import {and,eq} from "drizzle-orm";
 import {ensureDb,getDb} from "@/db";
 import {metaAccounts} from "@/db/schema";
 import {metaConfig,metaJson} from "@/lib/meta";
-import {decryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256} from "@/lib/trackbase-security";
+import { decryptSecret,hasActivePlan,planRequiredResponse,requestUserId,sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 import {logHistory} from "@/lib/meta-rules";
 
 type Action="activate"|"pause"|"duplicate"|"budget"|"delete";
 
-export async function POST(request:Request){
+export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   try{
     const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado."},{status:401});
     if(!(await hasActivePlan(userId)))return planRequiredResponse();

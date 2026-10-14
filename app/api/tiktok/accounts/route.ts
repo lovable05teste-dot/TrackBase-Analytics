@@ -3,7 +3,7 @@ import { ensureDb, getDb } from "@/db";
 import { tiktokAccounts } from "@/db/schema";
 import { requireFeature } from "@/lib/permissions";
 import { tiktokConfig } from "@/lib/tiktok";
-import { requestUserId } from "@/lib/trackbase-security";
+import { requestUserId, hasConflictingOrigin } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 }
 
 // Vincula/desvincula uma conta de anúncios (entra nas Campanhas TikTok).
-export async function POST(request: Request) {
+export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return json({ error: "Não autenticado" }, 401);
   if (!(await requireFeature(userId, "ativador_tiktok"))) return json({ error: "Seu plano precisa estar ativo para vincular contas.", upgrade: "/planos" }, 402);

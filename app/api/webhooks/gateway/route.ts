@@ -20,6 +20,10 @@ import {
   upsertOrder,
 } from "../../../../lib/sale-ingest";
 
+// Dados do comprador (e-mail, nome, telefone). Só texto curto; vazio = null.
+function buyerField(body: Record<string, unknown>, paths: string[]) {
+  return str(pick(body, paths)).slice(0, 160);
+}
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : typeof v === "number" && Number.isFinite(v) ? String(v) : "");
 export const maxDuration = 60;
 
@@ -132,6 +136,9 @@ export async function POST(request: Request) {
     utmContent,
     utmTerm,
     eventId,
+    customerEmail: buyerField(body, ["customer.email", "buyer.email", "email", "data.customer.email", "data.buyer.email", "client.email"]).toLowerCase() || null,
+    customerName: buyerField(body, ["customer.name", "buyer.name", "name", "data.customer.name", "data.buyer.name", "client.name"]) || null,
+    customerPhone: buyerField(body, ["customer.phone", "customer.phone_number", "buyer.phone", "phone", "data.customer.phone", "client.phone"]) || null,
   });
   const eventName = eventNameFor(status);
   await recordSaleEvent(credential.workspaceId, "sale.received", externalId, { status, raw: String(rawStatus ?? "").slice(0, 40), provider: credential.provider, dedup });

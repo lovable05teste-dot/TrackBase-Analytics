@@ -1,10 +1,10 @@
-import { requestUserId,sha256 } from "@/lib/trackbase-security";
+import { requestUserId,sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 import { evaluateWorkspace } from "@/lib/meta-rules";
 import { ensureDb } from "@/db";
 
 export const dynamic="force-dynamic";
 
-export async function POST(request:Request){
+export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
  const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});
  const body=await request.json().catch(()=>({})) as {dryRun?:boolean;ruleIds?:string[]};
  try{

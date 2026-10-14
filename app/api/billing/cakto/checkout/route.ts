@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { planSubscriptions } from "@/db/schema";
-import { requestUserId, sha256 } from "@/lib/trackbase-security";
+import { requestUserId, sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
 import { CaktoError, createCardCharge, createPixAutoCharge, createSubscription } from "@/lib/cakto";
 import { isPlanId, planOfferId, PLAN_VERSION_CURRENT, PLANS } from "@/lib/plans";
 import { audit } from "@/lib/permissions";
@@ -24,7 +24,7 @@ function friendlyCakto(e: CaktoError): string {
   return "A operadora recusou a cobrança. Confira os dados do cartão.";
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   await ensureDb();
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });

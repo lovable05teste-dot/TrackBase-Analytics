@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../../db";
 import { projects } from "../../../../db/schema";
-import { encryptSecret, hasActivePlan, planRequiredResponse, requestUserId, sha256 } from "../../../../lib/trackbase-security";
+import { encryptSecret, hasActivePlan, planRequiredResponse, requestUserId, sha256, hasConflictingOrigin } from "../../../../lib/trackbase-security";
 
-export async function POST(request: Request) {
+export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   await ensureDb();
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
