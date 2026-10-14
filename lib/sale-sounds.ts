@@ -218,7 +218,7 @@ export function silenceAll(){clearFlush();}
 /** Som vindo do service worker (push): toque único, sem eleição. */
 // O service worker avisa uma aba só; ela toca na hora (sem timer, que em aba
 // de fundo atrasa) e manda as outras abas não repetirem.
-export function playFromWorker(_soundId:string,_enabled:boolean){
+export function playFromWorker(){
  if(!prefs.enabled||prefs.selected==="none")return;
  suppressUntil=Date.now()+15000;clearFlush();
  try{bc?.postMessage({k:"push-played"});}catch{}
