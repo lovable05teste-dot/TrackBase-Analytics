@@ -30,7 +30,7 @@ export default async function Page() {
   const sugestoes: string[] = [];
   if (!ids.length) sugestoes.push("Crie um projeto e instale o tracker para ativar as previsões.");
   else {
-    if (cPv > 50 && pct(cIc, cPv) < 5) sugestoes.push("Otimize a página: IC/accesso abaixo de 5%. Teste nova headline e CTA no primeiro scroll.");
+    if (cPv > 50 && pct(cIc, cPv) < 5) sugestoes.push("Otimize a página: menos de 5% dos visitantes chegam ao checkout. Teste nova headline e CTA no primeiro scroll.");
     if (cIc >= 10 && convIc < 20) sugestoes.push(`Checkout com gargalo (${convIc}% IC→compra). Reduza fricção: Pix à vista, 1-click, prova perto do botão.`);
     if (avgTicket > 0 && avgTicket < 50) sugestoes.push(`Ticket médio baixo (${brl(avgTicket)}). Teste order bump / upsell para elevar o faturamento sem mais tráfego.`);
     if (trend === "queda") sugestoes.push("Tendência de queda vs média 30d. Revise frequência dos criativos e sobreposição de público.");
