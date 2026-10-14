@@ -182,3 +182,10 @@ test("modo teste (?gs_test=1): avisa o servidor e marca os eventos como teste", 
   vm.runInContext(trackerScript("project1", "https://app.com/api/events", "", parseTrackingConfig({})), normal.context);
   assert.ok(normal.requests.map(r => JSON.parse(r.body)).every(x => x.test === undefined && x.eventName !== "TestMode"));
 });
+
+test('multiple pixels receive targeted browser events with a shared event id, never broadcast to unrelated pixels',()=>{
+ const b=browser();vm.runInContext(trackerScript('multi','https://app.com/api/events',['12345678','87654321','12345678'],parseTrackingConfig(null)),b.context);
+ assert.equal(b.fbq.filter(a=>a[0]==='init').length,2);
+ const views=b.fbq.filter(a=>a[0]==='trackSingle'&&a[2]==='PageView');assert.equal(views.length,2);assert.equal(views[0][4].eventID,views[1][4].eventID);
+ assert.ok(!b.fbq.some(a=>a[0]==='track'));
+});

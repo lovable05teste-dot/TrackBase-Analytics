@@ -7,12 +7,14 @@ import {logHistory} from "@/lib/meta-rules";
 
 type Action="activate"|"pause"|"duplicate"|"budget"|"delete";
 
-export async function POST(request:Request){if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
+export async function POST(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   try{
     const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado."},{status:401});
     if(!(await hasActivePlan(userId)))return planRequiredResponse();
     const body=await request.json() as {accountId?:string;objectId?:string;level?:string;action?:Action;value?:number};
     if(!body.accountId||!body.objectId||!body.action)return Response.json({error:"Ação incompleta."},{status:400});
+    if(!["activate","pause","duplicate","budget","delete"].includes(body.action))return Response.json({error:"Ação inválida."},{status:400});
     if(!["campaign","adset","ad"].includes(body.level||""))return Response.json({error:"Nível inválido."},{status:400});
     await ensureDb();const [account]=await getDb().select().from(metaAccounts).where(and(eq(metaAccounts.id,body.accountId),eq(metaAccounts.userId,userId))).limit(1);
     if(!account)return Response.json({error:"Conta não encontrada."},{status:404});
@@ -23,7 +25,7 @@ export async function POST(request:Request){if (hasConflictingOrigin(request)) r
     const params=new URLSearchParams({access_token:token});
     if(body.action==="activate")params.set("status","ACTIVE");
     if(body.action==="pause")params.set("status","PAUSED");
-    if(body.action==="budget"){if(!body.value||body.value<=0)return Response.json({error:"Informe um orçamento válido."},{status:400});params.set("daily_budget",String(Math.round(body.value*100)))}
+    if(body.action==="budget"){if(!Number.isFinite(body.value)||!body.value||body.value<=0)return Response.json({error:"Informe um orçamento válido."},{status:400});params.set("daily_budget",String(Math.round(body.value*100)))}
     if(body.action==="duplicate"){const copy=new URLSearchParams({access_token:token});if(body.level==="campaign")copy.set("deep_copy","true");const result=await metaJson(`${base}/copies`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:copy});await logHistory(getDb(),{workspaceId:"ws_"+(await sha256(userId)).slice(0,24),userId,actor:"manual",action:"duplicate",targetLevel:String(body.level||""),targetId:String(body.objectId||"")});return Response.json({ok:true,action:body.action,result})}
     const result=await metaJson(base,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:params});
     await logHistory(getDb(),{workspaceId:"ws_"+(await sha256(userId)).slice(0,24),userId,actor:"manual",action:String(body.action||""),targetLevel:String(body.level||""),targetId:String(body.objectId||"")});

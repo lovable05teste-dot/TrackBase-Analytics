@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { apiCredentials, events, metaAccounts, metaLinked, orders, projects } from "@/db/schema";
+import { apiCredentials, events, metaAccounts, metaLinked, orders, projectPixels, projects } from "@/db/schema";
 import { getWorkspace } from "@/lib/analytics";
 
 export type SetupStatus = {
@@ -36,20 +36,21 @@ export async function loadSetupStatus(): Promise<SetupStatus> {
     const db = getDb();
     const projectRows = await db.select({ id: projects.id, pixelId: projects.pixelId, token: projects.metaTokenCipher }).from(projects).where(eq(projects.workspaceId, workspaceId));
     const ids = projectRows.map((p) => p.id);
-    const [accounts, linked, credentials, visit, utmVisit, sale] = await Promise.all([
+    const [accounts, linked, credentials, visit, utmVisit, sale, additionalPixels] = await Promise.all([
       db.select({ id: metaAccounts.id }).from(metaAccounts).where(eq(metaAccounts.userId, userId)),
       db.select({ id: metaLinked.adAccountId }).from(metaLinked).where(eq(metaLinked.userId, userId)),
       db.select({ active: apiCredentials.active }).from(apiCredentials).where(eq(apiCredentials.workspaceId, workspaceId)),
       ids.length ? db.select({ id: events.id }).from(events).where(and(inArray(events.projectId, ids), eq(events.source, "browser"))).limit(1) : Promise.resolve([]),
       ids.length ? db.select({ id: events.id }).from(events).where(and(inArray(events.projectId, ids), eq(events.source, "browser"), isNotNull(events.utmCampaign), ne(events.utmCampaign, ""))).limit(1) : Promise.resolve([]),
       ids.length ? db.select({ id: orders.id }).from(orders).where(inArray(orders.projectId, ids)).limit(1) : Promise.resolve([]),
+      ids.length ? db.select({ id:projectPixels.id }).from(projectPixels).where(inArray(projectPixels.projectId,ids)).limit(1) : Promise.resolve([]),
     ]);
     return {
       projects: projectRows.length,
       receivingVisits: visit.length > 0,
       metaLogins: accounts.length,
       metaLinked: linked.length,
-      pixelConnected: projectRows.some((p) => p.pixelId && p.token),
+      pixelConnected: additionalPixels.length>0||projectRows.some((p) => p.pixelId && p.token),
       // `active` pode ser integer ou boolean conforme o banco: filtra em JS.
       gateways: credentials.filter((c) => Boolean(c.active)).length,
       sales: sale.length,

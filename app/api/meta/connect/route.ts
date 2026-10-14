@@ -3,7 +3,8 @@ import { ensureDb, getDb } from "../../../../db";
 import { projects } from "../../../../db/schema";
 import { encryptSecret, hasActivePlan, planRequiredResponse, requestUserId, sha256, hasConflictingOrigin } from "../../../../lib/trackbase-security";
 
-export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
+export async function POST(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   await ensureDb();
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
@@ -21,9 +22,10 @@ export async function POST(request: Request) {if (hasConflictingOrigin(request))
   // token criptografado e a validação real acontece no primeiro envio CAPI.
   const encrypted = await encryptSecret(body.accessToken.trim());
   await getDb().update(projects).set({ pixelId: body.pixelId, metaTokenCipher: encrypted.cipher, metaTokenIv: encrypted.iv, metaTestCode: body.testCode?.trim() || null, metaConnectedAt: new Date().toISOString() }).where(eq(projects.id, body.projectId));
-  return Response.json({ connected: true, pixelId: body.pixelId, message: "Pixel e token conectados com segurança." });
+  return Response.json({ connected: true, pixelId: body.pixelId, validationStatus: "pending", message: "Pixel e token salvos. A validação da API de Conversões acontece no primeiro envio à Meta." });
 }
 
 export async function DELETE(request:Request){
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   await ensureDb();const userId=await requestUserId(request);if(!userId)return Response.json({error:"Não autenticado"},{status:401});if(!(await hasActivePlan(userId)))return planRequiredResponse();const projectId=new URL(request.url).searchParams.get("projectId");if(!projectId)return Response.json({error:"Projeto não informado"},{status:400});const workspaceId="ws_"+(await sha256(userId)).slice(0,24),[owned]=await getDb().select({id:projects.id}).from(projects).where(and(eq(projects.id,projectId),eq(projects.workspaceId,workspaceId))).limit(1);if(!owned)return Response.json({error:"Projeto não encontrado"},{status:404});await getDb().update(projects).set({pixelId:null,metaTokenCipher:null,metaTokenIv:null,metaTestCode:null,metaConnectedAt:null}).where(eq(projects.id,projectId));return Response.json({disconnected:true,projectId});
 }

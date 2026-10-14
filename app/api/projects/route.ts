@@ -1,6 +1,6 @@
 import { and,eq,inArray,max } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../db";
-import { apiCredentials,events,members,orders,projects,workspaces } from "../../../db/schema";
+import { apiCredentials,capiOutbox,events,members,orders,projectPixels,projects,workspaces } from "../../../db/schema";
 import { hasActivePlan, hasConflictingOrigin, planRequiredResponse, requestUserId, sha256 } from "../../../lib/trackbase-security";
 
 export async function GET(request: Request) {
@@ -78,6 +78,6 @@ export async function DELETE(request:Request){
   const id=new URL(request.url).searchParams.get("id");if(!id)return Response.json({error:"Projeto não informado"},{status:400});
   const workspaceId="ws_"+(await sha256(userId)).slice(0,24),db=getDb(),[owned]=await db.select({id:projects.id}).from(projects).where(and(eq(projects.id,id),eq(projects.workspaceId,workspaceId))).limit(1);
   if(!owned)return Response.json({error:"Projeto não encontrado"},{status:404});
-  await db.transaction(async tx=>{await tx.delete(events).where(eq(events.projectId,id));await tx.delete(orders).where(eq(orders.projectId,id));await tx.delete(apiCredentials).where(eq(apiCredentials.projectId,id));await tx.delete(projects).where(eq(projects.id,id))});
+  await db.transaction(async tx=>{await tx.delete(projectPixels).where(eq(projectPixels.projectId,id));await tx.delete(capiOutbox).where(eq(capiOutbox.projectId,id));await tx.delete(events).where(eq(events.projectId,id));await tx.delete(orders).where(eq(orders.projectId,id));await tx.delete(apiCredentials).where(eq(apiCredentials.projectId,id));await tx.delete(projects).where(eq(projects.id,id))});
   return Response.json({deleted:true,id});
 }

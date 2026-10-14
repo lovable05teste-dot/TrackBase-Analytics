@@ -1,3 +1,4 @@
+import { metaDestinations } from "@/lib/project-pixels";
 // Núcleo compartilhado da ingestão de vendas (webhook universal de gateways).
 // Regras de confiabilidade concentradas aqui:
 // - dedup por (provider, externalId): mesmo status repetido = 200 sem
@@ -8,7 +9,7 @@
 // - status desconhecido vira `pending` + alerta (nunca 400 que dropa venda).
 // O `db` vem por parâmetro tipado via `import type` (apagado em runtime) e o
 // push é dinâmico — este módulo segue importável em testes unitários puros.
-import { and, asc, desc, eq, inArray, lte, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, lt, or, sql } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
 import { dispatchCapi } from "@/lib/meta-capi";
@@ -281,9 +282,9 @@ export async function enqueueCapiOutbox(
   const now = Math.floor(Date.now() / 1000);
   // Reuse pending rows made by versions that used random UUIDs.
   const [existing] = await db.select({ id: capiOutbox.id }).from(capiOutbox)
-    .where(and(eq(capiOutbox.projectId, input.projectId), eq(capiOutbox.eventName, input.eventName), eq(capiOutbox.eventId, input.eventId))).limit(1);
+    .where(and(eq(capiOutbox.projectId, input.projectId), eq(capiOutbox.eventName, input.eventName), eq(capiOutbox.eventId, input.eventId), eq(capiOutbox.pixelId, input.pixelId))).limit(1);
   if (existing) return existing.id;
-  const id = `capi:${input.projectId}:${input.eventName}:${input.eventId}`;
+  const id = `capi:${input.projectId}:${input.pixelId}:${input.eventName}:${input.eventId}`;
   const { immediate, ...record } = input;
   await db.insert(capiOutbox).values({
     id,
@@ -328,13 +329,9 @@ export async function drainCapiOutbox(db: Db, opts: { workspaceId?: string; limi
           result.sent++;
           continue;
         }
-        const [proj] = await db
-          .select({ pixelId: projects.pixelId, cipher: projects.metaTokenCipher, iv: projects.metaTokenIv })
-          .from(projects)
-          .where(eq(projects.id, row.projectId))
-          .limit(1);
-        if (!proj?.pixelId || !proj.cipher || !proj.iv) throw new Error("pixel/token removido");
-        if (row.pixelId && row.pixelId !== proj.pixelId) throw new Error("pixel alterado; revise o destino antes de reenviar");
+        const destinations = await metaDestinations(db, row.projectId);
+        const proj = row.pixelId ? destinations.find(p=>p.pixelId===row.pixelId) : destinations[0];
+        if (!proj) throw new Error(row.pixelId ? "pixel alterado ou removido; revise o destino antes de reenviar" : "pixel/token removido");
         const payload = JSON.parse(row.payload) as Record<string, unknown>;
         // A saved test code must never divert a confirmed real purchase.
         if (row.eventName === "Purchase") delete payload.test_event_code;
@@ -422,13 +419,13 @@ export async function handleSalesQuota(
     const id = `${workspaceId}:sales:${start}`;
     const now = Math.floor(Date.now() / 1000);
     await db.insert(usageCounters).values({ id, workspaceId, metric: "sales", periodStart: start, periodEnd: end, count: 0, updatedAt: now }).onConflictDoNothing();
-    // read then increment (race window pequeno; aceitável sem tx pesada)
-    const [cur] = await db.select({ count: usageCounters.count }).from(usageCounters).where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start))).limit(1);
-    const next = (cur?.count ?? 0) + 1;
-    await db.update(usageCounters).set({ count: next, updatedAt: now }).where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start)));
-    const pct = Math.round((next / limit) * 100);
-    const thresholds = [80, 90, 100];
-    if (!thresholds.includes(pct) && !(next === limit)) return;
+    const [updated] = await db.update(usageCounters)
+      .set({ count: sql`${usageCounters.count} + 1`, updatedAt: now })
+      .where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, "sales"), eq(usageCounters.periodStart, start)))
+      .returning({ count: usageCounters.count });
+    const next = updated?.count ?? 0;
+    const pct = [80, 90, 100].find(threshold => ((next - 1) / limit) * 100 < threshold && (next / limit) * 100 >= threshold);
+    if (pct === undefined) return;
     // evita spam: só envia quando cruza threshold
     const email = (sub as { email?: string | null }).email || "";
     if (!email) return;

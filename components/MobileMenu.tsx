@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { FullMenu } from "./FullMenu";
+import { SoundSidebar } from "@/app/sound-sidebar";
 import Link from "next/link";
 
 export function MobileMenu() {
@@ -42,6 +43,7 @@ export function MobileMenu() {
               }}
             >
               <FullMenu />
+              <SoundSidebar />
             </div>
             <Link
               href="/conta/assinatura"
