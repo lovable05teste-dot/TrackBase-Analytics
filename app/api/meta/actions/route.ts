@@ -1,3 +1,4 @@
+import { internalError } from "@/lib/api-error";
 import {and,eq} from "drizzle-orm";
 import {ensureDb,getDb} from "@/db";
 import {metaAccounts} from "@/db/schema";
@@ -28,5 +29,5 @@ export async function POST(request:Request){if (hasConflictingOrigin(request)) r
     const result=await metaJson(base,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:params});
     await logHistory(getDb(),{workspaceId:"ws_"+(await sha256(userId)).slice(0,24),userId,actor:"manual",action:String(body.action||""),targetLevel:String(body.level||""),targetId:String(body.objectId||"")});
     return Response.json({ok:true,action:body.action,result});
-  }catch(error){console.error("Meta action",error);return Response.json({error:error instanceof Error?error.message:"A Meta recusou a alteração."},{status:500})}
+  }catch(error){console.error("Meta action",error);return internalError(error, "A Meta recusou a alteração.")}
 }

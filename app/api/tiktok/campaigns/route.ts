@@ -1,3 +1,4 @@
+import { internalError } from "@/lib/api-error";
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { events, projects, tiktokAccounts } from "@/db/schema";
@@ -87,6 +88,6 @@ export async function GET(request: Request) {
     return Response.json({ items: result, period, start: r.start, end: r.end, accounts: accounts.length, failures, totals: { ...totals, profit: totals.revenue - totals.spend, roas: totals.spend ? totals.revenue / totals.spend : null, tiktokSales: fromTiktok.length, tiktokRevenue: fromTiktok.reduce((s, e) => s + Number(e.value || 0), 0) }, updatedAt: new Date().toISOString() }, { headers: { "cache-control": "no-store" } });
   } catch (error) {
     console.error("TikTok campaigns GET", error);
-    return Response.json({ error: error instanceof Error ? error.message : "Falha ao importar dados do TikTok." }, { status: 500 });
+    return internalError(error, "Falha ao importar dados do TikTok.");
   }
 }

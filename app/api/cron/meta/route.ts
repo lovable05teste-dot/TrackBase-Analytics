@@ -1,3 +1,4 @@
+import { internalError } from "@/lib/api-error";
 import { and,eq,gte,inArray,lt } from "drizzle-orm";
 import { ensureDb,getDb } from "@/db";
 import { automationRules,notificationPrefs,orders,projects } from "@/db/schema";
@@ -80,5 +81,5 @@ export async function GET(request:Request){
   if(task==="capi")return Response.json({ok:true,...await runCapiDrain()});
   if(task==="monitor"){await ensureDb();const {runDueMonitors}=await import("@/lib/site-monitor");return Response.json({ok:true,...await runDueMonitors({limit:200})});}
   return Response.json({ok:true,...await runRules()});
- }catch(e){console.error("cron meta",e);return Response.json({error:e instanceof Error?e.message:"Falha no cron."},{status:500})}
+ }catch(e){console.error("cron meta",e);return internalError(e, "Falha no cron.")}
 }
