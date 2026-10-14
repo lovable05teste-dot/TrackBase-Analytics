@@ -6,6 +6,7 @@ import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
 import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
 import {getSoundPrefs,previewSound,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
+import { startPolling } from "@/lib/poll";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -34,19 +35,20 @@ export function NotificationsBell({inline=false}:{inline?:boolean}={}){
  const interesting=(o:Order)=>o.status==="approved"?prefs.approved:o.status==="pending"?prefs.pending:false;
  const unread=orders.filter(o=>interesting(o)&&(o.updatedAt*1000>(seen||0))).length;
 
- const load=useCallback(async(silentInit:boolean)=>{
+ const load=useCallback(async(silentInit:boolean):Promise<boolean>=>{
   try{
-   const r=await fetch("/api/orders?period=last_30d",{cache:"no-store"});if(!r.ok)return;
+   const r=await fetch("/api/orders?period=last_30d",{cache:"no-store"});if(!r.ok)return false;
    const b=await r.json();const p=prefsRef.current;
    const list:Array<Order>=(b.orders||[]).filter((o:Order)=>o.status==="approved"?p.approved:o.status==="pending"?p.pending:false);
-   if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return;}
+   if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return true;}
 const fresh=list.filter(o=>!known.current.has(o.id));
     if(fresh.length){
      // Som + toast de venda aprovada são tratados pelo SoundNotifications (global, 5s).
      known.current=new Set(list.map(o=>o.id));
     }
    setOrders(list);
-  }catch{}
+   return true;
+  }catch{return false}
  },[]);
 
  const savePrefs=async(next:NotifyPrefs)=>{
@@ -59,8 +61,7 @@ const fresh=list.filter(o=>!known.current.has(o.id));
   try{setSeen(Number(localStorage.getItem(SEEN_KEY)||0));}catch{}
   void load(true);
   fetch("/api/notifications/prefs",{cache:"no-store"}).then(r=>r.json()).then(b=>{if(b.prefs)setPrefs(b.prefs);}).catch(()=>{});
-  const timer=setInterval(()=>{if(!document.hidden)void load(false);},30000);
-  return ()=>clearInterval(timer);
+  return startPolling(async()=>(await load(false))?"ok":"error",{intervalMs:30000});
  },[load]);
 
  useEffect(()=>{
