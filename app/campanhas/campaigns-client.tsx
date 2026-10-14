@@ -1,12 +1,12 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
-import { applyCosts, hasCosts, normalizeCosts, ZERO_COSTS, type Costs } from "@/lib/costs";
+import { applyCosts, hasCosts, normalizeCosts, normalizeGatewayRates, ZERO_COSTS, type Costs, type GatewayRates } from "@/lib/costs";
 import {AlertCircle,BarChart3,Check,ChevronDown,Clipboard,Download,ExternalLink,Loader2,MoreHorizontal,Pause,Play,RefreshCw,Search,Trash2} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import { apiFetch } from "@/lib/plan-client";
 
 type Level="account"|"campaign"|"adset"|"ad";
-type Row={thumbnail?:string|null;utmSamples?:string[];attributedByName?:number;ctr?:number;reach?:number;frequency?:number;linkClicks?:number;pendingSales?:number;pendingRevenue?:number;id:string;name:string;status:string;configuredStatus?:string|null;dailyBudget?:number|null;lifetimeBudget?:number|null;campaignId?:string|null;level:string;accountId:string;adAccountId:string;accountName:string;currency:string;spend:number;clicks:number;impressions:number;cpc:number;cpm:number;pageViews:number;checkouts:number;sales:number;revenue:number;cpa:number|null;profit:number;roas:number|null};
+type Row={gatewaySales?:Record<string,{sales:number;revenue:number}>;thumbnail?:string|null;utmSamples?:string[];attributedByName?:number;ctr?:number;reach?:number;frequency?:number;linkClicks?:number;pendingSales?:number;pendingRevenue?:number;id:string;name:string;status:string;configuredStatus?:string|null;dailyBudget?:number|null;lifetimeBudget?:number|null;campaignId?:string|null;level:string;accountId:string;adAccountId:string;accountName:string;currency:string;spend:number;clicks:number;impressions:number;cpc:number;cpm:number;pageViews:number;checkouts:number;sales:number;revenue:number;cpa:number|null;profit:number;roas:number|null};
 type Daily={date:string;itemName:string;accountName:string;currency:string;spend:number;clicks:number;impressions:number;cpc:number};
 const money=(value:number,currency="BRL")=>new Intl.NumberFormat("pt-BR",{style:"currency",currency}).format(value||0),labels:Record<Level,string>={account:"Contas",campaign:"Campanhas",adset:"Conjuntos",ad:"Anúncios"};
 
@@ -109,9 +109,9 @@ export function CampaignsClient(){
  const saveColumns=(keys:string[])=>{setColumns(keys);try{localStorage.setItem(COLUMNS_KEY,JSON.stringify(keys))}catch{}};
  const visibleMetrics=METRICS.filter(m=>columns.includes(m.key));
  // Lucro real por linha: desconta produto, gateway e impostos (custos do Dashboard).
- const[costs,setCosts]=useState<Costs>(ZERO_COSTS);
- useEffect(()=>{const c=new AbortController();fetch("/api/tools/state?tool=custos",{cache:"no-store",signal:c.signal}).then(r=>r.ok?r.json():null).then(b=>{if(b)setCosts(normalizeCosts(b.data))}).catch(()=>{});return()=>c.abort()},[]);
- const costed=useMemo(()=>hasCosts(costs)?rows.map(r=>({...r,profit:applyCosts({revenue:r.revenue,sales:r.sales,spend:r.spend},costs).profit})):rows,[rows,costs]);
+ const[costs,setCosts]=useState<Costs>(ZERO_COSTS),[rates,setRates]=useState<GatewayRates>({});
+ useEffect(()=>{const c=new AbortController();fetch("/api/tools/state?tool=custos",{cache:"no-store",signal:c.signal}).then(r=>r.ok?r.json():null).then(b=>{if(b){setCosts(normalizeCosts(b.data));setRates(normalizeGatewayRates(b.data?.gateways))}}).catch(()=>{});return()=>c.abort()},[]);
+ const costed=useMemo(()=>hasCosts(costs)||Object.keys(rates).length?rows.map(r=>({...r,profit:applyCosts({revenue:r.revenue,sales:r.sales,spend:r.spend,gatewaySales:r.gatewaySales},costs,rates).profit})):rows,[rows,costs,rates]);
  const apiLevel=level==="account"?"campaign":level;
  const load=useCallback(async()=>{setLoading(true);setError("");try{const query=new URLSearchParams({period,level:apiLevel});if(period==="custom"&&start&&end){query.set("start",start);query.set("end",end)}const response=await fetch(`/api/meta/campaigns?${query}`,{cache:"no-store"}),body=await response.json();if(!response.ok)throw new Error(body.error||"Falha ao importar dados.");setRows(body.items||body.campaigns||[]);setDaily(body.daily||[]);setUpdated(body.updatedAt||"");setSelected(new Set());if(body.failures?.length)setError(body.failures.map((item:{account:string;error:string})=>`${item.account}: ${item.error}`).join(" · "))}catch(reason){setError(reason instanceof Error?reason.message:"Falha ao carregar.")}finally{setLoading(false)}},[period,start,end,apiLevel]);
  useEffect(()=>{load()},[load]);

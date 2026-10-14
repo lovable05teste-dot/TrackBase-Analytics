@@ -13,6 +13,8 @@ export const TOOL_SCHEMAS = {
     gatewayFeeFixed: z.number().min(0).max(1000).default(0),
     taxPct: z.number().min(0).max(100).default(0),
     otherMonthly: z.number().min(0).max(100000000).default(0),
+    // Taxas próprias por gateway (chave = nome do gateway, ex.: kiwify).
+    gateways: z.record(z.string().regex(/^[a-z0-9_]{1,40}$/), z.object({ feePct: z.number().min(0).max(100), feeFixed: z.number().min(0).max(1000) })).refine(v => Object.keys(v).length <= 30).optional(),
   }),
   agent_hub: z.array(z.object({ id, name: z.string().min(1).max(120), condition: z.string().max(300), action: z.string().max(300), active: z.boolean() })).max(100),
 };

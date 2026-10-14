@@ -1,10 +1,13 @@
 import { internalError } from "@/lib/api-error";
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { events, projects, tiktokAccounts } from "@/db/schema";
+import { events, orders, projects, tiktokAccounts } from "@/db/schema";
+import { netRevenue } from "@/lib/net-revenue";
+import { applyCosts } from "@/lib/costs";
+import { loadWorkspaceCosts } from "@/lib/costs-server";
 import { isTestEvent, testVisitorIds } from "@/lib/test-traffic";
 import { rateToBrl } from "@/lib/fx";
-import { isTiktokSource, payloadField, tiktokApi } from "@/lib/tiktok";
+import { isTiktokSource, tiktokApi } from "@/lib/tiktok";
 import { buildUtmIndex } from "@/lib/utm-match";
 import { decryptSecret, requestUserId, sha256 } from "@/lib/trackbase-security";
 
@@ -73,19 +76,26 @@ export async function GET(request: Request) {
     const testVisitors = await testVisitorIds(db, projectIds);
     const clean = tracked.filter((e) => !isTestEvent(e, testVisitors));
     const matched = buildUtmIndex(clean, (e) => [e.utmCampaign]).matchAll(items, { idOnly: true });
+    // Receita pelo status atual do pedido: reembolso e chargeback saem da receita.
+    const orderRows = projectIds.length
+      ? await db.select({ id: orders.id, provider: orders.provider, status: orders.status, value: orders.value, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource }).from(orders)
+          .where(and(inArray(orders.projectId, projectIds), inArray(orders.status, ["approved", "pending", "refunded", "chargeback"]), gte(orders.createdAt, r.from), lte(orders.createdAt, r.to)))
+      : [];
+    const orderMatched = buildUtmIndex(orderRows, (o) => [o.utmCampaign]).matchAll(items, { idOnly: true });
+    // Custos da operação (produto, gateway por gateway, impostos), como nas Campanhas da Meta.
+    const { costs, rates } = await loadWorkspaceCosts(db, workspaceId);
     const unique = (list: { id: string; visitorId: string | null }[]) => new Set(list.map((e) => e.visitorId || e.id)).size;
     const result = items.map((item) => {
       const hit = matched.get(item.id)?.events || [];
-      const purchases = hit.filter((e) => e.eventName === "Purchase");
+      const net = netRevenue(orderMatched.get(item.id)?.events || []);
       const pending = hit.filter((e) => e.eventName === "PaymentPending");
-      const revenue = purchases.reduce((sum, e) => sum + Number(e.value || 0), 0);
-      return { ...item, pageViews: unique(hit.filter((e) => e.eventName === "PageView")), checkouts: unique(hit.filter((e) => e.eventName === "InitiateCheckout")), sales: purchases.length, revenue, pendingSales: pending.length, pendingRevenue: pending.reduce((sum, e) => sum + Number(e.value || 0), 0), profit: revenue - item.spend, roas: item.spend ? revenue / item.spend : null, cpa: purchases.length ? item.spend / purchases.length : null };
+      return { ...item, pageViews: unique(hit.filter((e) => e.eventName === "PageView")), checkouts: unique(hit.filter((e) => e.eventName === "InitiateCheckout")), sales: net.sales, revenue: net.revenue, refundedSales: net.refundedSales, refundedRevenue: net.refundedRevenue, pendingSales: pending.length, pendingRevenue: pending.reduce((sum, e) => sum + Number(e.value || 0), 0), profit: applyCosts({ revenue: net.revenue, sales: net.sales, spend: item.spend, gatewaySales: net.byProvider }, costs, rates).profit, roas: item.spend ? net.revenue / item.spend : null, cpa: net.sales ? item.spend / net.sales : null };
     }).sort((a, b) => b.profit - a.profit || b.revenue - a.revenue || b.spend - a.spend);
 
     // Todas as vendas vindas do TikTok (UTM tiktok ou ttclid), mesmo sem campanha casada.
-    const fromTiktok = clean.filter((e) => e.eventName === "Purchase" && (isTiktokSource(e.utmSource) || payloadField(e.payload, "ttclid")));
+    const fromTiktok = orderRows.filter((o) => o.status === "approved" && isTiktokSource(o.utmSource));
     const totals = result.reduce((t, i) => ({ spend: t.spend + i.spend, impressions: t.impressions + i.impressions, clicks: t.clicks + i.clicks, sales: t.sales + i.sales, revenue: t.revenue + i.revenue }), { spend: 0, impressions: 0, clicks: 0, sales: 0, revenue: 0 });
-    return Response.json({ items: result, period, start: r.start, end: r.end, accounts: accounts.length, failures, totals: { ...totals, profit: totals.revenue - totals.spend, roas: totals.spend ? totals.revenue / totals.spend : null, tiktokSales: fromTiktok.length, tiktokRevenue: fromTiktok.reduce((s, e) => s + Number(e.value || 0), 0) }, updatedAt: new Date().toISOString() }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ items: result, period, start: r.start, end: r.end, accounts: accounts.length, failures, totals: { ...totals, profit: result.reduce((sum, item) => sum + item.profit, 0), roas: totals.spend ? totals.revenue / totals.spend : null, tiktokSales: fromTiktok.length, tiktokRevenue: fromTiktok.reduce((s, o) => s + Number(o.value || 0), 0) }, updatedAt: new Date().toISOString() }, { headers: { "cache-control": "no-store" } });
   } catch (error) {
     console.error("TikTok campaigns GET", error);
     return internalError(error, "Falha ao importar dados do TikTok.");
