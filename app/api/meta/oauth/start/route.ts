@@ -2,7 +2,7 @@ import { lt } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaOauthStates } from "@/db/schema";
 import { connectLinkConfirmation, userFromConnectLink } from "@/lib/connect-link";
-import { metaRedirectUri, requireMetaConfig } from "@/lib/meta";
+import { metaAuthorizationUrl, requireMetaConfig } from "@/lib/meta";
 import { pickSessionToken, requestSessionTokens, requestUserId, sessionCookie, sha256 } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   try {
     await ensureDb();
     const config = requireMetaConfig();
-    const redirectUri = metaRedirectUri();
+    const redirectUri = config.redirectUri;
     const callbackOrigin = new URL(redirectUri).origin;
     const state = `${crypto.randomUUID()}${crypto.randomUUID()}.${returnHost(request, callbackOrigin)}`;
     const now = Math.floor(Date.now() / 1000);
@@ -41,17 +41,11 @@ export async function GET(request: Request) {
       createdAt: now,
     });
 
-    const url = new URL(`https://www.facebook.com/${config.version}/dialog/oauth`);
-    url.searchParams.set("client_id", config.appId);
-    url.searchParams.set("redirect_uri", redirectUri);
-    url.searchParams.set("state", state);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", "ads_read,ads_management,business_management");
     // modo=classico: abre o login do Facebook sem a configuração do "Login
     // para Empresas" (config_id). Alternativa quando a Meta mostra "Recurso
     // indisponível" para essa configuração.
     const classic = new URL(request.url).searchParams.get("modo") === "classico";
-    if (config.configId && !classic) url.searchParams.set("config_id", config.configId);
+    const url = metaAuthorizationUrl(state, classic ? { ...config, configId: "" } : config);
 
     const headers = new Headers({ Location: url.toString(), "Cache-Control": "no-store, no-cache, must-revalidate", "Referrer-Policy": "no-referrer" });
     // Regrava o token que está VÁLIDO (não o primeiro do header, que pode

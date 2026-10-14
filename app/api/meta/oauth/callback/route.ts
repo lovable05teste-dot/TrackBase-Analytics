@@ -1,7 +1,7 @@
 import { and, eq, gte } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaAccounts, metaOauthStates } from "@/db/schema";
-import { metaJson, metaPages, metaRedirectUri, requireMetaConfig } from "@/lib/meta";
+import { metaJson, metaPages, requireMetaConfig } from "@/lib/meta";
 import { metaStateOrigin } from "@/lib/meta-oauth-state";
 import { encryptSecret, requestUserId, sha256 } from "@/lib/trackbase-security";
 
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
     const userId = valid.userId;
     const config = requireMetaConfig();
-    const redirectUri = metaRedirectUri();
+    const redirectUri = config.redirectUri;
     const exchange = new URL(`https://graph.facebook.com/${config.version}/oauth/access_token`);
     exchange.searchParams.set("client_id", config.appId);
     exchange.searchParams.set("client_secret", config.appSecret);
