@@ -1,9 +1,11 @@
 type MetaEnv = { META_APP_ID?: string; META_APP_SECRET?: string; META_LOGIN_CONFIG_ID?: string; META_GRAPH_VERSION?: string };
 
+export const META_OAUTH_REDIRECT_URI = "https://www.ghostscale.com.br/api/meta/oauth/callback";
+
 export function metaRedirectUri() {
   // OAuth da Meta exige igualdade literal. Nunca derive do Host, preview,
   // APP_URL, www/sem-www ou protocolo recebido pela requisição.
-  return "https://www.ghostscale.com.br/api/meta/oauth/callback";
+  return META_OAUTH_REDIRECT_URI;
 }
 
 export async function metaPages<T>(url: string): Promise<{ data: T[] }> {
@@ -30,6 +32,18 @@ export function requireMetaConfig() {
   const config=metaConfig();
   if(!config.appId||!config.appSecret) throw new Error("META_NOT_CONFIGURED");
   return config;
+}
+
+export function metaAuthorizationUrl(state: string, config = requireMetaConfig()): URL {
+  if (!config.appId || !config.appSecret) throw new Error("META_NOT_CONFIGURED");
+  const url = new URL(`https://www.facebook.com/${config.version}/dialog/oauth`);
+  url.searchParams.set("client_id", config.appId);
+  url.searchParams.set("redirect_uri", config.redirectUri);
+  url.searchParams.set("state", state);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("scope", "ads_read,ads_management,business_management");
+  if (config.configId) url.searchParams.set("config_id", config.configId);
+  return url;
 }
 
 export async function metaJson<T>(url:string, init?:RequestInit):Promise<T>{
