@@ -50,3 +50,16 @@ Base revisada: main em 899e298. Revisão estática das rotas de API, cadastro, s
 - Três testes novos: reserva concorrente de franquia e isolamento de workspace; conexão por parceiro com ID e nome sem aprovação adicional, com recusa de nome incorreto e gravação no usuário/workspace correto; origem conflitante recusada antes dos efeitos nas rotas Meta.
 - Testes existentes incluem deduplicação de vendas, CAPI/retries, isolamento de ferramentas, autorização de proteção, UTMs, callback OAuth e paginação Meta.
 - Sem banco de produção, sessão do dono ou autorização Meta real usados. As mudanças só entram no site após merge/deploy.
+
+
+## Dashboard e navegação — atualização
+
+- Pendências usam o status atual de `orders`, sem somar eventos pendentes históricos de pedidos já pagos ou cancelados.
+- Vendas iniciadas: pedidos criados no período, uma vez por projeto/gateway/ID. Não aumenta artificialmente o total para igualar aprovações.
+- Aprovações: histórico de pagamentos no período do evento; deduplicado por pedido e tipo de evento. Pedidos iniciados antes do período podem ser aprovados nele.
+- Taxa de aprovação: pedidos criados no período que já tiveram pagamento aprovado, inclusive os posteriormente estornados; mesmo conjunto no numerador e denominador. A taxa por meio de pagamento também inclui cancelados no denominador.
+- Filtros por origem/produto aplicados à mesma base de pedidos; testes explícitos excluídos, sem supor que a ausência de clique pago transforma uma venda em teste.
+- Valores somados em centavos. Gráfico financeiro desconta reembolsos e chargebacks, como o faturamento líquido.
+- Menu compartilhado: estados ativos, foco de teclado e expansão acessível. Cards e sons: ícones consistentes, contraste por estado e explicações curtas das métricas.
+- Validação: 9 testes direcionados aprovados, TypeScript aprovado e build Next.js aprovado. O ambiente não tem executável Chromium; revisão visual em navegador não concluída. Sem conferência do banco/gateway de produção.
+- Limitações: ausência de webhook não pode ser inferida; divergências históricas exigem conciliação com o gateway. Períodos usam America/Sao_Paulo, como o restante do produto. Valores financeiros pressupõem BRL; conversão de outras moedas não implementada. A conciliação carrega o histórico de vendas do workspace e precisa de agregação/paginação para grandes volumes.
