@@ -72,3 +72,23 @@
 .gs-funnel-divider {border-left:1px solid var(--border)}
 /* Card de métrica sem o espaço extra do Card base */
 .gs-dashboard .gs-metric[data-slot="card"] {padding-block:0;gap:0}
+
+/* Hierarquia e navegação do painel */
+.gs-dashboard {--gs-aside:color-mix(in oklab,var(--card) 96%,#7c3aed);background:color-mix(in oklab,var(--background) 96%,#7c3aed)}
+.gs-dashboard>aside {box-shadow:4px 0 24px #00000003}
+.gs-navigation {font-variant-numeric:tabular-nums}
+.gs-navigation .gs-nav-item {min-height:42px;position:relative}
+.gs-navigation .gs-nav-item svg {stroke-width:1.8;transition:color .15s}
+.gs-navigation .gs-nav-item[data-active="true"] {background:color-mix(in oklab,#8b5cf6 12%,transparent);color:var(--gs-link,#6d28d9)}
+.gs-navigation .gs-nav-item[data-active="true"]::before {content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:#8b5cf6}
+.gs-navigation :is(button,a):focus-visible {outline:2px solid #8b5cf6;outline-offset:3px}
+.gs-dashboard .metric-card {border-radius:16px;box-shadow:0 2px 8px #00000003}
+.gs-metric-icon {width:34px;height:34px;border-radius:10px;background:color-mix(in oklab,var(--gs-focus) 10%,transparent);color:var(--gs-link)}
+.gs-metric-icon svg {width:18px;height:18px;stroke-width:1.8}
+.gs-metric[data-tone="green"] .gs-metric-icon {background:color-mix(in oklab,var(--gs-pos) 10%,transparent);color:var(--gs-pos)}
+.gs-metric[data-tone="red"] .gs-metric-icon {background:color-mix(in oklab,var(--gs-neg) 8%,transparent);color:var(--gs-neg)}
+.gs-metric-heading {font-weight:600;line-height:1.4;min-height:34px}
+.gs-metric-value {margin-top:14px;font-weight:700}
+.gs-dashboard header {backdrop-filter:blur(14px)}
+.gs-dashboard .dashboard-input {min-height:40px;border-color:var(--border)}
+@media(max-width:640px) {.gs-metric-icon {width:28px;height:28px;border-radius:8px}.gs-metric-icon svg {width:15px;height:15px}.gs-metric-heading {min-height:32px}.gs-metric-value {font-size:24px}}
