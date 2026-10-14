@@ -37,20 +37,29 @@ test('atomic usage reservation honors the limit under concurrent requests and is
   } finally { sqlite.close(); }
 });
 
-test('knowing partner account ID and name does not authorize an unapproved customer', async () => {
+test('partner ID and matching name connect without administrative approval', async () => {
   let remoteCalls=0;
+  const writes=[];
   const chain={from(){return this},where(){return this},async limit(){return []}};
+  const db={select:()=>Object.create(chain),insert:()=>({values:value=>({onConflictDoUpdate:async()=>writes.push(value)})}),update:()=>({set:()=>({where:async()=>{}})})};
   const {POST}=load('../app/api/meta/partner/route.ts', {
-    and,eq,ne:()=>{},ensureDb:async()=>{},getDb:()=>({select:()=>Object.create(chain)}),
-    metaAccounts:{adAccountId:'ad',metaUserId:'login',userId:'user',id:'id'},metaPartnerGrants:{adAccountId:'ad',userId:'user'},
+    and,eq,ne:()=>{},ensureDb:async()=>{},getDb:()=>db,
+    metaAccounts:{adAccountId:'ad',metaUserId:'login',userId:'user',id:'id'},
     PARTNER_LOGIN_ID:'partner',partnerConfig:()=>({configured:true,token:'server-secret',businessId:'12345'}),
-    hasConflictingOrigin:()=>false,requestUserId:async()=> 'customer',hasActivePlan:async()=>true,isAdminUserId:async()=>false,
-    readPartnerAccount:async()=>{remoteCalls++;throw Error('must not query shared credentials')},
+    hasConflictingOrigin:()=>false,requestUserId:async()=> 'customer',hasActivePlan:async()=>true,
+    readPartnerAccount:async()=>{remoteCalls++;return {name:'Known name',business:{id:'67890'}}},
+    encryptSecret:async()=>({cipher:'encrypted',iv:'iv'}),sha256:async()=> 'customer-workspace',crypto:globalThis.crypto,
   },['POST']);
-  const response=await POST(new Request('https://www.ghostscale.com.br/api/meta/partner',{method:'POST',body:JSON.stringify({adAccountId:'123456789',accountName:'Known name'})}));
-  assert.equal(response.status,403);
-  assert.equal((await response.json()).code,'PARTNER_APPROVAL_REQUIRED');
-  assert.equal(remoteCalls,0);
+  const request=name=>new Request('https://www.ghostscale.com.br/api/meta/partner',{method:'POST',body:JSON.stringify({adAccountId:'123456789',accountName:name})});
+  assert.equal((await POST(request('Wrong name'))).status,403);
+  assert.equal(writes.length,0);
+  const response=await POST(request('Known name'));
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).added,true);
+  assert.equal(remoteCalls,2);
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].userId,'customer');
+  assert.equal(writes[0].workspaceId,'ws_customer-workspace');
 });
 
 test('Meta changes reject a conflicting origin before accessing any account', async () => {
