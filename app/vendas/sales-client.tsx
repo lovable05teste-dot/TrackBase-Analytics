@@ -59,7 +59,7 @@ export function SalesClient(){
     catch(e){alert(e instanceof Error?e.message:"Não foi possível apagar.")}
     finally{setDeleting(false)}
   };
-  useEffect(()=>{let alive=true;setLoading(true);fetch("/api/orders",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.orders)?v.orders:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar vendas.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
+  useEffect(()=>{let alive=true;fetch("/api/orders",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.orders)?v.orders:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar vendas.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
   const providers=useMemo(()=>Array.from(new Set(rows.map(r=>r.provider).filter(Boolean))).sort(),[rows]);
   const toggleSort=(key:SortKey)=>{if(key===sortKey)setSortDir(d=>d==="desc"?"asc":"desc");else{setSortKey(key);setSortDir("desc")}};
   const filtered=useMemo(()=>{

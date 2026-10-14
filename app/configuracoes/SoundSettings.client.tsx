@@ -16,8 +16,6 @@ export function SoundSettings() {
   const [blocked, setBlocked] = useState(isAudioBlocked);
 
   useEffect(() => {
-    setPref(getSoundPrefs());
-    setBlocked(isAudioBlocked());
     const off1 = subscribeSoundPrefs(setPref);
     const off2 = subscribeAudioBlocked(setBlocked);
     void refreshSoundPrefs();
