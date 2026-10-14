@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useCallback,useEffect,useState} from "react";
 import {AlertTriangle,Copy,FlaskConical,History,Loader2,Megaphone,Play,Plus,Trash2,Users} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Card,CardContent,CardHeader,CardTitle} from "@/components/ui/card";
@@ -28,7 +28,7 @@ const input="dashboard-input mt-1";
 
 function useApi<T>(url:string|null){
  const[data,setData]=useState<T|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState("");
- const load=async()=>{if(!url)return;setLoading(true);setError("");try{const r=await fetch(url,{cache:"no-store"});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setData(b);}catch(e){setError(e instanceof Error?e.message:"Falha.")}finally{setLoading(false)}};
+ const load=useCallback(async()=>{if(!url)return;setLoading(true);setError("");try{const r=await fetch(url,{cache:"no-store"});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setData(b);}catch(e){setError(e instanceof Error?e.message:"Falha.")}finally{setLoading(false)}},[url]);
  return {data,loading,error,load,setData};
 }
 
@@ -70,8 +70,8 @@ function Rules(){
 function Audiences({accounts}:{accounts:Account[]}){
  const[projects,setProjects]=useState<Project[]>([]);const[list,setList]=useState<AudienceItem[]>([]);const[msg,setMsg]=useState("");
  const[accountId,setAccountId]=useState("");const[projectId,setProjectId]=useState("");const[name,setName]=useState("Compradores 180d");const[days,setDays]=useState("180");const[busy,setBusy]=useState(false);
-  const loadAll=async()=>{setMsg("");try{const[p,a]=await Promise.all([fetch("/api/projects",{cache:"no-store"}).then(r=>r.json()),fetch("/api/meta/audiences",{cache:"no-store"}).then(r=>r.json()).catch(()=>({audiences:[]}))]);setProjects(p.projects||[]);setList(a.audiences||[]);if(!projectId&&p.projects?.[0])setProjectId(p.projects[0].id);}catch{setMsg("Falha ao carregar projetos/públicos.")}};
- useEffect(()=>{void loadAll();},[]);
+  const loadAll=useCallback(async()=>{setMsg("");try{const[p,a]=await Promise.all([fetch("/api/projects",{cache:"no-store"}).then(r=>r.json()),fetch("/api/meta/audiences",{cache:"no-store"}).then(r=>r.json()).catch(()=>({audiences:[]}))]);setProjects(p.projects||[]);setList(a.audiences||[]);setProjectId(cur=>cur||p.projects?.[0]?.id||"");}catch{setMsg("Falha ao carregar projetos/públicos.")}},[]);
+ useEffect(()=>{void loadAll();},[loadAll]);
  const create=async()=>{const proj=projects.find(p=>p.id===projectId);if(!proj?.pixelId){setMsg("O projeto precisa de um Pixel conectado.");return;}setBusy(true);setMsg("");try{const r=await apiFetch("/api/meta/audiences",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({accountId,pixelId:proj.pixelId,name,days:Number(days)})});const b=await r.json();if(!r.ok)throw new Error(b.error||"Falha.");setMsg(`Público "${b.name}" criado na Meta.`);await loadAll();}catch(e){setMsg(e instanceof Error?e.message:"Falha.")}finally{setBusy(false)}};
  return <div className="space-y-5">
   <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-blue-600"/>Criar público de compradores</CardTitle></CardHeader><CardContent><p className="mb-4 text-sm leading-6 text-slate-600">Gera um público no Gerenciador a partir do Pixel (evento Purchase) para lookalike e remarketing.</p><div className="grid gap-3 md:grid-cols-2"><label className="text-sm">Conta de anúncio<select className={input} value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="">Escolha…</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label><label className="text-sm">Projeto (Pixel)<select className={input} value={projectId} onChange={e=>setProjectId(e.target.value)}>{projects.map(p=><option key={p.id} value={p.id}>{p.name}{p.pixelId?` · ${p.pixelId}`:" · sem Pixel"}</option>)}</select></label><label className="text-sm">Nome do público<input className={input} value={name} onChange={e=>setName(e.target.value)}/></label><label className="text-sm">Retenção (dias)<input type="number" min={1} max={180} className={input} value={days} onChange={e=>setDays(e.target.value)}/></label></div><div className="mt-4"><Button onClick={create} disabled={busy||!accountId||!projectId}>{busy?<Loader2 className="animate-spin"/>:<Plus/>}Criar na Meta</Button>{msg&&<span className="ml-3 text-sm text-slate-600">{msg}</span>}</div></CardContent></Card>
@@ -81,14 +81,16 @@ function Audiences({accounts}:{accounts:Account[]}){
 
 function HistoryList(){
  const docs=useApi<{history:HistoryItem[]}>("/api/meta/history");
- useEffect(()=>{void docs.load();},[]);
+ const{load:loadHistory}=docs;
+ useEffect(()=>{void loadHistory();},[loadHistory]);
  return <Card className="metric-card"><CardHeader><CardTitle className="flex items-center gap-2"><History className="size-5 text-blue-600"/>Histórico de ações</CardTitle></CardHeader><CardContent>{docs.loading?<Loader2 className="animate-spin"/>:docs.error?<p className="text-sm text-red-600">{docs.error}</p>:!docs.data?.history.length?<p className="text-sm text-slate-500">Nenhuma ação registrada ainda.</p>:<div className="space-y-2">{docs.data.history.map((h:HistoryItem)=><div key={h.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 text-sm"><div><b>{h.action}</b> <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${h.actor==="rule"?"bg-violet-500/10 text-violet-700":"bg-slate-500/10 text-slate-600"}`}>{h.actor==="rule"?"regra":"manual"}</span><p className="mt-1 text-slate-600">{h.targetName||h.targetId||"—"}{h.detail?` · ${h.detail}`:""}</p></div><span className="text-xs text-slate-500">{when(h.createdAt)}</span></div>)}</div>}</CardContent></Card>;
 }
 
 export function LabClient(){
  const[tab,setTab]=useState("diag");
  const accs=useApi<{accounts:Account[]}>("/api/meta/accounts");
- useEffect(()=>{void accs.load();},[]);
+ const{load:loadAccounts}=accs;
+ useEffect(()=>{void loadAccounts();},[loadAccounts]);
  const accounts=(accs.data?.accounts||[]).map(a=>({id:a.id,adAccountId:a.adAccountId||"",name:a.name}));
   return <div className="space-y-5">
    {accs.error?<p role="alert" className="rounded-lg border border-red-400/25 bg-red-400/10 p-3 text-sm text-red-600">{accs.error} Vincule uma conta em Integrações.</p>:null}
