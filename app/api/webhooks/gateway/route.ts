@@ -1,4 +1,5 @@
 import { queuePurchaseCapi } from "@/lib/purchase-capi";
+import { readAmount, reviewNote } from "@/lib/webhook-review";
 import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../../db";
 import { apiCredentials, events, notificationPrefs, projects } from "../../../../db/schema";
@@ -54,8 +55,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "JSON inválido" }, { status: 400, headers: cors });
   }
 
-  const externalId = String(
-    pick(body, [
+  const providerOrderId = pick(body, [
       "transaction_hash",
       "transactionHash",
       "transaction.id",
@@ -70,11 +70,11 @@ export async function POST(request: Request) {
       "data.id",
       "data.transaction.id",
       "order.id",
-    ]) ||
-      // Sem ID do pedido: hash do corpo, para o reenvio do mesmo webhook
-      // não virar venda duplicada.
-      "sem_id_" + (await sha256(JSON.stringify(body))).slice(0, 24),
-  );
+  ]);
+  // Sem ID do pedido: hash do corpo, para o reenvio do mesmo webhook não virar
+  // venda duplicada. O pedido é marcado para revisão.
+  const idFromProvider = String(providerOrderId ?? "").trim() !== "";
+  const externalId = idFromProvider ? String(providerOrderId).trim() : "sem_id_" + (await sha256(JSON.stringify(body))).slice(0, 24);
   const rawStatus = pick(body, ["status", "payment_status", "transaction_status", "event", "type", "data.status", "data.payment_status", "data.transaction.status", "order.status"]);
   // Status inédito vira pendente + alerta (nunca 400 que dropa a venda).
   const { status, known } = resolveStatus(rawStatus);
@@ -91,14 +91,12 @@ export async function POST(request: Request) {
     ? pick(body, ["amount", "data.amount", "transaction.amount", "offer.price"])
     : pick(body, ["amount_cents", "amountCents", "total_cents", "data.amount_cents", "data.transaction.amount_cents", "order.total_cents"]);
   const rawValue = pick(body, ["value", "amount", "total", "price", "data.value", "data.amount", "data.transaction.amount", "order.total"]);
-  let value: number;
-  if (centsValue !== undefined) value = parseMoney(centsValue) / 100;
-  else if (rawValue !== undefined) value = parseMoney(rawValue);
-  else if (itemsList.length && Number.isFinite(parseMoney(itemsList[0].price))) value = fortpay ? parseMoney(itemsList[0].price) / 100 : parseMoney(itemsList[0].price);
-  else value = 0;
-  // Valor ilegível não pode derrubar a venda (gateway não reenvia 4xx):
-  // grava com 0 e segue.
-  if (!Number.isFinite(value) || value < 0) value = 0;
+  // Valor: centavos (campo de centavos ou FortPay) ou reais. Valor ausente ou
+  // ilegível não vira 0 em silêncio: o pedido é marcado para revisão.
+  const amountField = centsValue !== undefined ? centsValue : rawValue !== undefined ? rawValue : itemsList.length ? itemsList[0].price : undefined;
+  const amountRead = readAmount(amountField);
+  const inCents = centsValue !== undefined || (rawValue === undefined && fortpay && amountField !== undefined);
+  const value = amountRead.source === "explicit" && inCents ? amountRead.value / 100 : amountRead.value;
 
   const rawUtm = String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || "").trim();
   const utmName = (v: string) => {
@@ -123,6 +121,8 @@ export async function POST(request: Request) {
   const db = getDb();
 
   // Dedup: redelivery do mesmo status = 200 sem reinserir nem re-disparar.
+  const orderReviewNote = reviewNote({ idFromProvider, knownStatus: known, amount: amountRead });
+  if (orderReviewNote) console.warn(JSON.stringify({ scope: "webhook", event: "order-needs-review", provider: credential.provider, orderId: externalId, note: orderReviewNote }));
   const { dedup, prevStatus } = await upsertOrder(db, {
     projectId: credential.projectId,
     externalId,
@@ -139,6 +139,7 @@ export async function POST(request: Request) {
     customerEmail: buyerField(body, ["customer.email", "buyer.email", "email", "data.customer.email", "data.buyer.email", "client.email"]).toLowerCase() || null,
     customerName: buyerField(body, ["customer.name", "buyer.name", "name", "data.customer.name", "data.buyer.name", "client.name"]) || null,
     customerPhone: buyerField(body, ["customer.phone", "customer.phone_number", "buyer.phone", "phone", "data.customer.phone", "client.phone"]) || null,
+    reviewNote: orderReviewNote,
   });
   const eventName = eventNameFor(status);
   await recordSaleEvent(credential.workspaceId, "sale.received", externalId, { status, raw: String(rawStatus ?? "").slice(0, 40), provider: credential.provider, dedup });

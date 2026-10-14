@@ -187,6 +187,7 @@ export type OrderInput = {
   customerEmail?: string | null;
   customerName?: string | null;
   customerPhone?: string | null;
+  reviewNote?: string | null;
 };
 
 // Upsert do pedido com veredito de dedup. Retorna prevStatus para decidir se
@@ -201,7 +202,7 @@ export function statusRank(status: string | null | undefined) {
 
 export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: boolean; prevStatus: string | null }> {
   const existing = await db
-    .select({ status: orders.status, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmContent: orders.utmContent, utmTerm: orders.utmTerm, customerEmail: orders.customerEmail, customerName: orders.customerName, customerPhone: orders.customerPhone })
+    .select({ status: orders.status, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmContent: orders.utmContent, utmTerm: orders.utmTerm, customerEmail: orders.customerEmail, customerName: orders.customerName, customerPhone: orders.customerPhone, reviewNote: orders.reviewNote })
     .from(orders)
     .where(and(eq(orders.projectId, input.projectId), eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)))
     .limit(1);
@@ -234,6 +235,7 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
         customerEmail: input.customerEmail || existing[0].customerEmail,
         customerName: input.customerName || existing[0].customerName,
         customerPhone: input.customerPhone || existing[0].customerPhone,
+        reviewNote: input.reviewNote ?? existing[0].reviewNote,
         eventId: input.eventId,
         updatedAt: now,
       })
