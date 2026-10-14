@@ -8,7 +8,7 @@
 // - status desconhecido vira `pending` + alerta (nunca 400 que dropa venda).
 // O `db` vem por parâmetro tipado via `import type` (apagado em runtime) e o
 // push é dinâmico — este módulo segue importável em testes unitários puros.
-import { and, asc, desc, eq, inArray, lte, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, lt, ne, or } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
 import { dispatchCapi } from "@/lib/meta-capi";
@@ -109,6 +109,20 @@ export function parsePaidAt(value: unknown, now = Math.floor(Date.now() / 1000))
   }
   if (!Number.isFinite(ts) || ts <= 0 || ts > now + 300) return now;
   return ts;
+}
+
+// Atribuição da última visita deste visitante (tb_vid) no projeto. Usada quando
+// o webhook da compra não traz UTM nem fbclid: a venda ainda cai na campanha certa.
+export async function visitorAttribution(db: Db, projectId: string, visitorId: string) {
+  const [row] = await db
+    .select({ utmSource: events.utmSource, utmMedium: events.utmMedium, utmCampaign: events.utmCampaign, utmContent: events.utmContent, utmTerm: events.utmTerm, fbclid: events.fbclid, fbc: events.fbc, fbp: events.fbp })
+    .from(events)
+    .where(and(eq(events.projectId, projectId), eq(events.visitorId, visitorId), or(ne(events.utmCampaign, ""), ne(events.fbclid, ""))))
+    .orderBy(desc(events.occurredAt))
+    .limit(1);
+  if (!row) return {};
+  const clean = (v: string | null | undefined) => v || undefined;
+  return { utmSource: clean(row.utmSource), utmMedium: clean(row.utmMedium), utmCampaign: clean(row.utmCampaign), utmContent: clean(row.utmContent), utmTerm: clean(row.utmTerm), fbclid: clean(row.fbclid), fbc: clean(row.fbc), fbp: clean(row.fbp) };
 }
 
 export function backoffFor(attempts: number) {

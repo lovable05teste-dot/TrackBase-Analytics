@@ -18,6 +18,7 @@ import {
   resolveStatus,
   parsePaidAt,
   upsertOrder,
+  visitorAttribution,
 } from "../../../../lib/sale-ingest";
 
 // Dados do comprador (e-mail, nome, telefone). Só texto curto; vazio = null.
@@ -121,6 +122,24 @@ export async function POST(request: Request) {
   const paidTime = parsePaidAt(paidAt, now);
   const db = getDb();
 
+  const fbc = String(pick(body, ["fbc", "tracking.fbc", "trackingParameters.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
+  const fbp = String(pick(body, ["fbp", "tracking.fbp", "trackingParameters.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
+  const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "trackingParameters.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
+  const visitorId = String(pick(body, ["tb_vid", "tracking.tb_vid", "trackingParameters.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || "");
+  // Sem UTM/fbclid no webhook, usa a última visita do mesmo visitante (tb_vid).
+  // O que o gateway mandou tem prioridade; a visita só preenche o que faltou.
+  const fromVisit = visitorId ? await visitorAttribution(db, credential.projectId, visitorId) : {};
+  const attr = {
+    utmCampaign: utmCampaign || fromVisit.utmCampaign || null,
+    utmSource: utmSource || fromVisit.utmSource || null,
+    utmMedium: utmMedium || fromVisit.utmMedium || null,
+    utmContent: utmContent || fromVisit.utmContent || null,
+    utmTerm: utmTerm || fromVisit.utmTerm || null,
+  };
+  const fbclidAttr = fbclid || fromVisit.fbclid || "";
+  const fbcAttr = fbc || fromVisit.fbc || "";
+  const fbpAttr = fbp || fromVisit.fbp || "";
+
   // Dedup: redelivery do mesmo status = 200 sem reinserir nem re-disparar.
   const orderReviewNote = reviewNote({ idFromProvider, knownStatus: known, amount: amountRead });
   if (orderReviewNote) console.warn(JSON.stringify({ scope: "webhook", event: "order-needs-review", provider: credential.provider, orderId: externalId, note: orderReviewNote }));
@@ -131,11 +150,7 @@ export async function POST(request: Request) {
     status,
     value,
     currency,
-    utmCampaign,
-    utmSource,
-    utmMedium,
-    utmContent,
-    utmTerm,
+    ...attr,
     eventId,
     customerEmail: buyerField(body, ["customer.email", "buyer.email", "email", "data.customer.email", "data.buyer.email", "client.email"]).toLowerCase() || null,
     customerName: buyerField(body, ["customer.name", "buyer.name", "name", "data.customer.name", "data.buyer.name", "client.name"]) || null,
@@ -149,10 +164,6 @@ export async function POST(request: Request) {
     return Response.json({ received: true, orderId: externalId, status, event: eventName, dedup: true }, { headers: cors });
   }
 
-  const fbc = String(pick(body, ["fbc", "tracking.fbc", "trackingParameters.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
-  const fbp = String(pick(body, ["fbp", "tracking.fbp", "trackingParameters.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
-  const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "trackingParameters.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
-  const visitorId = String(pick(body, ["tb_vid", "tracking.tb_vid", "trackingParameters.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || "");
   await insertEventOnce(db, {
     projectId: credential.projectId,
     eventId,
@@ -161,14 +172,14 @@ export async function POST(request: Request) {
     value,
     currency,
     visitorId,
-    fbclid,
-    fbc,
-    fbp,
-    utmSource: cleanUtmSource(String(pick(body, ["utm_source", "tracking.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || "")) || "",
-    utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
-    utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
-    utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),
-    utmTerm: String(pick(body, ["utm_term", "tracking.utm_term", "metadata.utm_term", "data.tracking.utm_term"]) || ""),
+    fbclid: fbclidAttr,
+    fbc: fbcAttr,
+    fbp: fbpAttr,
+    utmSource: attr.utmSource || "",
+    utmCampaign: attr.utmCampaign || "",
+    utmMedium: attr.utmMedium || "",
+    utmContent: attr.utmContent || "",
+    utmTerm: attr.utmTerm || "",
     payload: JSON.stringify(body),
   });
 
@@ -181,7 +192,7 @@ export async function POST(request: Request) {
     // Never replay historical purchases beyond Meta's 48h deduplication window.
     if (saved?.eventName === "Purchase" && (!dedup || now - saved.occurredAt < 47 * 3600)) {
       capiStatus = await queuePurchaseCapi(db, { workspaceId: credential.workspaceId, projectId: credential.projectId,
-        eventId, externalId, occurredAt: saved.occurredAt, value, currency, body, visitorId, fbclid, fbc, fbp });
+        eventId, externalId, occurredAt: saved.occurredAt, value, currency, body, visitorId, fbclid: fbclidAttr, fbc: fbcAttr, fbp: fbpAttr });
     }
   }
   if (dedup) {
