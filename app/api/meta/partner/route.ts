@@ -1,3 +1,4 @@
+import {canAssignPartnerAccount,partnerFailure} from "@/lib/meta-partner-errors";
 import { and, eq, ne } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { metaAccounts } from "@/db/schema";
@@ -23,8 +24,9 @@ export async function POST(request: Request) {
   const config = partnerConfig();
   if (!config.configured) return json({ error: "Conexão por parceiro ainda não ativada no servidor." }, 503);
   const body = (await request.json().catch(() => ({}))) as { adAccountId?: unknown; accountName?: unknown };
-  const adAccountId = String(body.adAccountId || "").replace(/^act_/i, "").replace(/\D/g, "");
+  const adAccountId = typeof body?.adAccountId==="string"?body.adAccountId.trim().replace(/^act_/i, ""):"";
   if (!/^\d{5,25}$/.test(adAccountId)) return json({ error: "Cole o ID da conta de anúncios (só números, ex.: 1234567890)." }, 400);
+  if(typeof body.accountName!=="string"||!body.accountName.trim()||body.accountName.length>200)return json({code:"ACCOUNT_NAME_REQUIRED",error:"Informe o nome da conta de anúncios como aparece na Meta."},400);
   await ensureDb();
   const db = getDb();
   // Uma conta pertence a um único usuário da GhostScale.
@@ -33,17 +35,17 @@ export async function POST(request: Request) {
   let account;
   try {
     account = await readPartnerAccount(adAccountId, config.token);
-  } catch {
-    try {
-      await assignToSystemUser(adAccountId, config.token, config.businessId);
-      account = await readPartnerAccount(adAccountId, config.token);
-    } catch {
-      return json({ error: `Ainda não recebemos acesso à conta ${adAccountId}. Compartilhe a conta com o portfólio ${config.businessId} (passo 1) e tente de novo em 1 minuto.` }, 400);
-    }
+  } catch(error) {
+    if(!canAssignPartnerAccount(error)){const failure=partnerFailure(error,adAccountId,config.businessId,"read");return json(failure.body,failure.status)}
+    try {await assignToSystemUser(adAccountId, config.token, config.businessId)}
+    catch(assignmentError){const failure=partnerFailure(assignmentError,adAccountId,config.businessId,"assignment");return json(failure.body,failure.status)}
+    try {account = await readPartnerAccount(adAccountId, config.token)}
+    catch(readError){const failure=partnerFailure(readError,adAccountId,config.businessId,"read");return json(failure.body,failure.status)}
   }
+  if(!account||String(account.account_id)!==adAccountId)return json({code:"META_ACCOUNT_RESPONSE_INVALID",error:"A resposta da Meta não confirmou o ID informado. Nenhuma conta foi cadastrada."},503);
   // Mantém a conexão por ID e nome após confirmar o acesso compartilhado na Meta.
   const norm = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
-  if (!norm(body.accountName) || norm(body.accountName) !== norm(account.name)) return json({ error: "O nome da conta não confere. Copie o nome exatamente como aparece na BM, em Contas de anúncios." }, 403);
+  if (!norm(body.accountName) || norm(body.accountName) !== norm(account.name)) return json({ code:"ACCOUNT_NAME_MISMATCH", error: "O nome da conta não confere. Copie o nome exatamente como aparece na BM, em Contas de anúncios." }, 403);
   // Contas da própria BM da GhostScale não são de cliente: nunca liberar.
   if (account.business?.id === config.businessId) return json({ error: "Essa conta não pode ser adicionada por parceiro." }, 403);
   const now = Math.floor(Date.now() / 1000);

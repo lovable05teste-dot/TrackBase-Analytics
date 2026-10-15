@@ -47,7 +47,7 @@ test('partner ID and matching name connect without administrative approval', asy
     metaAccounts:{adAccountId:'ad',metaUserId:'login',userId:'user',id:'id'},
     PARTNER_LOGIN_ID:'partner',partnerConfig:()=>({configured:true,token:'server-secret',businessId:'12345'}),
     hasConflictingOrigin:()=>false,requestUserId:async()=> 'customer',hasActivePlan:async()=>true,
-    readPartnerAccount:async()=>{remoteCalls++;return {name:'Known name',business:{id:'67890'}}},
+    readPartnerAccount:async()=>{remoteCalls++;return {account_id:'123456789',name:'Known name',business:{id:'67890'}}},
     encryptSecret:async()=>({cipher:'encrypted',iv:'iv'}),sha256:async()=> 'customer-workspace',crypto:globalThis.crypto,
   },['POST']);
   const request=name=>new Request('https://www.ghostscale.com.br/api/meta/partner',{method:'POST',body:JSON.stringify({adAccountId:'123456789',accountName:name})});
