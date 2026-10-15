@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import {
   actionHistory, apiCredentials, auditLogs, automationRules, capiOutbox, emailVerifications, events,
   loginAttempts, members, metaAccounts, metaConnectLinks, metaLinked, metaOauthStates, monitorChecks, nativePushTokens,
-  notificationPrefs, orders, passwordResets, projects, protectionReports, pushSubscriptions, sessions, siteMonitors,
+  notificationPrefs, orders, passwordResets, projectPixels, savedDashboards, projects, protectionReports, pushSubscriptions, sessions, siteMonitors,
   siteProtections, soundPrefs, tiktokAccounts, toolStates, usageCounters, users, verificationCodes, workspaces,
 } from "@/db/schema";
 
@@ -20,6 +20,7 @@ export async function deleteUserAccount(db: Db, userId: string, workspaceId: str
 
   await db.transaction(async (tx) => {
     if (projectIds.length) {
+      await tx.delete(projectPixels).where(inArray(projectPixels.projectId, projectIds));
       await tx.delete(events).where(inArray(events.projectId, projectIds));
       await tx.delete(orders).where(inArray(orders.projectId, projectIds));
       await tx.delete(apiCredentials).where(inArray(apiCredentials.projectId, projectIds));
@@ -32,6 +33,7 @@ export async function deleteUserAccount(db: Db, userId: string, workspaceId: str
     await tx.delete(siteMonitors).where(eq(siteMonitors.workspaceId, workspaceId));
     await tx.delete(siteProtections).where(eq(siteProtections.workspaceId, workspaceId));
     await tx.delete(toolStates).where(eq(toolStates.workspaceId, workspaceId));
+    await tx.delete(savedDashboards).where(eq(savedDashboards.workspaceId, workspaceId));
     await tx.delete(automationRules).where(eq(automationRules.workspaceId, workspaceId));
     await tx.delete(actionHistory).where(eq(actionHistory.workspaceId, workspaceId));
     await tx.delete(usageCounters).where(eq(usageCounters.workspaceId, workspaceId));

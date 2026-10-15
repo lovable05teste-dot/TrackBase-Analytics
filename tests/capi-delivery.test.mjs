@@ -18,6 +18,9 @@ const plugins = [{ name:'fixtures', setup(b) {
   b.onLoad({filter:/.*/,namespace:'fixture'}, args => ({ contents: {
     db: 'export function getDb(){return globalThis.__capiDb;} export async function ensureDb(){}',
     security: `export async function decryptSecret(){if(globalThis.__decryptFails)throw Error('bad encryption');return 'test-token';}
+export async function encryptSecret(v){return {cipher:'encrypted-'+v,iv:'iv'};}
+export async function hasActivePlan(){return true;}
+export function planRequiredResponse(){return Response.json({error:'plan'},{status:402});}
 export async function sha256(v){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('');}
 export async function requestUserId(r){return r.headers.get('x-test-user');}
 export function hasConflictingOrigin(r){return !!r.headers.get('origin')&&r.headers.get('origin')!==new URL(r.url).origin;}`,
@@ -30,6 +33,8 @@ async function load(path) {
 }
 const gateway = await load('app/api/webhooks/gateway/route.ts');
 const ingest = await load('lib/sale-ingest.ts');
+const pixelsApi=await load('app/api/project-pixels/route.ts');
+const dashboardsApi=await load('app/api/dashboards/route.ts');
 const diagnostics = await load('app/api/meta/capi-deliveries/route.ts');
 const realFetch = globalThis.fetch;
 let sql, calls, response;
@@ -195,4 +200,36 @@ test('pt-BR amounts are parsed and a late pending webhook never downgrades an ap
  assert.equal(sql.prepare("SELECT value FROM orders WHERE external_id='brl-1'").get().value,97);
  assert.equal((await gateway.POST(webhook({id:'brl-1',status:'waiting_payment',value:'97,00'}))).status,200);
  assert.equal(sql.prepare("SELECT status FROM orders WHERE external_id='brl-1'").get().status,'approved');
+});
+
+const pixelRequest=(method,user='owner',body,id='')=>new Request('https://app.example/api/project-pixels?projectId=p'+(id?'&id='+id:''),{method,headers:{'x-test-user':user,origin:'https://app.example','content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+test('additional pixels and dashboards enforce tenant ownership and never return secrets',async()=>{
+ const body={name:'Second pixel',pixelId:'87654321',accessToken:'private-token'};
+ assert.equal((await pixelsApi.POST(pixelRequest('POST','other',body))).status,404);
+ assert.equal((await pixelsApi.POST(pixelRequest('POST','owner',body))).status,200);
+ const result=await pixelsApi.GET(pixelRequest('GET'));const text=await result.text();assert.ok(text.includes('87654321'));assert.ok(!text.includes('private-token'));assert.ok(!text.includes('encrypted-'));
+ const id=sql.prepare('SELECT id FROM project_pixels').get().id;
+ assert.equal((await pixelsApi.DELETE(pixelRequest('DELETE','other',null,id))).status,404);
+ assert.equal(sql.prepare('SELECT count(*) n FROM project_pixels').get().n,1);
+ const config={period:'today',source:'facebook',product:'Kit',start:'',end:'',metrics:['gross','sales'],autoRefresh:300};
+ const req=(method,user,body,id='')=>new Request('https://app.example/api/dashboards'+(id?'?id='+id:''),{method,headers:{'x-test-user':user,origin:'https://app.example','content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+ const saved=await dashboardsApi.POST(req('POST','owner',{name:'My dashboard',config}));assert.equal(saved.status,201);const {dashboard}=await saved.json();assert.deepEqual(dashboard.config,config);
+ assert.deepEqual((await (await dashboardsApi.GET(req('GET','other'))).json()).dashboards,[]);
+ await dashboardsApi.DELETE(req('DELETE','other',null,dashboard.id));assert.equal(sql.prepare('SELECT count(*) n FROM saved_dashboards').get().n,1);
+ assert.equal((await dashboardsApi.POST(req('POST','owner',{name:'Invalid',config:{...config,period:'custom',start:'2026-02-02',end:'2026-01-01'}}))).status,400);
+ await dashboardsApi.DELETE(req('DELETE','owner',null,dashboard.id));assert.equal(sql.prepare('SELECT count(*) n FROM saved_dashboards').get().n,0);
+});
+function addPixel(){sql.prepare('INSERT INTO project_pixels(id,project_id,pixel_id,name,cipher,iv,created_at) VALUES(?,?,?,?,?,?,?)').run('extra','p','87654321','Second','cipher','iv','2026-10-14');}
+test('one sale fans out to both pixels once, with the same event id and isolated receipts',async()=>{
+ addPixel();await gateway.POST(webhook(paid()));assert.equal(calls.length,2);
+ assert.equal(calls[0].body.data[0].event_id,calls[1].body.data[0].event_id);
+ assert.ok(calls.some(c=>c.url.includes('/12345678/events')));assert.ok(calls.some(c=>c.url.includes('/87654321/events')));
+ assert.equal(sql.prepare("SELECT count(*) n FROM capi_outbox WHERE status='sent'").get().n,2);
+ await gateway.POST(webhook(paid()));assert.equal(calls.length,2);assert.equal(sql.prepare('SELECT count(*) n FROM orders').get().n,1);
+});
+test('one rejected destination keeps its retry without blocking the other pixel',async()=>{
+ addPixel();globalThis.fetch=async(url,init)=>{calls.push({url,body:JSON.parse(init.body)});return String(url).includes('/87654321/')?Response.json({error:{code:190}},{status:400}):Response.json({events_received:1})};
+ const reply=await (await gateway.POST(webhook(paid()))).json();assert.equal(reply.capi,'pending');assert.equal(calls.length,2);
+ assert.equal(sql.prepare("SELECT status FROM capi_outbox WHERE pixel_id='12345678'").get().status,'sent');
+ assert.equal(sql.prepare("SELECT status FROM capi_outbox WHERE pixel_id='87654321'").get().status,'pending');
 });

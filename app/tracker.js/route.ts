@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
-import { projects, siteProtections } from "@/db/schema";
+import { projectPixels, projects, siteProtections } from "@/db/schema";
 import { parseTrackingConfig } from "@/lib/tracking-config";
 import { parseProtection, protectionScript } from "@/lib/protection";
 import { trackerScript } from "@/lib/tracker-script";
@@ -11,10 +11,12 @@ export async function GET(request: Request) {
   if (!key || key.length > 200) return new Response("/* Chave do projeto necessária. */", { status: 400, headers });
   try {
     await ensureDb();
-    const [project] = await getDb().select({ pixelId: projects.pixelId, tiktokPixelId: projects.tiktokPixelId, trackingConfig: projects.trackingConfig, domain: projects.domain, protection: siteProtections.config }).from(projects).leftJoin(siteProtections, and(eq(siteProtections.projectId, projects.id), eq(siteProtections.workspaceId, projects.workspaceId))).where(eq(projects.publicKey, key)).limit(1);
+    const [project] = await getDb().select({ id: projects.id, pixelId: projects.pixelId, tiktokPixelId: projects.tiktokPixelId, trackingConfig: projects.trackingConfig, domain: projects.domain, protection: siteProtections.config }).from(projects).leftJoin(siteProtections, and(eq(siteProtections.projectId, projects.id), eq(siteProtections.workspaceId, projects.workspaceId))).where(eq(projects.publicKey, key)).limit(1);
     if (!project) return new Response("/* Projeto não encontrado. */", { status: 404, headers });
+    const extra=await getDb().select({pixelId:projectPixels.pixelId}).from(projectPixels).where(eq(projectPixels.projectId,project.id));
+    const pixelIds=[...new Set([project.pixelId,...extra.map(p=>p.pixelId)].filter((id):id is string=>!!id))];
     const endpoint = new URL("/api/events", request.url).toString();
-    const script = protectionScript(parseProtection(project.protection, project.domain), key, endpoint) + "\n" + trackerScript(key, endpoint, project.pixelId || "", parseTrackingConfig(project.trackingConfig), BOT_UA_SOURCE, project.tiktokPixelId || "");
+    const script = protectionScript(parseProtection(project.protection, project.domain), key, endpoint) + "\n" + trackerScript(key, endpoint, pixelIds, parseTrackingConfig(project.trackingConfig), BOT_UA_SOURCE, project.tiktokPixelId || "");
     return new Response(script, { headers });
   } catch { return new Response("console.warn('GhostScale: tracker temporariamente indisponível.');", { status: 503, headers }); }
 }

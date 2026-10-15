@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { metaDestinations } from "@/lib/project-pixels";
+import { eq, inArray } from "drizzle-orm";
 import type { getDb } from "@/db";
 import { capiOutbox, projects } from "@/db/schema";
 import { purchaseUserData } from "@/lib/capi-user-data";
@@ -59,11 +60,17 @@ export async function queuePurchaseCapi(db: ReturnType<typeof getDb>, input: {
   }
   // Meta: fica na fila mesmo sem pixel (é enviada quando o pixel for configurado).
   // Exceção: projeto só com TikTok, sem pixel da Meta, não gera alerta falso.
-  const id = project.pixelId || !tiktokId ? await enqueueCapiOutbox(db, { workspaceId: input.workspaceId, projectId: input.projectId,
-    pixelId: project.pixelId || "", eventName: "Purchase", eventId: input.eventId, payload, immediate: true }) : null;
-  if (id) await drainCapiOutbox(db, { workspaceId: input.workspaceId, id, limit: 1 });
+  const destinations = await metaDestinations(db, input.projectId);
+  const metaIds:string[] = [];
+  for(const pixel of destinations) metaIds.push(await enqueueCapiOutbox(db, { workspaceId:input.workspaceId, projectId:input.projectId,
+    pixelId:pixel.pixelId, eventName:"Purchase", eventId:input.eventId, payload, immediate:true }));
+  if(!destinations.length&&!tiktokId) metaIds.push(await enqueueCapiOutbox(db, { workspaceId:input.workspaceId, projectId:input.projectId,
+    pixelId:project.pixelId||"", eventName:"Purchase", eventId:input.eventId, payload, immediate:true }));
+  // Every destination is persisted before any network call; a failure cannot skip the others.
+  await Promise.all(metaIds.map(id=>drainCapiOutbox(db, {workspaceId:input.workspaceId,id,limit:1})));
   if (tiktokId) await drainCapiOutbox(db, { workspaceId: input.workspaceId, id: tiktokId, limit: 1 });
-  const receiptId = (id || tiktokId) as string;
-  const [receipt] = await db.select({ status: capiOutbox.status }).from(capiOutbox).where(eq(capiOutbox.id, receiptId)).limit(1);
-  return receipt?.status || "queued";
+  const receiptIds=[...metaIds,...(tiktokId?[tiktokId]:[])];
+  const receipts=await db.select({ status:capiOutbox.status }).from(capiOutbox).where(inArray(capiOutbox.id,receiptIds));
+  if(receipts.some(r=>r.status==="dead"))return "dead";
+  return receipts.length===receiptIds.length&&receipts.every(r=>r.status==="sent")?"sent":"pending";
 }

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { metaRedirectUri, metaPages } from "../lib/meta.ts";
+import { metaAuthorizationUrl, metaConfig, metaRedirectUri, metaPages, requireMetaConfig } from "../lib/meta.ts";
 
 test("callback is always canonical and cannot be changed by environment or Host", () => {
   const old = {...process.env};
@@ -17,6 +17,61 @@ test("callback is always canonical and cannot be changed by environment or Host"
       assert.equal(metaRedirectUri(), "https://www.ghostscale.com.br/api/meta/oauth/callback");
     }
   } finally { for (const key of ["APP_URL","META_REDIRECT_URI"]) { if (old[key] === undefined) delete process.env[key]; else process.env[key]=old[key]; } }
+});
+
+function withMetaEnv(values, run) {
+  const keys = ["META_APP_ID", "META_APP_SECRET", "META_LOGIN_CONFIG_ID", "META_GRAPH_VERSION"];
+  const old = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  try {
+    for (const key of keys) {
+      if (values[key] === undefined) delete process.env[key];
+      else process.env[key] = values[key];
+    }
+    run();
+  } finally {
+    for (const key of keys) {
+      if (old[key] === undefined) delete process.env[key];
+      else process.env[key] = old[key];
+    }
+  }
+}
+
+test("authorization contains the configured App ID and exact shared callback", () => {
+  withMetaEnv({ META_APP_ID: " 123456789 ", META_APP_SECRET: "test-secret" }, () => {
+    const config = requireMetaConfig();
+    const url = metaAuthorizationUrl("test-state", config);
+    assert.equal(url.origin, "https://www.facebook.com");
+    assert.equal(url.pathname, "/v25.0/dialog/oauth");
+    assert.equal(url.searchParams.get("client_id"), "123456789");
+    assert.equal(url.searchParams.get("redirect_uri"), "https://www.ghostscale.com.br/api/meta/oauth/callback");
+    assert.equal(url.searchParams.get("redirect_uri"), config.redirectUri);
+    assert.equal(url.searchParams.get("state"), "test-state");
+    assert.equal(url.searchParams.get("response_type"), "code");
+    assert.equal(url.searchParams.get("scope"), "ads_read,ads_management,business_management");
+    assert.equal(url.searchParams.has("config_id"), false);
+    assert.equal(url.searchParams.has("client_secret"), false);
+    assert.equal(url.toString().includes("test-secret"), false);
+    assert.equal(url.searchParams.getAll("redirect_uri").length, 1);
+  });
+});
+
+test("authorization preserves optional login config and classic mode", () => {
+  withMetaEnv({ META_APP_ID: "123456789", META_APP_SECRET: "test-secret", META_LOGIN_CONFIG_ID: "987654321" }, () => {
+    const config = requireMetaConfig();
+    assert.equal(metaAuthorizationUrl("test-state", config).searchParams.get("config_id"), "987654321");
+    assert.equal(metaAuthorizationUrl("test-state", { ...config, configId: "" }).searchParams.has("config_id"), false);
+  });
+});
+
+test("missing or empty App ID prevents authorization with META_NOT_CONFIGURED", () => {
+  for (const appId of [undefined, "", "   "]) {
+    withMetaEnv({ META_APP_ID: appId, META_APP_SECRET: "test-secret" }, () => {
+      assert.equal(metaConfig().appId, "");
+      assert.throws(() => requireMetaConfig(), /META_NOT_CONFIGURED/);
+      assert.throws(() => metaAuthorizationUrl("test-state"), /META_NOT_CONFIGURED/);
+      assert.throws(() => metaAuthorizationUrl("test-state", metaConfig()), /META_NOT_CONFIGURED/);
+    });
+  }
 });
 
 test("pagination traverses more than five pages without truncating", async () => {

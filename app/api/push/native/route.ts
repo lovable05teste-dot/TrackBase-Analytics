@@ -1,14 +1,16 @@
+import { hasConflictingOrigin } from "@/lib/trackbase-security";
 import { eq } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { nativePushTokens } from "@/db/schema";
 import { isExpoToken } from "@/lib/native-push";
-import { requestUserId, sha256, hasConflictingOrigin } from "@/lib/trackbase-security";
+import { requestUserId, sha256 } from "@/lib/trackbase-security";
 
 export const dynamic = "force-dynamic";
 
 // O app nativo abre o painel e registra aqui o token de push do aparelho,
 // usando a sessão (cookie) de quem está logado.
-export async function POST(request: Request) {if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
+export async function POST(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const body = (await request.json().catch(() => ({}))) as { token?: unknown; platform?: unknown };
@@ -24,6 +26,7 @@ export async function POST(request: Request) {if (hasConflictingOrigin(request))
 }
 
 export async function DELETE(request: Request) {
+  if (hasConflictingOrigin(request)) return Response.json({ error: "Origem inválida." }, { status: 403 });
   const userId = await requestUserId(request);
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const token = new URL(request.url).searchParams.get("token") || "";

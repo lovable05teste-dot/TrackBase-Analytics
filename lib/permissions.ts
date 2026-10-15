@@ -3,7 +3,7 @@ import { ensureDb, getDb } from "@/db";
 import { auditLogs, members, planSubscriptions, usageCounters } from "@/db/schema";
 import { sha256 } from "./trackbase-security";
 import { getEffectivePlan, isPlanId, type FeatureKey, type PlanId, canUseFeature, PLAN_VERSION_CURRENT } from "./plans";
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq, and, lt, sql } from "drizzle-orm";
 
 // Funções centrais — backend é autoridade; frontend só reflete.
 
@@ -87,6 +87,7 @@ export async function checkUsageLimit(userId: string, metric: string): Promise<{
 
 // Reserva atômica de 1 unidade (evita saldo negativo por concorrência: check + insert em tx com ON CONFLICT)
 export async function reserveUsage(workspaceId: string, metric: string, periodStart: number, periodEnd: number, limit: number): Promise<boolean> {
+  if (Number.isNaN(limit) || limit <= 0) return false;
   await ensureDb();
   const db = getDb();
   const id = `${workspaceId}:${metric}:${periodStart}`;
@@ -96,18 +97,10 @@ export async function reserveUsage(workspaceId: string, metric: string, periodSt
   // incrementa apenas se ainda < limite — update condicional
   const res = await db
     .update(usageCounters)
-    .set({ count: (usageCounters.count as unknown as number) as never, updatedAt: now })
-    .where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, metric), eq(usageCounters.periodStart, periodStart)))
+    .set({ count: sql`${usageCounters.count} + 1`, updatedAt: now })
+    .where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, metric), eq(usageCounters.periodStart, periodStart), ...(Number.isFinite(limit) ? [lt(usageCounters.count, limit)] : [])))
     .returning({ count: usageCounters.count });
-  // Drizzle não suporta WHERE count < limit no update direto para sqlite; fallback: leitura + CAS loop
-  // Para garantir atomicidade sem race, faz leitura após update e reverte se excedeu
-  const cur = res[0]?.count ?? 0;
-  // Se excedeu, decrementa e nega
-  if (cur > limit) {
-    await db.update(usageCounters).set({ count: cur - 1, updatedAt: now }).where(and(eq(usageCounters.workspaceId, workspaceId), eq(usageCounters.metric, metric), eq(usageCounters.periodStart, periodStart)));
-    return false;
-  }
-  return true;
+  return res.length === 1;
 }
 
 // Auditoria minimalista (não loga payloads/tokens)

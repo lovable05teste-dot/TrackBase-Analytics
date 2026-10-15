@@ -41,8 +41,7 @@ export async function POST(request: Request) {
       return json({ error: `Ainda não recebemos acesso à conta ${adAccountId}. Compartilhe a conta com o portfólio ${config.businessId} (passo 1) e tente de novo em 1 minuto.` }, 400);
     }
   }
-  // Prova de dono: além do ID, o nome exato da conta (visto só por quem tem
-  // acesso a ela na BM). Sem isso, quem soubesse o ID pegava a conta de outro.
+  // Mantém a conexão por ID e nome após confirmar o acesso compartilhado na Meta.
   const norm = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
   if (!norm(body.accountName) || norm(body.accountName) !== norm(account.name)) return json({ error: "O nome da conta não confere. Copie o nome exatamente como aparece na BM, em Contas de anúncios." }, 403);
   // Contas da própria BM da GhostScale não são de cliente: nunca liberar.
