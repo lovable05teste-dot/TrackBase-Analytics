@@ -16,7 +16,7 @@ const FIELDS: { key: keyof Costs; label: string; suffix: string; hint: string }[
 
 // Formulário dos custos da operação (salvo em /api/tools/state?tool=custos).
 // `breakdown` = valores já calculados para o período do Dashboard.
-export function CostsEditor({ costs, revision, onSaved, breakdown }: { costs: Costs; revision: number; onSaved: (c: Costs, revision: number) => void; breakdown: { product: number; gateway: number; tax: number; other: number; total: number } }) {
+export function CostsEditor({ costs, revision, onSaved, breakdown, saveCosts }: { costs: Costs; revision: number; saveCosts?: (c:Costs)=>Promise<{data:Costs;revision:number}>; onSaved: (c: Costs, revision: number) => void; breakdown: { product: number; gateway: number; tax: number; other: number; total: number } }) {
   const [draft, setDraft] = useState<Record<keyof Costs, string>>(() => Object.fromEntries(FIELDS.map((f) => [f.key, costs[f.key] ? String(costs[f.key]).replace(".", ",") : ""])) as Record<keyof Costs, string>);
   const [saving, setSaving] = useState(false), [msg, setMsg] = useState("");
   const parse = (v: string) => { const n = Number(v.replace(/\./g, "").replace(",", ".")); return Number.isFinite(n) && n > 0 ? n : 0; };
@@ -24,6 +24,7 @@ export function CostsEditor({ costs, revision, onSaved, breakdown }: { costs: Co
     setSaving(true); setMsg("");
     const data = Object.fromEntries(FIELDS.map((f) => [f.key, parse(draft[f.key])])) as Costs;
     try {
+      if(saveCosts){const b=await saveCosts(data);onSaved(b.data,b.revision);setMsg("Custos deste dashboard salvos.");return}
       const r = await apiFetch("/api/tools/state?tool=custos", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data, revision }) });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Não foi possível salvar.");

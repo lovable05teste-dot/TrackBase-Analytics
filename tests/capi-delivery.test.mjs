@@ -211,7 +211,7 @@ test('additional pixels and dashboards enforce tenant ownership and never return
  const id=sql.prepare('SELECT id FROM project_pixels').get().id;
  assert.equal((await pixelsApi.DELETE(pixelRequest('DELETE','other',null,id))).status,404);
  assert.equal(sql.prepare('SELECT count(*) n FROM project_pixels').get().n,1);
- const config={period:'today',source:'facebook',product:'Kit',start:'',end:'',metrics:['gross','sales'],autoRefresh:300};
+ const config={period:'today',source:'facebook',product:'Kit',start:'',end:'',metrics:['gross','sales'],autoRefresh:300,scope:{projectIds:['p'],metaAccountIds:[],tiktokAccountIds:[],metaCampaignIds:[],tiktokCampaignIds:[]}};
  const req=(method,user,body,id='')=>new Request('https://app.example/api/dashboards'+(id?'?id='+id:''),{method,headers:{'x-test-user':user,origin:'https://app.example','content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
  const saved=await dashboardsApi.POST(req('POST','owner',{name:'My dashboard',config}));assert.equal(saved.status,201);const {dashboard}=await saved.json();assert.deepEqual(dashboard.config,config);
  assert.deepEqual((await (await dashboardsApi.GET(req('GET','other'))).json()).dashboards,[]);
