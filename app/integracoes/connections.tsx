@@ -1,6 +1,7 @@
 "use client";
+import {CapiDeliveryStatus} from "./capi-delivery-status";
 import { AdditionalPixels } from "./additional-pixels";
-import {FormEvent,useEffect,useState} from "react";
+import {FormEvent,useCallback,useEffect,useState} from "react";
 import {Check,CheckCircle2,Copy,KeyRound,Loader2,Plus,Settings2,ShieldCheck,Trash2} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {TrackingRules} from "./tracking-rules";
@@ -8,16 +9,16 @@ import { copyText } from "@/lib/clipboard";
 import { apiFetch } from "@/lib/plan-client";
 import { LoadingState } from "@/components/LoadingState";
 
-type Project={id:string;name:string;domain?:string;pixelId?:string;metaConnectedAt?:string};
+type Project={id:string;name:string;publicKey?:string;domain?:string;pixelId?:string;metaConnectedAt?:string};
 type Credential={id:string;name:string;provider:string;projectId:string;active:boolean;createdAt:string;lastUsedAt?:string};
 type Created={token:string;webhookUrl:string;webhookUrlWithToken:string;authorization:string};
 const input="min-h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-base outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-400/15 sm:text-sm";
 
 function CopyField({label,value,secret=false}:{label:string;value:string;secret?:boolean}){const[c,setC]=useState(false);const copy=async()=>{if(await copyText(value)){setC(true);setTimeout(()=>setC(false),1600)}};return <div className="min-w-0"><div className="mb-2 flex flex-col gap-1 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between"><span className="font-medium">{label}</span>{secret&&<span className="font-medium text-amber-700">Copie agora: não será exibido novamente</span>}</div><div className="grid min-w-0 grid-cols-[minmax(0,1fr)_44px] gap-2"><code className="max-h-28 min-w-0 overflow-y-auto break-all rounded-lg bg-white p-3 text-xs leading-5 text-blue-600">{value}</code><Button aria-label={`Copiar ${label}`} type="button" variant="outline" size="icon" className="size-11" onClick={copy}>{c?<Check/>:<Copy/>}</Button></div></div>}
 
-function ProjectSelect({projects,value,onChange}:{projects:Project[];value:string;onChange:(id:string)=>void}){
+function ProjectSelect({projects,value,onChange,label="Projeto",disabled=false}:{projects:Project[];value:string;onChange:(id:string)=>void;label?:string;disabled?:boolean}){
  if(projects.length<2)return null;
- return <label className="block max-w-md text-sm font-medium text-slate-700">Projeto<select className={input+" mt-1.5"} value={value} onChange={e=>onChange(e.target.value)}>{projects.map(p=><option className="bg-white" key={p.id} value={p.id}>{p.name}</option>)}</select></label>;
+ return <label className="block max-w-md text-sm font-medium text-slate-700">{label}<select className={input+" mt-1.5"} disabled={disabled} value={value} onChange={e=>onChange(e.target.value)}>{projects.map(p=><option className="bg-white" key={p.id} value={p.id}>{p.name}</option>)}</select></label>;
 }
 const NeedProject=()=> <p className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-800"><b>Falta o projeto.</b> Conclua a etapa 1 (<a href="#script" className="underline">Instalar o script</a>) e volte aqui.</p>;
 
@@ -38,44 +39,49 @@ function CapiQualityCard({projectId}:{projectId:string}){
  </div>;
 }
 
-export function PixelConnect(){const[projects,setProjects]=useState<Project[]>([]),[projectId,setProjectId]=useState(""),[pixelId,setPixelId]=useState(""),[token,setToken]=useState(""),[testCode,setTestCode]=useState(""),[pixelName,setPixelName]=useState("Pixel GhostScale"),[busy,setBusy]=useState(false),[creating,setCreating]=useState(false),[deleting,setDeleting]=useState(false),[mode,setMode]=useState<"create"|"existing">("existing"),[message,setMessage]=useState(""),[loaded,setLoaded]=useState(false);
- const loadProjects=async()=>{try{const b=await fetch("/api/projects",{cache:"no-store"}).then(r=>r.json());setProjects(b.projects||[]);setProjectId(id=>id||b.projects?.[0]?.id||"")}catch{/* mantém lista atual */}finally{setLoaded(true)}};
- useEffect(()=>{const timer=window.setTimeout(()=>{void loadProjects()},0);return()=>window.clearTimeout(timer)},[]);
- const current=projects.find(p=>p.id===projectId);
- const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setMessage("");try{const r=await apiFetch("/api/meta/connect",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,pixelId,accessToken:token,testCode})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível conectar.");setMessage(b.message || `Pixel ${b.pixelId} salvo. Valide o envio de eventos à Meta.`);setToken("");await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Erro ao conectar.")}finally{setBusy(false)}};
- const createPixel=async()=>{setCreating(true);setMessage("");try{const r=await apiFetch("/api/meta/pixel/create",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,name:pixelName})}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível criar o Pixel.");setPixelId(b.pixelId);setMessage(`Pixel ${b.pixelId} criado e conectado. Navegador e CAPI estão prontos.`);await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Erro ao criar Pixel.")}finally{setCreating(false)}};
- const disconnect=async()=>{if(!current?.pixelId||!confirm(`Desconectar o Pixel ${current.pixelId} do projeto “${current.name}”?`))return;setDeleting(true);setMessage("");try{const r=await apiFetch(`/api/meta/connect?projectId=${encodeURIComponent(projectId)}`,{method:"DELETE"}),b=await r.json();if(!r.ok)throw new Error(b.error||"Não foi possível desconectar.");setPixelId("");setMessage("Pixel desconectado do projeto.");await loadProjects()}catch(e){setMessage(e instanceof Error?e.message:"Não foi possível desconectar.")}finally{setDeleting(false)}};
- if(!loaded)return <LoadingState label="Carregando" rows={2}/>;
- if(!projects.length)return <NeedProject/>;
- const ok=/conectado|criado|ativo|salvos|salvo/i.test(message)&&!/desconectado/i.test(message);
+export function PixelConnect({allowCreateTrackingPixel=false}:{allowCreateTrackingPixel?:boolean}={}){
+ const [projects,setProjects]=useState<Project[]>([]),[projectId,setProjectId]=useState("");
+ const [pixelId,setPixelId]=useState(""),[token,setToken]=useState(""),[testCode,setTestCode]=useState("");
+ const [pixelName,setPixelName]=useState("Pixel GhostScale"),[mode,setMode]=useState<"create"|"existing">("existing"),[editPrimary,setEditPrimary]=useState(false);
+ const [busy,setBusy]=useState(false),[creating,setCreating]=useState(false),[deleting,setDeleting]=useState(false),[loaded,setLoaded]=useState(false),[message,setMessage]=useState("");
+ const [newPixelOpen,setNewPixelOpen]=useState(false),[trackingName,setTrackingName]=useState(""),[trackingDomain,setTrackingDomain]=useState(""),[creatingTracking,setCreatingTracking]=useState(false);
+ const loadProjects=useCallback(async(signal?:AbortSignal)=>{
+  const r=await fetch("/api/projects",{cache:"no-store",signal}),b=await r.json();
+  if(!r.ok)throw Error(b.error||"Não foi possível carregar os pixels.");
+  return (b.projects||[]) as Project[];
+ },[]);
+ useEffect(()=>{const c=new AbortController();loadProjects(c.signal).then(rows=>{if(!c.signal.aborted){setProjects(rows);setProjectId(id=>rows.some(p=>p.id===id)?id:rows[0]?.id||"")}}).catch(e=>{if(!c.signal.aborted)setMessage(e.message)}).finally(()=>{if(!c.signal.aborted)setLoaded(true)});return()=>c.abort()},[loadProjects]);
+ const current=projects.find(p=>p.id===projectId),working=busy||creating||deleting||creatingTracking;
+ const selectProject=(id:string)=>{setProjectId(id);setPixelId("");setToken("");setTestCode("");setEditPrimary(false);setMessage("");setMode("existing")};
+ async function createTrackingPixel(e:FormEvent){
+  e.preventDefault();setCreatingTracking(true);setMessage("");
+  try{const r=await apiFetch("/api/projects",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:trackingName.trim(),domain:trackingDomain.trim()})}),b=await r.json();
+   if(!r.ok)throw Error(b.error||"Não foi possível criar o pixel GhostScale.");
+   if(!b.project?.id||!b.project.publicKey)throw Error("Recarregue a lista para conferir o pixel criado.");
+   setProjects(list=>[...list,b.project]);selectProject(b.project.id);setNewPixelOpen(false);setTrackingName("");setTrackingDomain("");setMessage("Pixel GhostScale criado. Instale o código abaixo e adicione os pixels Meta que devem receber os eventos.");
+  }catch(e){setMessage(e instanceof Error?e.message:"Não foi possível criar.")}finally{setCreatingTracking(false)}
+ }
+ async function submit(e:FormEvent){e.preventDefault();setBusy(true);setMessage("");try{const r=await apiFetch("/api/meta/connect",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,pixelId,accessToken:token,testCode})}),b=await r.json();if(!r.ok)throw Error(b.error||"Não foi possível conectar.");setMessage(b.message||"ID e token salvos. Confira a entrega no Gerenciador de Eventos.");setToken("");setEditPrimary(false);setProjects(await loadProjects())}catch(e){setMessage(e instanceof Error?e.message:"Erro ao conectar.")}finally{setBusy(false)}}
+ async function createPixel(){setCreating(true);setMessage("");try{const r=await apiFetch("/api/meta/pixel/create",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,name:pixelName})}),b=await r.json();if(!r.ok)throw Error(b.error||"Não foi possível criar o pixel na Meta.");setPixelId(b.pixelId);setMessage(`Pixel Meta ${b.pixelId} criado e configuração salva. Confira o recebimento em Testar eventos na Meta.`);setProjects(await loadProjects())}catch(e){setMessage(e instanceof Error?e.message:"Erro ao criar pixel na Meta.")}finally{setCreating(false)}}
+ async function disconnect(){if(!current?.pixelId||!confirm(`Desconectar somente o pixel Meta ${current.pixelId}? Os outros destinos continuarão recebendo os eventos.`))return;setDeleting(true);setMessage("");try{const r=await apiFetch(`/api/meta/connect?projectId=${encodeURIComponent(projectId)}`,{method:"DELETE"}),b=await r.json();if(!r.ok)throw Error(b.error||"Não foi possível desconectar.");setPixelId("");setToken("");setEditPrimary(false);setMessage("Destino Meta desconectado. Os demais destinos foram mantidos.");setProjects(await loadProjects())}catch(e){setMessage(e instanceof Error?e.message:"Não foi possível desconectar.")}finally{setDeleting(false)}}
+ if(!loaded)return <LoadingState label="Carregando pixels" rows={2}/>;
  return <div className="space-y-5">
-  <ProjectSelect projects={projects} value={projectId} onChange={id=>{setProjectId(id);setMessage("")}}/>
-  {current?.pixelId?<>
-   <div className="flex flex-col gap-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="flex items-center gap-2 font-semibold text-emerald-600"><CheckCircle2 className="size-5"/>Pixel conectado</p><p className="mt-1 break-all text-sm text-slate-600">Pixel {current.pixelId} · navegador + API de Conversões</p></div><Button type="button" variant="outline" className="h-11 w-full text-red-600 sm:w-auto" disabled={deleting} onClick={disconnect}>{deleting?<Loader2 className="animate-spin"/>:<Trash2/>}Desconectar</Button></div>
-   <CapiQualityCard projectId={current.id}/></>
-  :<>
-   <div role="tablist" aria-label="Como conectar o Pixel" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-medium">
-    {([["existing","Já tenho um Pixel"],["create","Criar um Pixel novo"]] as const).map(([value,label])=><button key={value} type="button" role="tab" aria-selected={mode===value} onClick={()=>setMode(value)} className={`min-h-11 rounded-lg px-3 transition ${mode===value?"bg-white text-slate-900 shadow-sm":"text-slate-500 hover:text-slate-700"}`}>{label}</button>)}
-   </div>
-   {mode==="existing"?
-    <form onSubmit={submit} className="space-y-3">
-     <p className="rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600"><b className="text-foreground">Onde encontrar:</b> Gerenciador de Eventos da Meta → escolha o Pixel → Configurações → API de Conversões → <b>Gerar token de acesso</b>.</p>
-     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="block text-sm font-medium text-slate-700">ID do Pixel<input className={input+" mt-1.5"} value={pixelId} onChange={e=>setPixelId(e.target.value.replace(/\D/g,""))} inputMode="numeric" placeholder="123456789012345" required/></label>
-      <label className="block text-sm font-medium text-slate-700">Token da API de Conversões<input type="password" className={input+" mt-1.5"} value={token} onChange={e=>setToken(e.target.value)} placeholder="Cole o token da Meta" autoComplete="off" required/></label>
-     </div>
-     <details className="text-sm"><summary className="cursor-pointer text-slate-500">Código de teste (opcional)</summary><input className={input+" mt-2 max-w-xs"} value={testCode} onChange={e=>setTestCode(e.target.value)} placeholder="TEST12345"/><p className="mt-1 text-xs text-slate-500">Use só para ver eventos na aba &quot;Testar eventos&quot; da Meta. Apague depois.</p></details>
-     <Button className="h-11 w-full sm:w-auto" disabled={busy||!projectId}>{busy?<Loader2 className="animate-spin"/>:<ShieldCheck/>}{busy?"Conectando…":"Conectar Pixel"}</Button>
-    </form>
-   :<div className="space-y-3">
-     <p className="text-sm leading-6 text-slate-600">A GhostScale cria o Pixel no portfólio da conta Meta conectada na etapa 2. A conta precisa ser administradora do portfólio.</p>
-     <label className="block max-w-md text-sm font-medium text-slate-700">Nome do novo Pixel<input className={input+" mt-1.5"} value={pixelName} onChange={e=>setPixelName(e.target.value)} placeholder="Ex.: Pixel Loja Principal"/></label>
-     <Button type="button" className="h-11 w-full sm:w-auto" disabled={creating||!projectId||!pixelName.trim()} onClick={createPixel}>{creating?<Loader2 className="animate-spin"/>:<Plus/>}{creating?"Criando na Meta…":"Criar e conectar"}</Button>
-    </div>}
+  {allowCreateTrackingPixel&&<section className="space-y-4 rounded-xl border border-border p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Seu pixel GhostScale</h2><p className="mt-1 text-sm text-muted-foreground">Um código no site. Cinco ou mais pixels Meta recebendo os mesmos eventos, cada um com seu ID e token.</p></div><Button type="button" disabled={working} onClick={()=>setNewPixelOpen(v=>!v)}><Plus/>Criar pixel GhostScale</Button></div>
+  {newPixelOpen&&<form onSubmit={createTrackingPixel} className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Nome do pixel GhostScale<input className={input+" mt-1"} required maxLength={80} value={trackingName} placeholder="Ex.: Oferta principal" onChange={e=>setTrackingName(e.target.value)}/></label><label className="text-sm">Domínio do site (opcional)<input className={input+" mt-1"} maxLength={253} value={trackingDomain} placeholder="oferta.seusite.com" onChange={e=>setTrackingDomain(e.target.value)}/></label><p className="text-xs text-muted-foreground sm:col-span-2">Este pixel é o projeto de rastreamento da oferta e usa um projeto do seu plano.</p><Button type="submit" disabled={working||!trackingName.trim()}>{creatingTracking?<Loader2 className="animate-spin"/>:<Plus/>}{creatingTracking?"Criando…":"Criar e gerar código"}</Button></form>}
+  </section>}
+  {!projects.length?allowCreateTrackingPixel?<p className="rounded-lg bg-muted p-4 text-sm">Crie seu primeiro pixel GhostScale acima. Depois, cadastre os destinos Meta com ID e token.</p>:<NeedProject/>:<>
+  <ProjectSelect projects={projects} value={projectId} disabled={working} label={allowCreateTrackingPixel?"Pixel GhostScale (projeto)":"Projeto"} onChange={selectProject}/>
+  {allowCreateTrackingPixel&&current&&<section className="space-y-3 rounded-xl border border-border p-4"><h3 className="font-semibold">{current.name}</h3><p className="text-sm text-muted-foreground">Instale uma vez no site. Adicionar outro destino Meta aqui não exige trocar o script. As vendas devem chegar pelo webhook deste mesmo projeto.</p>{current.publicKey&&<CopyField label="Script único do pixel GhostScale" value={`<script async src="${typeof window!=="undefined"?window.location.origin:""}/tracker.js?key=${current.publicKey}"></script>`}/>}<a href="/webhooks" className="inline-block text-sm text-blue-600 underline">Configurar webhook de vendas</a></section>}
+  {current?.pixelId&&<><div className="flex flex-col gap-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="flex items-center gap-2 font-semibold text-emerald-600"><CheckCircle2 className="size-5"/>Destino Meta principal</p><p className="mt-1 break-all text-sm text-slate-600">ID {current.pixelId} · {current.metaConnectedAt?"token salvo · entrega a conferir na Meta":"token CAPI ainda precisa ser configurado"}</p></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={working} onClick={()=>{setPixelId(current.pixelId||"");setToken("");setTestCode("");setMode("existing");setEditPrimary(true)}}>Atualizar ID/token</Button><Button type="button" variant="outline" disabled={working} onClick={disconnect}>{deleting?<Loader2 className="animate-spin"/>:<Trash2/>}Desconectar</Button></div></div><CapiQualityCard key={current.id} projectId={current.id}/></>}
+  {(!current?.pixelId||editPrimary)&&<section className="space-y-3"><h3 className="font-semibold">{editPrimary?"Atualizar destino Meta principal":"Conectar o primeiro destino Meta"}</h3>
+  {!editPrimary&&<div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-medium">{([["existing","Já tenho pixel Meta"],["create","Criar pixel na Meta"]] as const).map(([value,label])=><button key={value} type="button" disabled={working} aria-pressed={mode===value} onClick={()=>setMode(value)} className={`min-h-11 rounded-lg px-3 ${mode===value?"bg-white text-slate-900 shadow-sm":"text-slate-500"}`}>{label}</button>)}</div>}
+  {mode==="existing"?<form onSubmit={submit} className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm">ID do pixel Meta<input className={input+" mt-1.5"} value={pixelId} onChange={e=>setPixelId(e.target.value.replace(/\D/g,""))} inputMode="numeric" pattern="[0-9]{6,25}" placeholder="123456789012345" required/></label><label className="block text-sm">Token da API de Conversões<input type="password" className={input+" mt-1.5"} value={token} onChange={e=>setToken(e.target.value)} autoComplete="off" maxLength={4096} placeholder="Token com acesso a este ID" required/></label></div><details className="text-sm"><summary className="cursor-pointer text-slate-500">Código de teste (opcional)</summary><input className={input+" mt-2 max-w-xs"} maxLength={100} value={testCode} onChange={e=>setTestCode(e.target.value)} placeholder="TEST12345"/></details><p className="text-xs text-muted-foreground">No Gerenciador de Eventos da Meta, escolha o pixel e abra Configurações → API de Conversões → Gerar token de acesso.</p><Button disabled={working||!projectId}>{busy?<Loader2 className="animate-spin"/>:<ShieldCheck/>}{busy?"Salvando…":"Salvar ID e token"}</Button>{editPrimary&&<Button type="button" variant="ghost" disabled={working} onClick={()=>{setEditPrimary(false);setToken("")}}>Cancelar</Button>}</form>:<div className="space-y-3"><p className="text-sm text-muted-foreground">Cria um pixel no portfólio da conta Meta conectada em Integrações. É necessário ter acesso de administrador nesse portfólio.</p><label className="block text-sm">Nome do pixel na Meta<input className={input+" mt-1.5"} value={pixelName} onChange={e=>setPixelName(e.target.value)}/></label><Button type="button" disabled={working||!projectId||!pixelName.trim()} onClick={createPixel}>{creating?<Loader2 className="animate-spin"/>:<Plus/>}{creating?"Criando na Meta…":"Criar e conectar na Meta"}</Button></div>}
+  </section>}
+  <AdditionalPixels key={projectId} projectId={projectId} primaryPixelId={current?.pixelId}/>
+  {allowCreateTrackingPixel&&<CapiDeliveryStatus key={`deliveries-${projectId}`} projectId={projectId}/>}
+  {(current?.pixelId||allowCreateTrackingPixel)&&<details className="rounded-xl border border-slate-200"><summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-sm font-medium text-slate-600"><Settings2 className="size-4"/>Eventos do pixel GhostScale</summary><div className="border-t border-slate-200 px-4 pb-4"><TrackingRules key={projectId} projectId={projectId} enabled/></div></details>}
   </>}
-  <AdditionalPixels key={projectId} projectId={projectId}/>
-  {message&&<p role="status" className={"rounded-xl border p-4 text-sm leading-6 "+(ok?"border-emerald-300 bg-emerald-50 text-emerald-800":"border-red-300 bg-red-50 text-red-800")}>{message}</p>}
-  {current?.pixelId&&<details className="rounded-xl border border-slate-200"><summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-sm font-medium text-slate-600"><Settings2 className="size-4"/>Configurações avançadas do rastreamento</summary><div className="border-t border-slate-200 px-4 pb-4"><TrackingRules projectId={projectId} enabled/></div></details>}
+  {message&&<p role="status" className="rounded-xl border border-border bg-muted/50 p-4 text-sm leading-6">{message}</p>}
  </div>;
 }
 

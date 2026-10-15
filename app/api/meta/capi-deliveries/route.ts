@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, notLike } from "drizzle-orm";
 import { ensureDb, getDb } from "@/db";
 import { capiOutbox, projects } from "@/db/schema";
 import { hasConflictingOrigin, requestUserId, sha256 } from "@/lib/trackbase-security";
@@ -12,11 +12,12 @@ export async function GET(request: Request) {
   if (!userId) return Response.json({ error: "Não autenticado" }, { status: 401 });
   await ensureDb();
   const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
-  const rows = await getDb().select({ id: capiOutbox.id, eventId: capiOutbox.eventId,
+  const projectId=new URL(request.url).searchParams.get("projectId");
+  const rows = await getDb().select({ id: capiOutbox.id, pixelId:capiOutbox.pixelId, eventId: capiOutbox.eventId,
     project: projects.name, status: capiOutbox.status, attempts: capiOutbox.attempts,
     error: capiOutbox.lastError, updatedAt: capiOutbox.updatedAt })
     .from(capiOutbox).innerJoin(projects, eq(projects.id, capiOutbox.projectId))
-    .where(and(eq(capiOutbox.workspaceId, workspaceId), eq(projects.workspaceId, workspaceId), eq(capiOutbox.eventName, "Purchase")))
+    .where(and(eq(capiOutbox.workspaceId, workspaceId), eq(projects.workspaceId, workspaceId), eq(capiOutbox.eventName, "Purchase"),notLike(capiOutbox.pixelId,"tiktok:%"),...(projectId?[eq(capiOutbox.projectId,projectId)]:[])))
     .orderBy(desc(capiOutbox.createdAt)).limit(50);
   return Response.json({ deliveries: rows }, { headers: { "Cache-Control": "no-store" } });
 }

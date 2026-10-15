@@ -17,7 +17,7 @@ const plugins = [{ name:'fixtures', setup(b) {
   b.onResolve({filter:/lib\/push$/}, () => ({path:'push',namespace:'fixture'}));
   b.onLoad({filter:/.*/,namespace:'fixture'}, args => ({ contents: {
     db: 'export function getDb(){return globalThis.__capiDb;} export async function ensureDb(){}',
-    security: `export async function decryptSecret(){if(globalThis.__decryptFails)throw Error('bad encryption');return 'test-token';}
+    security: `export async function decryptSecret(cipher){if(globalThis.__decryptFails)throw Error('bad encryption');return globalThis.__tokenMap?.[cipher]||'test-token';}
 export async function encryptSecret(v){return {cipher:'encrypted-'+v,iv:'iv'};}
 export async function hasActivePlan(){return true;}
 export function planRequiredResponse(){return Response.json({error:'plan'},{status:402});}
@@ -33,6 +33,7 @@ async function load(path) {
 }
 const gateway = await load('app/api/webhooks/gateway/route.ts');
 const ingest = await load('lib/sale-ingest.ts');
+const primaryApi=await load('app/api/meta/connect/route.ts');
 const pixelsApi=await load('app/api/project-pixels/route.ts');
 const dashboardsApi=await load('app/api/dashboards/route.ts');
 const diagnostics = await load('app/api/meta/capi-deliveries/route.ts');
@@ -50,7 +51,7 @@ beforeEach(() => {
   sql.prepare('INSERT INTO projects(id,workspace_id,name,domain,public_key,pixel_id,meta_token_cipher,meta_token_iv,meta_test_code,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)').run('p',ws,'Test project','https://shop.example','public-key','12345678','cipher','iv','TEST123','2026-10-09');
   sql.prepare('INSERT INTO api_credentials(id,workspace_id,project_id,name,provider,token_hash,active,created_at) VALUES(?,?,?,?,?,?,?,?)').run('cred',ws,'p','gateway','fortpay',sha('test-key'),1,'2026-10-09');
   calls=[];response=()=>Response.json({events_received:1,fbtrace_id:'trace'});
-  globalThis.__decryptFails=false;globalThis.__notifications=0;
+  globalThis.__decryptFails=false;globalThis.__tokenMap={};globalThis.__notifications=0;
   globalThis.fetch=async(url,init)=>{calls.push({url,headers:init.headers,body:JSON.parse(init.body)});return response();};
 });
 afterEach(()=>{globalThis.fetch=realFetch;sql.close();});
@@ -232,4 +233,33 @@ test('one rejected destination keeps its retry without blocking the other pixel'
  const reply=await (await gateway.POST(webhook(paid()))).json();assert.equal(reply.capi,'pending');assert.equal(calls.length,2);
  assert.equal(sql.prepare("SELECT status FROM capi_outbox WHERE pixel_id='12345678'").get().status,'sent');
  assert.equal(sql.prepare("SELECT status FROM capi_outbox WHERE pixel_id='87654321'").get().status,'pending');
+});
+test('five Meta pixels each use their own token for one sale, with independent receipts and no duplicate revenue',async()=>{
+ const ids=['12345678','22345678','32345678','42345678','52345678'];globalThis.__tokenMap.cipher='token-1';
+ for(const [i,pixelId] of ids.slice(1).entries()){
+  const accessToken=`token-${i+2}`;globalThis.__tokenMap['encrypted-'+accessToken]=accessToken;
+  assert.equal((await pixelsApi.POST(pixelRequest('POST','owner',{name:`Meta ${i+2}`,pixelId,accessToken}))).status,200);
+ }
+ await gateway.POST(webhook(paid()));assert.equal(calls.length,5);
+ for(const [i,pixelId] of ids.entries()){const call=calls.find(c=>String(c.url).includes('/'+pixelId+'/events'));assert.ok(call);assert.equal(call.headers.authorization,`Bearer token-${i+1}`)}
+ assert.equal(new Set(calls.map(c=>c.body.data[0].event_id)).size,1);
+ assert.equal(sql.prepare('SELECT count(*) n FROM orders').get().n,1);assert.equal(sql.prepare("SELECT count(*) n FROM events WHERE event_name='Purchase'").get().n,1);
+ assert.equal(sql.prepare("SELECT count(*) n FROM capi_outbox WHERE status='sent'").get().n,5);
+ const result=await diagnostics.GET(new Request('https://app.example/api/meta/capi-deliveries?projectId=p',{headers:{'x-test-user':'owner'}}));const text=await result.text();const receipts=JSON.parse(text).deliveries;assert.equal(receipts.length,5);assert.deepEqual(new Set(receipts.map(r=>r.pixelId)),new Set(ids));assert.ok(!text.includes('token-'));assert.ok(!text.includes('cipher'));
+ assert.deepEqual((await (await diagnostics.GET(new Request('https://app.example/api/meta/capi-deliveries?projectId=other',{headers:{'x-test-user':'owner'}}))).json()).deliveries,[]);
+ await gateway.POST(webhook(paid()));assert.equal(calls.length,5);
+});
+test('one of five rejected pixels can rotate its token and retry without resending the other four',async()=>{
+ for(const id of ['22345678','32345678','42345678','52345678'])assert.equal((await pixelsApi.POST(pixelRequest('POST','owner',{name:id,pixelId:id,accessToken:'old-'+id}))).status,200);
+ globalThis.fetch=async(url,init)=>{calls.push({url,headers:init.headers,body:JSON.parse(init.body)});return String(url).includes('/52345678/')?Response.json({error:{code:190}},{status:400}):Response.json({events_received:1})};
+ await gateway.POST(webhook(paid()));assert.equal(calls.length,5);assert.equal(sql.prepare("SELECT count(*) n FROM capi_outbox WHERE status='sent'").get().n,4);
+ const failed=sql.prepare("SELECT * FROM capi_outbox WHERE pixel_id='52345678'").get();assert.equal(failed.status,'pending');
+ assert.equal((await pixelsApi.POST(pixelRequest('POST','owner',{name:'Rotated',pixelId:'52345678',accessToken:'rotated-token'}))).status,200);globalThis.__tokenMap['encrypted-rotated-token']='rotated-token';
+ globalThis.fetch=async(url,init)=>{calls.push({url,headers:init.headers,body:JSON.parse(init.body)});return Response.json({events_received:1})};
+ assert.equal((await diagnostics.POST(diag('POST','owner',{id:failed.id}))).status,200);assert.equal(calls.length,6);assert.equal(calls[5].headers.authorization,'Bearer rotated-token');assert.equal(calls[5].body.data[0].event_id,calls[0].body.data[0].event_id);assert.equal(sql.prepare("SELECT count(*) n FROM capi_outbox WHERE status='sent'").get().n,5);
+});
+test('the primary pixel cannot duplicate an additional destination and removing one destination keeps the other four',async()=>{
+ for(const id of ['22345678','32345678','42345678','52345678'])await pixelsApi.POST(pixelRequest('POST','owner',{name:id,pixelId:id,accessToken:'token'}));
+ const r=await primaryApi.POST(new Request('https://app.example/api/meta/connect',{method:'POST',headers:{'x-test-user':'owner',origin:'https://app.example','content-type':'application/json'},body:JSON.stringify({projectId:'p',pixelId:'22345678',accessToken:'token'})}));assert.equal(r.status,409);assert.equal(sql.prepare("SELECT pixel_id FROM projects WHERE id='p'").get().pixel_id,'12345678');
+ const id=sql.prepare("SELECT id FROM project_pixels WHERE pixel_id='52345678'").get().id;await pixelsApi.DELETE(pixelRequest('DELETE','owner',null,id));await gateway.POST(webhook(paid()));assert.equal(calls.length,4);assert.ok(!calls.some(c=>String(c.url).includes('/52345678/')));
 });
