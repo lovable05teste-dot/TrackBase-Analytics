@@ -80,3 +80,15 @@ export function flagEmoji(code: string): string {
   if (!/^[A-Z]{2}$/.test(code)) return "🌐";
   return String.fromCodePoint(...[...code].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65));
 }
+
+// País pelo telefone do comprador, para venda sem país informado.
+// "+55 11 91234-5678" (DDI 55) → "BR". Sem DDI, 10 ou 11 dígitos com DDD
+// válido só contam como Brasil quando a venda é em reais.
+export function countryFromPhone(phone: unknown, currency?: unknown): string | null {
+  const raw = String(phone ?? "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  if (/^55[1-9]\d{9,10}$/.test(digits) && (raw.startsWith("+") || digits.length >= 12)) return "BR";
+  if (!raw.startsWith("+") && /^[1-9][1-9]\d{8,9}$/.test(digits) && String(currency ?? "").toUpperCase() === "BRL") return "BR";
+  return null;
+}
