@@ -19,3 +19,13 @@ test('bandeira e coordenadas válidas', () => {
     assert.ok(Math.abs(c.lat) <= 90 && Math.abs(c.lng) <= 180, code);
   }
 });
+
+test('país pelo telefone do comprador', async () => {
+  const { countryFromPhone } = await import('../lib/country-geo.ts');
+  assert.equal(countryFromPhone('+55 11 91234-5678'), 'BR');
+  assert.equal(countryFromPhone('5511912345678'), 'BR');
+  assert.equal(countryFromPhone('(11) 91234-5678', 'BRL'), 'BR');
+  assert.equal(countryFromPhone('(11) 91234-5678'), null);
+  assert.equal(countryFromPhone('+1 415 555 0100', 'BRL'), null);
+  assert.equal(countryFromPhone(''), null);
+});
