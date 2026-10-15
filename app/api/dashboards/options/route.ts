@@ -1,0 +1,5 @@
+import { eq } from "drizzle-orm";
+import { ensureDb,getDb } from "@/db";
+import { projects,metaAccounts,tiktokAccounts } from "@/db/schema";
+import { requestUserId,sha256 } from "@/lib/trackbase-security";
+export async function GET(r:Request){const userId=await requestUserId(r);if(!userId)return Response.json({error:"Entre na sua conta."},{status:401});await ensureDb();const db=getDb(),workspaceId="ws_"+(await sha256(userId)).slice(0,24);const [ps,meta,tt]=await Promise.all([db.select({id:projects.id,name:projects.name}).from(projects).where(eq(projects.workspaceId,workspaceId)),db.select({id:metaAccounts.id,name:metaAccounts.accountName,accountId:metaAccounts.adAccountId}).from(metaAccounts).where(eq(metaAccounts.userId,userId)),db.select({id:tiktokAccounts.id,name:tiktokAccounts.advertiserName,accountId:tiktokAccounts.advertiserId}).from(tiktokAccounts).where(eq(tiktokAccounts.userId,userId))]);return Response.json({projects:ps,metaAccounts:meta,tiktokAccounts:tt},{headers:{"Cache-Control":"private, no-store"}})}

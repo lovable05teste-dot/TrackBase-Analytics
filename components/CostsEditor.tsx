@@ -16,7 +16,7 @@ const FIELDS: { key: keyof Costs; label: string; suffix: string; hint: string }[
 
 // Formulário dos custos da operação (salvo em /api/tools/state?tool=custos).
 // `breakdown` = valores já calculados para o período do Dashboard.
-export function CostsEditor({ costs, rates, revision, onSaved, breakdown }: { costs: Costs; rates: GatewayRates; revision: number; onSaved: (c: Costs & { gateways?: unknown }, revision: number) => void; breakdown: { product: number; gateway: number; tax: number; other: number; total: number } }) {
+export function CostsEditor({ costs, rates, revision, onSaved, breakdown, saveCosts }: { costs: Costs; rates: GatewayRates; revision: number; saveCosts?: (c: Costs & { gateways?: unknown }) => Promise<{ data: Costs & { gateways?: unknown }; revision: number }>; onSaved: (c: Costs & { gateways?: unknown }, revision: number) => void; breakdown: { product: number; gateway: number; tax: number; other: number; total: number } }) {
   const [draft, setDraft] = useState<Record<keyof Costs, string>>(() => Object.fromEntries(FIELDS.map((f) => [f.key, costs[f.key] ? String(costs[f.key]).replace(".", ",") : ""])) as Record<keyof Costs, string>);
   const [saving, setSaving] = useState(false), [msg, setMsg] = useState("");
   // Taxas próprias por gateway: campo vazio usa a taxa geral acima.
@@ -41,6 +41,7 @@ export function CostsEditor({ costs, rates, revision, onSaved, breakdown }: { co
       return [[g, { feePct: parse(d.pct), feeFixed: parse(d.fixed) }]];
     }));
     try {
+      if (saveCosts) { const b = await saveCosts({ ...data, gateways: gatewayData }); onSaved(b.data, b.revision); setMsg("Custos deste dashboard salvos."); return; }
       const r = await apiFetch("/api/tools/state?tool=custos", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { ...data, gateways: gatewayData }, revision }) });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Não foi possível salvar.");
@@ -62,6 +63,7 @@ export function CostsEditor({ costs, rates, revision, onSaved, breakdown }: { co
       <div className="space-y-2 border-t border-slate-200 pt-3">
         <p className="text-sm font-medium">Taxa por gateway <span className="font-normal text-slate-500">(opcional)</span></p>
         <p className="text-[11px] text-slate-500">Deixe em branco para usar a taxa geral acima. Cada gateway paga a própria taxa sobre as vendas dele.</p>
+        {saveCosts ? <p className="text-sm text-slate-500">As taxas por gateway valem para a conta toda. Edite-as nos custos do dashboard geral.</p> : <>
         {gateways.length === 0 && <p className="text-sm text-slate-500">Os gateways aparecem aqui depois da primeira venda recebida.</p>}
         {gateways.map((g) => (
           <div key={g} className="grid items-center gap-2 sm:grid-cols-[1fr_120px_120px]">
@@ -70,6 +72,7 @@ export function CostsEditor({ costs, rates, revision, onSaved, breakdown }: { co
             <input inputMode="decimal" aria-label={`Taxa fixa do ${g}`} placeholder="R$ fixo (geral)" className="dashboard-input h-9" value={gwDraft[g]?.fixed ?? ""} onChange={(e) => setGwDraft((d) => ({ ...d, [g]: { pct: d[g]?.pct ?? "", fixed: e.target.value } }))} />
           </div>
         ))}
+        </>}
       </div>
       <Button className="h-10" disabled={saving} onClick={save}>{saving ? <Loader2 className="animate-spin" /> : <Save />}Salvar custos</Button>
       {msg && <p role="status" className="text-sm text-slate-500">{msg}</p>}
