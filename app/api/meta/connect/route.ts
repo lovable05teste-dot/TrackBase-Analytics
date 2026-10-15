@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../../db";
-import { projects } from "../../../../db/schema";
+import { projects,projectPixels } from "../../../../db/schema";
 import { encryptSecret, hasActivePlan, planRequiredResponse, requestUserId, sha256, hasConflictingOrigin } from "../../../../lib/trackbase-security";
 
 export async function POST(request: Request) {
@@ -16,6 +16,8 @@ export async function POST(request: Request) {
   const workspaceId = "ws_" + (await sha256(userId)).slice(0, 24);
   const [owned] = await getDb().select({ id: projects.id }).from(projects).where(and(eq(projects.id, body.projectId), eq(projects.workspaceId, workspaceId))).limit(1);
   if (!owned) return Response.json({ error: "Projeto não encontrado" }, { status: 404 });
+  const [duplicate]=await getDb().select({id:projectPixels.id}).from(projectPixels).where(and(eq(projectPixels.projectId,body.projectId),eq(projectPixels.pixelId,body.pixelId!))).limit(1);
+  if(duplicate)return Response.json({error:"Este ID já está cadastrado nos destinos adicionais. Atualize o token na linha correspondente."},{status:409});
   // Tokens gerados em “API de Conversões” podem enviar eventos para /events,
   // mas não têm permissão para consultar os dados do Pixel. Validá-los com
   // GET /{pixel_id} causava o falso erro (#100 Missing Permission). Guardamos o

@@ -189,3 +189,12 @@ test('multiple pixels receive targeted browser events with a shared event id, ne
  const views=b.fbq.filter(a=>a[0]==='trackSingle'&&a[2]==='PageView');assert.equal(views.length,2);assert.equal(views[0][4].eventID,views[1][4].eventID);
  assert.ok(!b.fbq.some(a=>a[0]==='track'));
 });
+test('a single GhostScale script routes PageView and checkout to five Meta IDs without broadcasting',()=>{
+ const pixels=['12345678','22345678','32345678','42345678','52345678'],b=browser();
+ vm.runInContext(trackerScript('five','https://app.com/api/events',pixels,parseTrackingConfig(null)),b.context);
+ assert.equal(b.fbq.filter(a=>a[0]==='init').length,5);
+ vm.runInContext('TrackBase.track("InitiateCheckout",{value:19.9,currency:"BRL"})',b.context);
+ for(const event of ['PageView','InitiateCheckout']){const sent=b.fbq.filter(a=>a[0]==='trackSingle'&&a[2]===event);assert.equal(sent.length,5);assert.deepEqual(new Set(sent.map(a=>a[1])),new Set(pixels));assert.equal(new Set(sent.map(a=>a[4].eventID)).size,1)}
+ assert.ok(!b.fbq.some(a=>a[0]==='track'));
+ assert.equal(b.requests.map(r=>JSON.parse(r.body)).filter(r=>r.eventName==='InitiateCheckout').length,1);
+});
