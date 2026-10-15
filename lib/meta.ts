@@ -46,9 +46,13 @@ export function metaAuthorizationUrl(state: string, config = requireMetaConfig()
   return url;
 }
 
+export class MetaApiError extends Error {
+  status:number;code?:number;subcode?:number;transient:boolean;
+  constructor(message:string,status:number,code?:number,subcode?:number,transient=false){super(message);this.name="MetaApiError";this.status=status;this.code=code;this.subcode=subcode;this.transient=transient}
+}
 export async function metaJson<T>(url:string, init?:RequestInit):Promise<T>{
   const response=await fetch(url,{...init,cache:"no-store",signal:init?.signal ?? AbortSignal.timeout(15000)});
-  const body=await response.json() as T & {error?:{message?:string;code?:number}};
-  if(!response.ok||(body as {error?:unknown}).error) throw new Error((body as {error?:{message?:string}}).error?.message||"A Meta recusou a solicitação.");
+  const body=await response.json().catch(()=>{throw new MetaApiError("A Meta retornou uma resposta inválida.",response.status,undefined,undefined,true)}) as T & {error?:{message?:string;code?:number;error_subcode?:number;is_transient?:boolean}};
+  if(!response.ok||body?.error){const error=body?.error;throw new MetaApiError(error?.message||"A Meta recusou a solicitação.",response.status,error?.code,error?.error_subcode,error?.is_transient===true)}
   return body;
 }
