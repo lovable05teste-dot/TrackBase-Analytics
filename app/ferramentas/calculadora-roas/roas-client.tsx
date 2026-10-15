@@ -1,13 +1,14 @@
 "use client";
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { parseBrNumber } from "@/lib/br-number";
 
 export function RoasClient() {
   const [spend, setSpend] = useState("1000");
   const [revenue, setRevenue] = useState("3000");
   const [orders, setOrders] = useState("20");
   const r = useMemo(() => {
-    const s = Number(spend) || 0, rev = Number(revenue) || 0, n = Number(orders) || 0;
+    const s = parseBrNumber(spend), rev = parseBrNumber(revenue), n = parseBrNumber(orders);
     return { roas: s > 0 ? rev / s : 0, cpa: n > 0 ? s / n : 0, ticket: n > 0 ? rev / n : 0, lucro: rev - s };
   }, [spend, revenue, orders]);
   const input = "w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm";

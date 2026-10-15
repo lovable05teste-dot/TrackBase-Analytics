@@ -9,7 +9,7 @@ import { metaDestinations } from "@/lib/project-pixels";
 // - status desconhecido vira `pending` + alerta (nunca 400 que dropa venda).
 // O `db` vem por parâmetro tipado via `import type` (apagado em runtime) e o
 // push é dinâmico — este módulo segue importável em testes unitários puros.
-import { and, asc, desc, eq, inArray, lte, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, lt, ne, or, sql } from "drizzle-orm";
 import { capiOutbox, events, orders, projects } from "@/db/schema";
 import { decryptSecret } from "@/lib/trackbase-security";
 import { dispatchCapi } from "@/lib/meta-capi";
@@ -112,6 +112,20 @@ export function parsePaidAt(value: unknown, now = Math.floor(Date.now() / 1000))
   return ts;
 }
 
+// Atribuição da última visita deste visitante (tb_vid) no projeto. Usada quando
+// o webhook da compra não traz UTM nem fbclid: a venda ainda cai na campanha certa.
+export async function visitorAttribution(db: Db, projectId: string, visitorId: string) {
+  const [row] = await db
+    .select({ utmSource: events.utmSource, utmMedium: events.utmMedium, utmCampaign: events.utmCampaign, utmContent: events.utmContent, utmTerm: events.utmTerm, fbclid: events.fbclid, fbc: events.fbc, fbp: events.fbp })
+    .from(events)
+    .where(and(eq(events.projectId, projectId), eq(events.visitorId, visitorId), or(ne(events.utmCampaign, ""), ne(events.fbclid, ""))))
+    .orderBy(desc(events.occurredAt))
+    .limit(1);
+  if (!row) return {};
+  const clean = (v: string | null | undefined) => v || undefined;
+  return { utmSource: clean(row.utmSource), utmMedium: clean(row.utmMedium), utmCampaign: clean(row.utmCampaign), utmContent: clean(row.utmContent), utmTerm: clean(row.utmTerm), fbclid: clean(row.fbclid), fbc: clean(row.fbc), fbp: clean(row.fbp) };
+}
+
 export function backoffFor(attempts: number) {
   return BACKOFF_SECONDS[Math.min(Math.max(0, attempts), BACKOFF_SECONDS.length - 1)];
 }
@@ -188,6 +202,7 @@ export type OrderInput = {
   customerEmail?: string | null;
   customerName?: string | null;
   customerPhone?: string | null;
+  reviewNote?: string | null;
 };
 
 // Upsert do pedido com veredito de dedup. Retorna prevStatus para decidir se
@@ -202,7 +217,7 @@ export function statusRank(status: string | null | undefined) {
 
 export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: boolean; prevStatus: string | null }> {
   const existing = await db
-    .select({ status: orders.status, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmContent: orders.utmContent, utmTerm: orders.utmTerm, customerEmail: orders.customerEmail, customerName: orders.customerName, customerPhone: orders.customerPhone })
+    .select({ status: orders.status, utmCampaign: orders.utmCampaign, utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmContent: orders.utmContent, utmTerm: orders.utmTerm, customerEmail: orders.customerEmail, customerName: orders.customerName, customerPhone: orders.customerPhone, reviewNote: orders.reviewNote })
     .from(orders)
     .where(and(eq(orders.projectId, input.projectId), eq(orders.provider, input.provider), eq(orders.externalId, input.externalId)))
     .limit(1);
@@ -235,6 +250,7 @@ export async function upsertOrder(db: Db, input: OrderInput): Promise<{ dedup: b
         customerEmail: input.customerEmail || existing[0].customerEmail,
         customerName: input.customerName || existing[0].customerName,
         customerPhone: input.customerPhone || existing[0].customerPhone,
+        reviewNote: input.reviewNote ?? existing[0].reviewNote,
         eventId: input.eventId,
         updatedAt: now,
       })

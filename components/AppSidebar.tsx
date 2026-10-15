@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
@@ -29,7 +30,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Link href="/" className="flex items-center gap-3 px-2 py-2 mb-6" onClick={onNavigate}>
-        <img src="/ghostscale-logo.png" alt="Logo GhostScale" className="h-11 w-auto max-w-[160px] shrink-0 object-contain" />
+        <Image src="/ghostscale-logo.png" width={900} height={300} alt="Logo GhostScale" className="h-11 w-auto max-w-[160px] shrink-0 object-contain" />
       </Link>
       <nav className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pb-4 pr-1">
         {NAV_GROUPS.map((g) => {

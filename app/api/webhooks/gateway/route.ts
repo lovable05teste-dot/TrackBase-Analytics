@@ -1,4 +1,5 @@
 import { queuePurchaseCapi } from "@/lib/purchase-capi";
+import { readAmount, reviewNote } from "@/lib/webhook-review";
 import { and, eq } from "drizzle-orm";
 import { ensureDb, getDb } from "../../../../db";
 import { apiCredentials, events, notificationPrefs, projects } from "../../../../db/schema";
@@ -15,9 +16,9 @@ import {
   insertEventOnce,
   pick,
   resolveStatus,
-  parseMoney,
   parsePaidAt,
   upsertOrder,
+  visitorAttribution,
 } from "../../../../lib/sale-ingest";
 
 // Dados do comprador (e-mail, nome, telefone). Só texto curto; vazio = null.
@@ -54,8 +55,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "JSON inválido" }, { status: 400, headers: cors });
   }
 
-  const externalId = String(
-    pick(body, [
+  const providerOrderId = pick(body, [
       "transaction_hash",
       "transactionHash",
       "transaction.id",
@@ -70,11 +70,13 @@ export async function POST(request: Request) {
       "data.id",
       "data.transaction.id",
       "order.id",
-    ]) ||
-      // Sem ID do pedido: hash do corpo, para o reenvio do mesmo webhook
-      // não virar venda duplicada.
-      "sem_id_" + (await sha256(JSON.stringify(body))).slice(0, 24),
-  );
+      "order_id",
+      "orderId",
+  ]);
+  // Sem ID do pedido: hash do corpo, para o reenvio do mesmo webhook não virar
+  // venda duplicada. O pedido é marcado para revisão.
+  const idFromProvider = String(providerOrderId ?? "").trim() !== "";
+  const externalId = idFromProvider ? String(providerOrderId).trim() : "sem_id_" + (await sha256(JSON.stringify(body))).slice(0, 24);
   const rawStatus = pick(body, ["status", "payment_status", "transaction_status", "event", "type", "data.status", "data.payment_status", "data.transaction.status", "order.status"]);
   // Status inédito vira pendente + alerta (nunca 400 que dropa a venda).
   const { status, known } = resolveStatus(rawStatus);
@@ -91,14 +93,12 @@ export async function POST(request: Request) {
     ? pick(body, ["amount", "data.amount", "transaction.amount", "offer.price"])
     : pick(body, ["amount_cents", "amountCents", "total_cents", "data.amount_cents", "data.transaction.amount_cents", "order.total_cents"]);
   const rawValue = pick(body, ["value", "amount", "total", "price", "data.value", "data.amount", "data.transaction.amount", "order.total"]);
-  let value: number;
-  if (centsValue !== undefined) value = parseMoney(centsValue) / 100;
-  else if (rawValue !== undefined) value = parseMoney(rawValue);
-  else if (itemsList.length && Number.isFinite(parseMoney(itemsList[0].price))) value = fortpay ? parseMoney(itemsList[0].price) / 100 : parseMoney(itemsList[0].price);
-  else value = 0;
-  // Valor ilegível não pode derrubar a venda (gateway não reenvia 4xx):
-  // grava com 0 e segue.
-  if (!Number.isFinite(value) || value < 0) value = 0;
+  // Valor: centavos (campo de centavos ou FortPay) ou reais. Valor ausente ou
+  // ilegível não vira 0 em silêncio: o pedido é marcado para revisão.
+  const amountField = centsValue !== undefined ? centsValue : rawValue !== undefined ? rawValue : itemsList.length ? itemsList[0].price : undefined;
+  const amountRead = readAmount(amountField);
+  const inCents = centsValue !== undefined || (rawValue === undefined && fortpay && amountField !== undefined);
+  const value = amountRead.source === "explicit" && inCents ? amountRead.value / 100 : amountRead.value;
 
   const rawUtm = String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || "").trim();
   const utmName = (v: string) => {
@@ -122,7 +122,27 @@ export async function POST(request: Request) {
   const paidTime = parsePaidAt(paidAt, now);
   const db = getDb();
 
+  const fbc = String(pick(body, ["fbc", "tracking.fbc", "trackingParameters.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
+  const fbp = String(pick(body, ["fbp", "tracking.fbp", "trackingParameters.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
+  const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "trackingParameters.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
+  const visitorId = String(pick(body, ["tb_vid", "tracking.tb_vid", "trackingParameters.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || "");
+  // Sem UTM/fbclid no webhook, usa a última visita do mesmo visitante (tb_vid).
+  // O que o gateway mandou tem prioridade; a visita só preenche o que faltou.
+  const fromVisit = visitorId ? await visitorAttribution(db, credential.projectId, visitorId) : {};
+  const attr = {
+    utmCampaign: utmCampaign || fromVisit.utmCampaign || null,
+    utmSource: utmSource || fromVisit.utmSource || null,
+    utmMedium: utmMedium || fromVisit.utmMedium || null,
+    utmContent: utmContent || fromVisit.utmContent || null,
+    utmTerm: utmTerm || fromVisit.utmTerm || null,
+  };
+  const fbclidAttr = fbclid || fromVisit.fbclid || "";
+  const fbcAttr = fbc || fromVisit.fbc || "";
+  const fbpAttr = fbp || fromVisit.fbp || "";
+
   // Dedup: redelivery do mesmo status = 200 sem reinserir nem re-disparar.
+  const orderReviewNote = reviewNote({ idFromProvider, knownStatus: known, amount: amountRead });
+  if (orderReviewNote) console.warn(JSON.stringify({ scope: "webhook", event: "order-needs-review", provider: credential.provider, orderId: externalId, note: orderReviewNote }));
   const { dedup, prevStatus } = await upsertOrder(db, {
     projectId: credential.projectId,
     externalId,
@@ -130,15 +150,12 @@ export async function POST(request: Request) {
     status,
     value,
     currency,
-    utmCampaign,
-    utmSource,
-    utmMedium,
-    utmContent,
-    utmTerm,
+    ...attr,
     eventId,
     customerEmail: buyerField(body, ["customer.email", "buyer.email", "email", "data.customer.email", "data.buyer.email", "client.email"]).toLowerCase() || null,
     customerName: buyerField(body, ["customer.name", "buyer.name", "name", "data.customer.name", "data.buyer.name", "client.name"]) || null,
     customerPhone: buyerField(body, ["customer.phone", "customer.phone_number", "buyer.phone", "phone", "data.customer.phone", "client.phone"]) || null,
+    reviewNote: orderReviewNote,
   });
   const eventName = eventNameFor(status);
   await recordSaleEvent(credential.workspaceId, "sale.received", externalId, { status, raw: String(rawStatus ?? "").slice(0, 40), provider: credential.provider, dedup });
@@ -147,10 +164,6 @@ export async function POST(request: Request) {
     return Response.json({ received: true, orderId: externalId, status, event: eventName, dedup: true }, { headers: cors });
   }
 
-  const fbc = String(pick(body, ["fbc", "tracking.fbc", "trackingParameters.fbc", "metadata.fbc", "data.tracking.fbc"]) || "");
-  const fbp = String(pick(body, ["fbp", "tracking.fbp", "trackingParameters.fbp", "metadata.fbp", "data.tracking.fbp"]) || "");
-  const fbclid = String(pick(body, ["fbclid", "tracking.fbclid", "trackingParameters.fbclid", "metadata.fbclid", "data.tracking.fbclid"]) || "");
-  const visitorId = String(pick(body, ["tb_vid", "tracking.tb_vid", "trackingParameters.tb_vid", "metadata.tb_vid", "data.tracking.tb_vid"]) || "");
   await insertEventOnce(db, {
     projectId: credential.projectId,
     eventId,
@@ -159,14 +172,14 @@ export async function POST(request: Request) {
     value,
     currency,
     visitorId,
-    fbclid,
-    fbc,
-    fbp,
-    utmSource: cleanUtmSource(String(pick(body, ["utm_source", "tracking.utm_source", "metadata.utm_source", "data.tracking.utm_source"]) || "")) || "",
-    utmCampaign: String(pick(body, ["utm_campaign", "tracking.utm_campaign", "metadata.utm_campaign", "data.tracking.utm_campaign"]) || ""),
-    utmMedium: String(pick(body, ["utm_medium", "tracking.utm_medium", "metadata.utm_medium", "data.tracking.utm_medium"]) || ""),
-    utmContent: String(pick(body, ["utm_content", "tracking.utm_content", "metadata.utm_content", "data.tracking.utm_content"]) || ""),
-    utmTerm: String(pick(body, ["utm_term", "tracking.utm_term", "metadata.utm_term", "data.tracking.utm_term"]) || ""),
+    fbclid: fbclidAttr,
+    fbc: fbcAttr,
+    fbp: fbpAttr,
+    utmSource: attr.utmSource || "",
+    utmCampaign: attr.utmCampaign || "",
+    utmMedium: attr.utmMedium || "",
+    utmContent: attr.utmContent || "",
+    utmTerm: attr.utmTerm || "",
     payload: JSON.stringify(body),
   });
 
@@ -179,7 +192,7 @@ export async function POST(request: Request) {
     // Never replay historical purchases beyond Meta's 48h deduplication window.
     if (saved?.eventName === "Purchase" && (!dedup || now - saved.occurredAt < 47 * 3600)) {
       capiStatus = await queuePurchaseCapi(db, { workspaceId: credential.workspaceId, projectId: credential.projectId,
-        eventId, externalId, occurredAt: saved.occurredAt, value, currency, body, visitorId, fbclid, fbc, fbp });
+        eventId, externalId, occurredAt: saved.occurredAt, value, currency, body, visitorId, fbclid: fbclidAttr, fbc: fbcAttr, fbp: fbpAttr });
     }
   }
   if (dedup) {

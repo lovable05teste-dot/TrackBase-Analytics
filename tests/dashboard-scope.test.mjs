@@ -106,6 +106,6 @@ test('TikTok uses dashboard accounts, campaign IDs and the requested comparison 
  const r=await tiktok.GET(req(base));assert.equal(r.status,200);const body=await r.json();assert.equal(body.accounts,1);assert.equal(body.totals.spend,75);assert.equal(body.items.length,1);
  assert.equal(reports[0].searchParams.get('start_date'),'2026-10-10');assert.equal(reports[0].searchParams.get('end_date'),'2026-10-12');
  await tiktok.GET(req(base+'&compare=1'));assert.equal(reports[1].searchParams.get('start_date'),'2026-10-07');assert.equal(reports[1].searchParams.get('end_date'),'2026-10-09');
- const max=await tiktok.GET(req(`tiktok/campaigns?dashboardId=${d.id}&period=maximum`));assert.equal(max.status,500);assert.match((await max.json()).error,/período com datas/);
+ const max=await tiktok.GET(req(`tiktok/campaigns?dashboardId=${d.id}&period=maximum`));assert.equal(max.status,400);assert.match((await max.json()).error,/período com datas/);
  globalThis.fetch=async()=>Response.json({code:401,message:'expired'},{status:401});const failed=await (await tiktok.GET(req(base))).json();assert.equal(failed.failures.length,1);
 });

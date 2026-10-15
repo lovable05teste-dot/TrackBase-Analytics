@@ -13,9 +13,13 @@ export function UtmBuilderClient() {
   const [term, setTerm] = useState("{{adset.name}}|{{adset.id}}");
   const [copied, setCopied] = useState(false);
   const url = useMemo(() => {
-    const p = new URLSearchParams({ utm_source: source, utm_medium: medium, utm_campaign: campaign, utm_content: content, utm_term: term });
+    // Variáveis dinâmicas ({{campaign.name}}, {{ad.id}}…) e o separador | precisam
+    // ficar sem codificar, senão a Meta não as substitui pelo nome real.
+    const enc = (v: string) => encodeURIComponent(v).replace(/%7B/gi, "{").replace(/%7D/gi, "}").replace(/%7C/gi, "|");
+    const query = [["utm_source", source], ["utm_medium", medium], ["utm_campaign", campaign], ["utm_content", content], ["utm_term", term]]
+      .map(([k, v]) => `${k}=${enc(v)}`).join("&");
     const sep = base.includes("?") ? "&" : "?";
-    return `${base}${sep}${p.toString()}`;
+    return `${base}${sep}${query}`;
   }, [base, source, medium, campaign, content, term]);
   async function copy() { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); }
   const input = "w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm";

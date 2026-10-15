@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { ensureDb, getDb } from "@/db";
 import { auditLogs, planSubscriptions, users, webhookEvents } from "@/db/schema";
 import { sha256 } from "@/lib/trackbase-security";
@@ -148,6 +149,8 @@ async function handleOrderEvent(event: string, data: OrderData, analyticsEventId
   }
 }
 
+const CaktoEnvelope = z.object({ event: z.string().min(1).max(120) }).passthrough();
+
 export async function POST(request: Request) {
   const raw = await request.text();
   const timestamp = request.headers.get("x-cakto-timestamp") || "";
@@ -156,7 +159,13 @@ export async function POST(request: Request) {
   try { body = JSON.parse(raw); } catch { return Response.json({ error: "JSON inválido" }, { status: 400 }); }
   const valid = verifyWebhookSignature(raw, timestamp, signature) || verifyWebhookSecret(body.secret);
   if (!valid) return Response.json({ error: "Assinatura inválida" }, { status: 401 });
-  const event = typeof body.event === "string" ? body.event : "";
+  // Envelope mínimo do evento (depois da autenticação): sem evento não há o que processar.
+  const envelope = CaktoEnvelope.safeParse(body);
+  if (!envelope.success) {
+    console.warn(JSON.stringify({ scope: "webhook", event: "cakto-payload-invalid", issues: envelope.error.issues.map((i) => i.path.join(".") || "body") }));
+    return Response.json({ error: "Payload inválido" }, { status: 400 });
+  }
+  const event = envelope.data.event;
   if (!event) return Response.json({ received: true });
   await ensureDb();
   // Idempotência + persistência durável antes de processar

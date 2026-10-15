@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useLocalValue, writeLocal } from "@/lib/local-store";
 import { MessageCircle, Send } from "lucide-react";
 import { uid } from "@/lib/uid";
 import { Button } from "@/components/ui/button";
@@ -9,21 +10,15 @@ type Msg = { id: string; name: string; text: string; at: string };
 const KEY = "tb_community_chat";
 
 export function ChatClient() {
-  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [name, setName] = useState("");
   const [text, setText] = useState("");
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setMsgs(JSON.parse(raw));
-    } catch { /* mantém vazio */ } finally { setReady(true); }
-  }, []);
-  useEffect(() => { if (!ready) return; try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-100))); } catch { /* sem persistência */ } }, [msgs, ready]);
+  // Mensagens ficam no navegador (localStorage); o estado vem do armazenamento.
+  const raw = useLocalValue(KEY);
+  const msgs = useMemo<Msg[]>(() => { try { return raw ? (JSON.parse(raw) as Msg[]) : []; } catch { return []; } }, [raw]);
   function send(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
-    setMsgs((m) => [...m, { id: uid(), name: name.trim().slice(0, 40) || "Anônimo", text: text.trim().slice(0, 500), at: new Date().toLocaleString("pt-BR") }].slice(-100));
+    writeLocal(KEY, JSON.stringify([...msgs, { id: uid(), name: name.trim().slice(0, 40) || "Anônimo", text: text.trim().slice(0, 500), at: new Date().toLocaleString("pt-BR") }].slice(-100)));
     setText("");
   }
   return (

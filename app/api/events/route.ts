@@ -87,7 +87,9 @@ export async function POST(request: Request) {
     if (eventName === "TestMode" && testVisitor) {
       await getDb().update(events).set({ source: "test" }).where(and(eq(events.projectId, project.id), eq(events.visitorId, testVisitor)));
     }
-    const safeBody={...body,email:body.email?"[HASHED]":undefined,phone:body.phone?"[HASHED]":undefined,_ip:clientIp(request,ipMode),_ua:(request.headers.get("user-agent")||"").slice(0,400)||undefined};
+    // País do visitante pelo IP (cabeçalho da Vercel), para o mapa de vendas.
+    const ipCountry=(request.headers.get("x-vercel-ip-country")||"").trim().toUpperCase();
+    const safeBody={...body,country:body.country||(/^[A-Z]{2}$/.test(ipCountry)?ipCountry:undefined),email:body.email?"[HASHED]":undefined,phone:body.phone?"[HASHED]":undefined,_ip:clientIp(request,ipMode),_ua:(request.headers.get("user-agent")||"").slice(0,400)||undefined};
     await getDb().insert(events).values({
       id: crypto.randomUUID(), projectId: project.id, eventId, eventName, source: isTest ? "test" : "browser",
       occurredAt: eventTime, visitorId: String(body.visitorId || ""),

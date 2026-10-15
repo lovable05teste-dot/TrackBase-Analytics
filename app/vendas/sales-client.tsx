@@ -3,7 +3,7 @@ import {useEffect,useMemo,useState} from "react";
 import {ArrowDown,ArrowUp,ArrowUpDown,Download,Search,Trash2,X} from "lucide-react";
 import {apiFetch} from "@/lib/plan-client";
 
-type Sale={id:string;externalId:string;provider:string;status:string;value:number;currency:string;updatedAt:number;projectName:string;utmCampaign?:string|null;utmSource?:string|null;utmMedium?:string|null;utmContent?:string|null;utmTerm?:string|null};
+type Sale={id:string;reviewNote?:string|null;externalId:string;provider:string;status:string;value:number;currency:string;updatedAt:number;projectName:string;utmCampaign?:string|null;utmSource?:string|null;utmMedium?:string|null;utmContent?:string|null;utmTerm?:string|null};
 // Cache de formatadores: evita recriar Intl.NumberFormat a cada célula (200 linhas).
 const fmtCache=new Map<string,Intl.NumberFormat>();
 const LIMIT=200;
@@ -59,7 +59,7 @@ export function SalesClient(){
     catch(e){alert(e instanceof Error?e.message:"Não foi possível apagar.")}
     finally{setDeleting(false)}
   };
-  useEffect(()=>{let alive=true;setLoading(true);fetch("/api/orders",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.orders)?v.orders:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar vendas.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
+  useEffect(()=>{let alive=true;fetch("/api/orders",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.orders)?v.orders:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar vendas.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
   const providers=useMemo(()=>Array.from(new Set(rows.map(r=>r.provider).filter(Boolean))).sort(),[rows]);
   const toggleSort=(key:SortKey)=>{if(key===sortKey)setSortDir(d=>d==="desc"?"asc":"desc");else{setSortKey(key);setSortDir("desc")}};
   const filtered=useMemo(()=>{
@@ -130,7 +130,7 @@ export function SalesClient(){
           <td className="max-w-[160px] truncate p-3">{row.projectName||"—"}</td>
           <td className="p-3 text-slate-500">{row.provider}</td>
           <td className="max-w-[200px] truncate p-3 text-slate-500">{row.utmCampaign||"—"}</td>
-          <td className="whitespace-nowrap p-3"><span className="inline-flex items-center gap-2"><span className={`size-1.5 shrink-0 rounded-full ${STATUS_DOT[row.status]||STATUS_DOT.cancelled}`}/>{STATUS_LABEL[row.status]||row.status}</span></td>
+          <td className="whitespace-nowrap p-3"><span className="inline-flex items-center gap-2"><span className={`size-1.5 shrink-0 rounded-full ${STATUS_DOT[row.status]||STATUS_DOT.cancelled}`}/>{STATUS_LABEL[row.status]||row.status}{row.reviewNote&&<span title={row.reviewNote} className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">revisar</span>}</span></td>
           <td className="whitespace-nowrap p-3 text-right font-medium tabular-nums">{money(row.value,row.currency)}</td>
           <td className="whitespace-nowrap p-3 text-slate-500 tabular-nums">{when(row.updatedAt)}</td>
           <td className="p-3 text-right text-xs text-slate-400">Ver</td>

@@ -13,7 +13,7 @@ export function SaleSoundBridge() {
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const m = e.data;
-      if (m && m.type === "play-sale-sound") playFromWorker(m.soundId, m.enabled);
+      if (m && m.type === "play-sale-sound") playFromWorker();
     };
     try { if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", onMessage); } catch {}
     return () => { try { if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", onMessage); } catch {} };

@@ -6,6 +6,8 @@ import {Switch} from "@/components/ui/switch";
 import {DEFAULT_PREFS,type NotifyPrefs} from "@/lib/notify";
 import {SALE_SOUNDS,type SoundPrefs} from "@/lib/sound-prefs";
 import {getSoundPrefs,previewSound,setSoundPrefs,subscribeSoundPrefs} from "@/lib/sale-sounds";
+import { startPolling } from "@/lib/poll";
+import { useLocalValue, writeLocal } from "@/lib/local-store";
 
 type Order={id:string;externalId:string;status:string;value:number;currency:string;provider:string;projectName?:string;utmCampaign?:string|null;updatedAt:number;createdAt:number};
 const SEEN_KEY="tb_notif_seen";
@@ -15,7 +17,7 @@ function bufToB64(buf:ArrayBuffer|null){if(!buf)return "";const b=new Uint8Array
 function vapidKey(k:string){const pad="=".repeat((4-k.length%4)%4);return Uint8Array.from(atob((k+pad).replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))}
 
 export function NotificationsBell({inline=false}:{inline?:boolean}={}){
- const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const[seen,setSeen]=useState(0);
+ const[orders,setOrders]=useState<Order[]>([]);const[open,setOpen]=useState(false);const seen=Number(useLocalValue(SEEN_KEY)||0);
  const[prefs,setPrefs]=useState<NotifyPrefs>(DEFAULT_PREFS);
  const[sound,setSound]=useState<SoundPrefs>(getSoundPrefs());
  const[push,setPush]=useState<"unknown"|"unsupported"|"off"|"on"|"denied"|"loading">("unknown");
@@ -34,19 +36,20 @@ export function NotificationsBell({inline=false}:{inline?:boolean}={}){
  const interesting=(o:Order)=>o.status==="approved"?prefs.approved:o.status==="pending"?prefs.pending:false;
  const unread=orders.filter(o=>interesting(o)&&(o.updatedAt*1000>(seen||0))).length;
 
- const load=useCallback(async(silentInit:boolean)=>{
+ const load=useCallback(async(silentInit:boolean):Promise<boolean>=>{
   try{
-   const r=await fetch("/api/orders?period=last_30d",{cache:"no-store"});if(!r.ok)return;
+   const r=await fetch("/api/orders?period=last_30d",{cache:"no-store"});if(!r.ok)return false;
    const b=await r.json();const p=prefsRef.current;
    const list:Array<Order>=(b.orders||[]).filter((o:Order)=>o.status==="approved"?p.approved:o.status==="pending"?p.pending:false);
-   if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return;}
+   if(silentInit){known.current=new Set(list.map(o=>o.id));setOrders(list);return true;}
 const fresh=list.filter(o=>!known.current.has(o.id));
     if(fresh.length){
      // Som + toast de venda aprovada são tratados pelo SoundNotifications (global, 5s).
      known.current=new Set(list.map(o=>o.id));
     }
    setOrders(list);
-  }catch{}
+   return true;
+  }catch{return false}
  },[]);
 
  const savePrefs=async(next:NotifyPrefs)=>{
@@ -56,11 +59,9 @@ const fresh=list.filter(o=>!known.current.has(o.id));
  };
 
  useEffect(()=>{
-  try{setSeen(Number(localStorage.getItem(SEEN_KEY)||0));}catch{}
   void load(true);
   fetch("/api/notifications/prefs",{cache:"no-store"}).then(r=>r.json()).then(b=>{if(b.prefs)setPrefs(b.prefs);}).catch(()=>{});
-  const timer=setInterval(()=>{if(!document.hidden)void load(false);},30000);
-  return ()=>clearInterval(timer);
+  return startPolling(async()=>(await load(false))?"ok":"error",{intervalMs:30000});
  },[load]);
 
  useEffect(()=>{
@@ -93,10 +94,10 @@ const fresh=list.filter(o=>!known.current.has(o.id));
  useEffect(()=>{const off=subscribeSoundPrefs(setSound);return off;},[]);
 
 
- const markSeen=()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}};
+ const markSeen=()=>{writeLocal(SEEN_KEY,String(Date.now()))};
  const toggle=()=>{if(!open)markSeen();setOpen(v=>!v);};
  // Página Notificações: abre já aberta e marca como vistas.
- useEffect(()=>{if(!inline)return;const t=window.setTimeout(()=>{const now=Date.now();setSeen(now);try{localStorage.setItem(SEEN_KEY,String(now));}catch{}},0);return()=>window.clearTimeout(t)},[inline]);
+ useEffect(()=>{if(!inline)return;const t=window.setTimeout(()=>{writeLocal(SEEN_KEY,String(Date.now()))},0);return()=>window.clearTimeout(t)},[inline]);
  // iPhone: a chave VAPID é buscada antes, para o subscribe acontecer logo
  // depois da permissão (o Safari pode recusar se houver espera no meio).
  const vapidRef=useRef("");

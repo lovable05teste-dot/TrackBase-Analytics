@@ -17,9 +17,42 @@ export function hasCosts(c: Costs) {
   return Object.values(c).some((v) => v > 0);
 }
 
-export function applyCosts(input: { revenue: number; sales: number; spend: number; days?: number }, c: Costs) {
+// Taxa por gateway (opcional). Quem não tem taxa própria usa a taxa geral.
+export type GatewayRate = { feePct: number; feeFixed: number };
+export type GatewayRates = Record<string, GatewayRate>;
+export type GatewaySales = Record<string, { sales: number; revenue: number }>;
+
+export function normalizeGatewayRates(raw: unknown): GatewayRates {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: GatewayRates = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const name = key.trim().toLowerCase();
+    if (!name || !value || typeof value !== "object") continue;
+    const v = value as Record<string, unknown>;
+    const pct = Number(v.feePct), fixed = Number(v.feeFixed);
+    out[name] = {
+      feePct: Number.isFinite(pct) && pct > 0 ? pct : 0,
+      feeFixed: Number.isFinite(fixed) && fixed > 0 ? fixed : 0,
+    };
+  }
+  return out;
+}
+
+// Taxa do gateway: com vendas por gateway, cada um paga a sua taxa; sem essa
+// informação, a taxa geral é aplicada sobre o total (comportamento anterior).
+export function gatewayCost(c: Costs, revenue: number, sales: number, gatewaySales?: GatewaySales, rates: GatewayRates = {}) {
+  if (!gatewaySales || !Object.keys(gatewaySales).length) return (revenue * c.gatewayFeePct) / 100 + sales * c.gatewayFeeFixed;
+  let total = 0;
+  for (const [provider, g] of Object.entries(gatewaySales)) {
+    const rate = rates[provider] ?? { feePct: c.gatewayFeePct, feeFixed: c.gatewayFeeFixed };
+    total += (g.revenue * rate.feePct) / 100 + g.sales * rate.feeFixed;
+  }
+  return total;
+}
+
+export function applyCosts(input: { revenue: number; sales: number; spend: number; days?: number; gatewaySales?: GatewaySales }, c: Costs, rates?: GatewayRates) {
   const product = (input.revenue * c.productCostPct) / 100;
-  const gateway = (input.revenue * c.gatewayFeePct) / 100 + input.sales * c.gatewayFeeFixed;
+  const gateway = gatewayCost(c, input.revenue, input.sales, input.gatewaySales, rates);
   const tax = (input.revenue * c.taxPct) / 100;
   const other = input.days ? (c.otherMonthly / 30) * input.days : 0;
   const total = product + gateway + tax + other;

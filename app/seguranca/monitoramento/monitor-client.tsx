@@ -1,4 +1,5 @@
 "use client";
+import { startPolling } from "@/lib/poll";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Activity, BellRing, Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
@@ -43,25 +44,27 @@ export function MonitorClient() {
   const [keyword, setKeyword] = useState("");
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<boolean> => {
     try {
       const r = await fetch("/api/monitors", { cache: "no-store" });
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || "Não foi possível carregar.");
       setMonitors(b.monitors || []);
       setCanEdit(b.canEdit !== false);
+      setError("");
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível carregar.");
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    const first = window.setTimeout(() => void load(), 0);
-    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000);
-    return () => { window.clearTimeout(first); window.clearInterval(timer); };
-  }, [load]);
+  useEffect(
+    () => startPolling(async () => ((await load()) ? "ok" : "error"), { intervalMs: 60000, immediate: true }),
+    [load],
+  );
 
   async function call(path: string, init: RequestInit, tag: string) {
     setBusy(tag);

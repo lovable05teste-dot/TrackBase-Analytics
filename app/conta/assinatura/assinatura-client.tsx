@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, Loader2, Lock, ShieldCheck, X, AlertCircle, Ban } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -487,8 +488,8 @@ export function AssinaturaClient() {
           <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-white/10 bg-[#101521] p-6 text-slate-100 sm:rounded-3xl sm:p-8">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <img
-                  src="/ghostscale-logo.png"
+                <Image
+                  src="/ghostscale-logo.png" width={900} height={300}
                   alt="GhostScale"
                   className="h-8 w-auto max-w-[160px] object-contain drop-shadow-[0_0_14px_rgba(255,48,80,.35)]"
                 />
@@ -559,8 +560,8 @@ export function AssinaturaClient() {
           <div className="max-h-[92vh] w-full min-w-0 max-w-lg overflow-x-hidden overflow-y-auto rounded-t-3xl border border-white/10 bg-[#101521] p-4 text-slate-100 sm:rounded-3xl sm:p-8">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <img
-                  src="/ghostscale-logo.png"
+                <Image
+                  src="/ghostscale-logo.png" width={900} height={300}
                   alt="GhostScale"
                   className="h-8 w-auto max-w-[160px] object-contain drop-shadow-[0_0_14px_rgba(255,48,80,.35)]"
                 />
@@ -618,8 +619,8 @@ export function AssinaturaClient() {
               pixData ? (
                 <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
                   <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-[#FF0030]/[.12] to-transparent p-4">
-                    <img
-                      src="https://i.imgur.com/yExNdU0.png"
+                    <Image
+                      unoptimized src="https://i.imgur.com/yExNdU0.png" width={120} height={32}
                       alt="Pix"
                       className="h-8 w-auto object-contain"
                       onError={(e) => {
@@ -639,8 +640,8 @@ export function AssinaturaClient() {
                       Isso autoriza a recorrência mensal — as próximas cobranças debitam sozinhas.
                     </p>
                     <div className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3 shadow-[0_0_50px_-12px_rgba(52,211,153,.45)] dark:bg-white">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(pixData.qrCode)}`}
+                      <Image
+                        unoptimized src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(pixData.qrCode)}`}
                         alt="QR Code Pix"
                         width={220}
                         height={220}

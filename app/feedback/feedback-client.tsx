@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useLocalValue, writeLocal } from "@/lib/local-store";
 import { Send } from "lucide-react";
 import { uid } from "@/lib/uid";
 import { Button } from "@/components/ui/button";
@@ -11,19 +12,13 @@ const KEY = "tb_feedback";
 export function FeedbackClient() {
   const [type, setType] = useState("Sugestão");
   const [text, setText] = useState("");
-  const [list, setList] = useState<F[]>([]);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setList(JSON.parse(raw));
-    } catch { /* mantém vazio */ } finally { setReady(true); }
-  }, []);
-  useEffect(() => { if (!ready) return; try { localStorage.setItem(KEY, JSON.stringify(list.slice(-50))); } catch { /* sem persistência */ } }, [list, ready]);
+  // Envios ficam no navegador (localStorage); o estado vem do armazenamento.
+  const raw = useLocalValue(KEY);
+  const list = useMemo<F[]>(() => { try { return raw ? (JSON.parse(raw) as F[]) : []; } catch { return []; } }, [raw]);
   function send(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
-    setList((l) => [...l, { id: uid(), type, text: text.trim().slice(0, 1000), at: new Date().toLocaleString("pt-BR") }]);
+    writeLocal(KEY, JSON.stringify([...list, { id: uid(), type, text: text.trim().slice(0, 1000), at: new Date().toLocaleString("pt-BR") }].slice(-50)));
     setText("");
   }
   return (

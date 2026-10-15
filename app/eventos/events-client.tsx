@@ -15,7 +15,7 @@ function when(ts:number){
 export function EventsClient(){
   const [rows,setRows]=useState<Ev[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
   const [name,setName]=useState(""),[search,setSearch]=useState("");
-  useEffect(()=>{let alive=true;setLoading(true);fetch("/api/events",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.events)?v.events:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar eventos.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
+  useEffect(()=>{let alive=true;fetch("/api/events",{cache:"no-store"}).then(r=>r.json()).then(v=>{if(!alive)return;if(v.error)throw Error(v.error);setRows(Array.isArray(v.events)?v.events:[])}).catch(e=>{if(alive)setError(e instanceof Error?e.message:"Falha ao carregar eventos.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
   const [marking,setMarking]=useState("");
   // Marca o evento (e tudo do mesmo visitante) como teste: sai das métricas.
   const markTest=async(r:Ev)=>{
