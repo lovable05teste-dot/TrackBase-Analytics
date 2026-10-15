@@ -2,6 +2,7 @@ import { and,eq,inArray } from "drizzle-orm";
 import type { getDb } from "@/db";
 import { projects,metaAccounts,tiktokAccounts,savedDashboards } from "@/db/schema";
 import { dashboardConfigSchema,type DashboardScope } from "@/lib/dashboard-config";
+import {isTiktokSource} from "@/lib/tiktok";
 import { parseUtm,isMetaTraffic } from "@/lib/utm-match";
 type Db=ReturnType<typeof getDb>;
 export class DashboardScopeError extends Error { status=409; }
@@ -23,7 +24,7 @@ export async function dashboardScope(db:Db,params:URLSearchParams,userId:string,
 }
 export function matchesDashboardCampaign(scope:DashboardScope|null,event:{utmSource?:string|null;utmCampaign?:string|null;fbclid?:string|null}) {
  if(!scope)return true;
- const tt=/^(tiktok|tt|tik_tok)(?=$|[^a-z])/i.test(event.utmSource||"");
+ const tt=isTiktokSource(event.utmSource);
  const allowed=tt?scope.tiktokCampaignIds:isMetaTraffic(event)?scope.metaCampaignIds:[];
  return !allowed.length||allowed.includes(parseUtm(event.utmCampaign).id||"");
 }

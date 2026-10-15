@@ -7,7 +7,6 @@ import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import {applyCosts,ZERO_COSTS} from '../lib/costs.ts';
-import {loadDashboardAds} from '../lib/dashboard-ads.ts';
 
 const require = createRequire(import.meta.url);
 const sha = v => createHash('sha256').update(v).digest('hex');
@@ -33,6 +32,7 @@ async function load(path) {
   const m={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(require,m,m.exports);return m.exports;
 }
 
+const {loadDashboardAds}=await load('lib/dashboard-ads.ts');
 const dashboards=await load('app/api/dashboards/route.ts');
 const revenue=await load('app/api/dashboard/route.ts');
 const meta=await load('app/api/meta/campaigns/route.ts');
@@ -108,4 +108,19 @@ test('TikTok uses dashboard accounts, campaign IDs and the requested comparison 
  await tiktok.GET(req(base+'&compare=1'));assert.equal(reports[1].searchParams.get('start_date'),'2026-10-07');assert.equal(reports[1].searchParams.get('end_date'),'2026-10-09');
  const max=await tiktok.GET(req(`tiktok/campaigns?dashboardId=${d.id}&period=maximum`));assert.equal(max.status,500);assert.match((await max.json()).error,/período com datas/);
  globalThis.fetch=async()=>Response.json({code:401,message:'expired'},{status:401});const failed=await (await tiktok.GET(req(base))).json();assert.equal(failed.failures.length,1);
+});
+test('all supported TikTok aliases obey the dashboard campaign filter',async()=>{
+ sql.prepare('DELETE FROM events').run();sql.prepare('INSERT INTO tiktok_accounts(id,workspace_id,user_id,advertiser_id,advertiser_name,currency,access_token_cipher,access_token_iv,connected_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)').run('tt',ws,'owner','tt','TikTok','BRL','cipher','iv',1,1);
+ const c=config('p',null);c.scope.tiktokAccountIds=['tt'];c.scope.tiktokCampaignIds=['777777'];const d=await save(c);
+ for(const [index,alias] of ['tiktok','tt','tiktokads','tik_tok',' TikTokAds '].entries()){
+  for(const [suffix,campaign,value] of [['yes','777777',100],['no','888888',900]])sql.prepare('INSERT INTO events(id,project_id,event_id,event_name,source,occurred_at,value,currency,utm_source,utm_campaign) VALUES(?,?,?,?,?,?,?,?,?,?)').run(`${index}-${suffix}`,'p',`${index}-${suffix}`,'Purchase','webhook',Math.floor(Date.now()/1000)-1,value,'BRL',alias,campaign);
+ }
+ const body=await (await revenue.GET(req('dashboard?period=today&dashboardId='+d.id))).json();assert.equal(body.metrics.net,500);assert.equal(body.metrics.sales,5);
+});
+test('partial-day financial comparisons are withheld for both ad platforms',async()=>{
+ globalThis.fetch=async url=>Response.json(String(url).includes('/meta/')?{campaigns:[{spend:100,clicks:1}],accounts:1,failures:[]}:{items:[],accounts:0,failures:[]});
+ const q=new URLSearchParams({period:'today',compare:'1'});const prior=await loadDashboardAds(q,new AbortController().signal);assert.equal(prior.meta.unavailable,true);assert.match(prior.warning,/mesmo horário/);
+ q.delete('compare');assert.equal((await loadDashboardAds(q,new AbortController().signal)).meta.unavailable,false);
+ q.set('period','yesterday');q.set('compare','1');assert.equal((await loadDashboardAds(q,new AbortController().signal)).meta.unavailable,false);
+ globalThis.fetch=async url=>Response.json(String(url).includes('/meta/')?{campaigns:[],accounts:0,failures:[]}:{items:[{spend:75,clicks:1}],accounts:1,failures:[]});q.set('period','today');assert.equal((await loadDashboardAds(q,new AbortController().signal)).meta.unavailable,true);
 });
