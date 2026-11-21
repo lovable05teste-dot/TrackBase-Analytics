@@ -30,3 +30,9 @@ test('custom event IDs changing between statuses still map by transaction ID',()
  const result=run([order('a','approved',{eventId:'custom-paid'})],[event('a','PaymentPending',{eventId:'custom-created',payload:JSON.stringify({transaction:{id:'a'}})}),event('a','Purchase',{eventId:'custom-paid',payload:JSON.stringify({transaction:{id:'a'}})}),event('a','Purchase',{eventId:'custom-retry',payload:JSON.stringify({transaction:{id:'a'}})})]);
  assert.equal(result.pending.length,0);assert.equal(result.financial.length,1);
 });
+test('financial sale keeps its gateway so fees use the same approval cohort',()=>{
+ const result=run([order('a','approved',{provider:'kiwify',createdAt:50})],[event('a','Purchase')]);
+ assert.equal(result.initiated.length,0);
+ assert.equal(result.financial.length,1);
+ assert.equal(result.financial[0].provider,'kiwify');
+});

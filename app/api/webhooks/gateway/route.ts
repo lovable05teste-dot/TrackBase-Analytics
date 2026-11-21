@@ -115,6 +115,7 @@ export async function POST(request: Request) {
   const utmContent = utmName(utmOf("utm_content") || ""),
     utmTerm = utmName(utmOf("utm_term") || "");
   const productTitle = itemsList.length ? String(itemsList[0].title || itemsList[0].name || "") : "";
+  const paymentMethod = str(pick(body, ["payment_method", "paymentMethod", "method", "data.payment_method", "data.payment.method", "data.transaction.payment_method", "order.payment_method"])).toLowerCase();
   const currency = String(pick(body, ["currency", "data.currency", "data.transaction.currency"]) || "BRL").toUpperCase();
   const eventId = eventIdFor(pick(body, ["event_id", "eventId", "tracking.event_id", "metadata.event_id", "data.event_id"]), credential.provider, externalId, status);
   const paidAt = pick(body, ["paid_at", "data.paid_at"]);
@@ -209,7 +210,8 @@ export async function POST(request: Request) {
     if (!allowed) await recordSaleEvent(credential.workspaceId, "push.sale", externalId, { status, skipped: "desativado em Notificações" });
     if (allowed) {
       const money = `R$ ${value.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
-      const title = (status === "approved" ? "Venda aprovada" : "Venda pendente") + (prefs.showValue ? ` · ${money}` : "");
+      const pendingTitle = /pix/.test(paymentMethod) ? "PIX gerado" : "Pagamento gerado";
+      const title = (status === "approved" ? "Venda aprovada" : pendingTitle) + (prefs.showValue ? ` · ${money}` : "");
       const parts: string[] = [];
       if (prefs.showProject) {
         const [proj] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, credential.projectId)).limit(1);
@@ -227,7 +229,7 @@ export async function POST(request: Request) {
       }
       await notifySale(credential.workspaceId, externalId, status, {
           title,
-          body: parts.join(" · ") || (status === "approved" ? "Toque para ver a venda aprovada" : "Toque para ver a venda pendente"),
+          body: parts.join(" · ") || (status === "approved" ? "Toque para ver a venda aprovada" : /pix/.test(paymentMethod) ? "O cliente gerou um PIX. Aguardando pagamento." : "Pagamento criado. Aguardando confirmação."),
           url: "/vendas",
           tag: `tb-${status}-${externalId}`,
         });
