@@ -1,6 +1,6 @@
 // Pedidos são a fonte do status atual; eventos são o histórico financeiro.
 export type SaleOrder = { id:string; projectId:string; provider:string; externalId:string; eventId:string|null; status:string; value:number; currency:string; createdAt:number; utmSource:string|null; utmCampaign:string|null };
-export type SaleEvent = { id:string; projectId:string; eventId:string; eventName:string; occurredAt:number; value:number|null; currency:string|null; source:string; visitorId:string|null; utmSource:string|null; utmCampaign:string|null; product:string; payment:string; country:string; payload?:string|null };
+export type SaleEvent = { id:string; projectId:string; eventId:string; eventName:string; occurredAt:number; value:number|null; currency:string|null; source:string; visitorId:string|null; utmSource:string|null; utmCampaign:string|null; product:string; payment:string; country:string; payload?:string|null; provider?:string|null };
 export function sumMoney(rows: Array<{value:number|null}>) {
   return rows.reduce((sum,row)=>sum+(Number.isFinite(Number(row.value))?Math.round(Number(row.value)*100):0),0)/100;
 }
@@ -48,12 +48,12 @@ export function reconcileSales<T extends SaleEvent>(orders:SaleOrder[], events:T
   const initiated=orders.filter(o=>o.createdAt>=range.start&&o.createdAt<=range.end&&!testOrders.has(o.id)).map(o=>({...o,product:metadata.get(o.id)?.product||'Sem produto',payment:metadata.get(o.id)?.payment||'Não informado',country:metadata.get(o.id)?.country||'Sem país'})).filter(matches);
   const pending=initiated.filter(o=>o.status==='pending');
   // Um pedido por tipo de evento, mesmo se o gateway reenviar com outro event_id.
-  const unique=new Map<string,T>();
+  const unique=new Map<string,T & {provider:string}>();
   for(const e of [...events].sort((a,b)=>a.occurredAt-b.occurredAt)) {
     const o=orderFor(e);
     if(!saleNames.has(e.eventName)||e.eventName==='PaymentPending'||isTest(e)||(o&&testOrders.has(o.id)))continue;
     const key=`${e.projectId}:${o?.id||e.eventId}:${e.eventName}`;
-    if(!unique.has(key))unique.set(key,{...e,utmSource:o?.utmSource||e.utmSource,utmCampaign:o?.utmCampaign||e.utmCampaign,product:o?metadata.get(o.id)?.product||e.product:e.product});
+    if(!unique.has(key))unique.set(key,{...e,utmSource:o?.utmSource||e.utmSource,utmCampaign:o?.utmCampaign||e.utmCampaign,product:o?metadata.get(o.id)?.product||e.product:e.product,provider:o?.provider||e.provider||"gateway"});
   }
   const financial=[...unique.values()].filter(e=>e.occurredAt>=range.start&&e.occurredAt<=range.end&&matches(e));
   const paidInitiated=initiated.filter(o=>['approved','refunded','chargeback'].includes(o.status)).length;
